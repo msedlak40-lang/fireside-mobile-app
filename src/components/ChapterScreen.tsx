@@ -153,7 +153,11 @@ export default function ChapterScreen() {
   // Get advanced summary as string
   const advancedSummaryString = useMemo(() => {
     const adv = advRaw?.summary_advanced
-    if (typeof adv === 'string') return adv
+    if (typeof adv === 'string') {
+      const headings = adv.match(/^##[^#].*$/gm) || []
+      console.log('Available ## headings:', headings)
+      return adv
+    }
     if (Array.isArray(adv)) {
       return adv.map((s: any) => {
         const title = s?.title || s?.section || ''
@@ -199,7 +203,9 @@ export default function ChapterScreen() {
   }, [advancedSummaryString, extractSection])
 
   const hebrewWordsData = useMemo(() => {
-    return extractSection(advancedSummaryString, 'Key Hebrew Words & Insights')
+    const result = extractSection(advancedSummaryString, 'Key Hebrew Words & Insights')
+    console.log('Hebrew section extracted:', result ? `${result.substring(0, 100)}...` : 'NULL')
+    return result
   }, [advancedSummaryString, extractSection])
 
   // ---- Progress: direct DB writes ----
