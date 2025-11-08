@@ -51,7 +51,13 @@ const parseContextKey = (ck?: string | null) => {
     const m = s.match(/^s:([^:]+)(?::p(\d+))?$/)
     if (m) {
       const [, section, p] = m
-      return { type: 'section' as const, label: p ? `${section} • p.${p}` : section }
+      const paraIndex = p ? parseInt(p, 10) : null
+      return {
+        type: 'section' as const,
+        label: p ? `${section} • p.${p}` : section,
+        section,
+        paraIndex
+      }
     }
     return { type: 'section' as const, label: s.slice(2) || 'summary' }
   }
@@ -261,8 +267,58 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
     }
 
     if (ctx.type === 'section') {
+      // Check if this is a One Pager section (format: onepager-summary, onepager-theological-themes, etc.)
+      if ('section' in ctx && ctx.section?.startsWith('onepager-')) {
+        const sectionName = ctx.section.replace('onepager-', '')
+        let content = '(Highlighted section)'
+
+        if (sectionName === 'summary') {
+          // Fetch from advanced summary - Original Summary section
+          const { data: summaryData } = await supabase
+            .from('bible_chapter_summaries_strongs')
+            .select('summary_advanced')
+            .eq('book_name', item.book_name)
+            .eq('chapter_number', item.chapter_number ?? chapter)
+            .maybeSingle()
+
+          if (typeof summaryData?.summary_advanced === 'string') {
+            content = extractSection(summaryData.summary_advanced, 'Original Summary') || '(Section not found)'
+          }
+        } else if (sectionName === 'theological-themes' || sectionName === 'key-verses') {
+          // Fetch from basic summary
+          const { data: summaryData } = await supabase
+            .from('bible_chapter_summaries')
+            .select('summary_content')
+            .eq('book_id', selectedBook?.id)
+            .eq('chapter_number', item.chapter_number ?? chapter)
+            .maybeSingle()
+
+          if (summaryData?.summary_content) {
+            const sectionTitle = sectionName === 'theological-themes' ? 'Theological Themes' : 'Key Verses'
+            content = extractSection(summaryData.summary_content, sectionTitle) || '(Section not found)'
+          }
+        } else if (sectionName === 'practical-applications') {
+          // Fetch from advanced summary - Practical Applications section
+          const { data: summaryData } = await supabase
+            .from('bible_chapter_summaries_strongs')
+            .select('summary_advanced')
+            .eq('book_name', item.book_name)
+            .eq('chapter_number', item.chapter_number ?? chapter)
+            .maybeSingle()
+
+          if (typeof summaryData?.summary_advanced === 'string') {
+            content = extractSection(summaryData.summary_advanced, 'Practical Applications') || '(Section not found)'
+          }
+        }
+
+        setEntryModalBody(content)
+        setEntryModalLoading(false)
+        return
+      }
+
+      // Handle regular basic/advanced sections
       const tier = item.study_tier || 'basic'
-      
+
       if (tier === 'basic') {
         const { data: summaryData } = await supabase
           .from('bible_chapter_summaries')
@@ -270,7 +326,7 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
           .eq('book_id', selectedBook?.id)
           .eq('chapter_number', item.chapter_number ?? chapter)
           .maybeSingle()
-        
+
         setEntryModalBody(summaryData?.summary_content || '(Highlighted section)')
       } else {
         const { data: summaryData } = await supabase
@@ -279,61 +335,12 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
           .eq('book_name', item.book_name)
           .eq('chapter_number', item.chapter_number ?? chapter)
           .maybeSingle()
-        
-        const content = typeof summaryData?.summary_advanced === 'string' 
-          ? summaryData.summary_advanced 
+
+        const content = typeof summaryData?.summary_advanced === 'string'
+          ? summaryData.summary_advanced
           : '(Highlighted section)'
         setEntryModalBody(content)
       }
-      setEntryModalLoading(false)
-      return
-    }
-
-    if (ctx.type === 'paragraph' && 'tier' in ctx && ctx.tier === 'onepager') {
-      // Handle One Pager highlights
-      const sectionName = ctx.section || ''
-      let content = '(Highlighted section)'
-
-      if (sectionName === 'summary') {
-        // Fetch from advanced summary - Original Summary section
-        const { data: summaryData } = await supabase
-          .from('bible_chapter_summaries_strongs')
-          .select('summary_advanced')
-          .eq('book_name', item.book_name)
-          .eq('chapter_number', item.chapter_number ?? chapter)
-          .maybeSingle()
-
-        if (typeof summaryData?.summary_advanced === 'string') {
-          content = extractSection(summaryData.summary_advanced, 'Original Summary') || '(Section not found)'
-        }
-      } else if (sectionName === 'theological-themes' || sectionName === 'key-verses') {
-        // Fetch from basic summary
-        const { data: summaryData } = await supabase
-          .from('bible_chapter_summaries')
-          .select('summary_content')
-          .eq('book_id', selectedBook?.id)
-          .eq('chapter_number', item.chapter_number ?? chapter)
-          .maybeSingle()
-
-        if (summaryData?.summary_content) {
-          const sectionTitle = sectionName === 'theological-themes' ? 'Theological Themes' : 'Key Verses'
-          content = extractSection(summaryData.summary_content, sectionTitle) || '(Section not found)'
-        }
-      } else if (sectionName === 'practical-applications') {
-        // Fetch from advanced summary - Practical Applications section
-        const { data: summaryData } = await supabase
-          .from('bible_chapter_summaries_strongs')
-          .select('summary_advanced')
-          .eq('book_name', item.book_name)
-          .eq('chapter_number', item.chapter_number ?? chapter)
-          .maybeSingle()
-
-        if (typeof summaryData?.summary_advanced === 'string') {
-          content = extractSection(summaryData.summary_advanced, 'Practical Applications') || '(Section not found)'
-        }
-      }
-
-      setEntryModalBody(content)
       setEntryModalLoading(false)
       return
     }
