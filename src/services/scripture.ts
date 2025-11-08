@@ -408,3 +408,71 @@ export async function fetchAllTerms(): Promise<SimpleTerm[]> {
     definition: row.definition ?? '',
   })).filter((t: SimpleTerm) => t.term.length > 0)
 }
+
+/** ------------ Verse of the Day ------------ */
+export type VerseOfTheDay = {
+  book_name: string
+  chapter_number: number
+  verse_number: number
+  verse_text: string
+  translation: string
+  reference: string // e.g. "John 3:16"
+}
+
+/**
+ * Fetch verse of the day using a deterministic algorithm based on current date
+ * This ensures all users see the same verse on the same day
+ */
+export async function fetchVerseOfTheDay(preferredTranslation: string = 'KJV'): Promise<VerseOfTheDay | null> {
+  try {
+    // Get total count of verses to calculate offset
+    const { count, error: countError } = await supabase
+      .from('bible_verses')
+      .select('*', { count: 'exact', head: true })
+      .eq('translation', preferredTranslation)
+
+    if (countError || !count) {
+      console.warn('[fetchVerseOfTheDay] Could not get verse count:', countError)
+      return null
+    }
+
+    // Use current date to deterministically select a verse index
+    const today = new Date()
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
+    const year = today.getFullYear()
+
+    // Create a seed from year and day of year
+    const seed = (year * 1000 + dayOfYear) % count
+
+    // Fetch the verse at this offset
+    const { data, error } = await supabase
+      .from('bible_verses')
+      .select('book_name, chapter_number, verse_number, verse_text, translation')
+      .eq('translation', preferredTranslation)
+      .order('book_name', { ascending: true })
+      .order('chapter_number', { ascending: true })
+      .order('verse_number', { ascending: true })
+      .range(seed, seed)
+      .limit(1)
+      .maybeSingle()
+
+    if (error || !data) {
+      console.warn('[fetchVerseOfTheDay] Error fetching verse:', error)
+      return null
+    }
+
+    const reference = `${data.book_name} ${data.chapter_number}:${data.verse_number}`
+
+    return {
+      book_name: data.book_name,
+      chapter_number: data.chapter_number,
+      verse_number: data.verse_number,
+      verse_text: data.verse_text,
+      translation: data.translation,
+      reference
+    }
+  } catch (err) {
+    console.error('[fetchVerseOfTheDay] Unexpected error:', err)
+    return null
+  }
+}

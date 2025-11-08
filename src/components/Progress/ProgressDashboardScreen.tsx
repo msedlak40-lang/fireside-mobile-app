@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
+import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/scripture';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
@@ -18,6 +19,7 @@ type CachedData = {
   activePlan: ActivePlanWithReading | null;
   activeCharacterStudy: ActiveCharacterStudy | null;
   todayDevotion: any | null;
+  verseOfTheDay: VerseOfTheDay | null;
   timestamp: number;
 };
 
@@ -46,6 +48,7 @@ export default function ProgressDashboardScreen() {
   const [activePlan, setActivePlan] = useState<ActivePlanWithReading | null>(null);
   const [activeCharacterStudy, setActiveCharacterStudy] = useState<ActiveCharacterStudy | null>(null);
   const [todayDevotion, setTodayDevotion] = useState<any | null>(null);
+  const [verseOfTheDay, setVerseOfTheDay] = useState<VerseOfTheDay | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -82,10 +85,11 @@ export default function ProgressDashboardScreen() {
   // Fetch fresh data from API
   const fetchFreshData = async () => {
     try {
-      const [dashData, planData, characterStudyData] = await Promise.all([
+      const [dashData, planData, characterStudyData, verseData] = await Promise.all([
         fetchUserDashboard(),
         fetchActiveReadingPlan(),
         fetchActiveCharacterStudy(),
+        fetchVerseOfTheDay('KJV'),
       ]);
 
       // today's devotion
@@ -101,12 +105,14 @@ export default function ProgressDashboardScreen() {
         activePlan: planData,
         activeCharacterStudy: characterStudyData,
         todayDevotion: data ?? null,
+        verseOfTheDay: verseData,
       };
 
       setDashboard(freshData.dashboard);
       setActivePlan(freshData.activePlan);
       setActiveCharacterStudy(freshData.activeCharacterStudy);
       setTodayDevotion(freshData.todayDevotion);
+      setVerseOfTheDay(freshData.verseOfTheDay);
 
       // Save to cache
       await saveToCache(freshData);
@@ -126,6 +132,7 @@ export default function ProgressDashboardScreen() {
         setActivePlan(cached.activePlan);
         setActiveCharacterStudy(cached.activeCharacterStudy);
         setTodayDevotion(cached.todayDevotion);
+        setVerseOfTheDay(cached.verseOfTheDay);
         setLoading(false);
         // Don't fetch fresh data on initial load if cache is valid
         return;
@@ -223,7 +230,20 @@ const openTodayDevotion = useCallback(() => {
           )}
         </View>
 
-        {/* Today’s Devotion */}
+        {/* Verse of the Day */}
+        {verseOfTheDay && (
+          <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#dbeafe', borderRadius: 12 }}>
+            <Text style={{ fontSize: 12, color: '#1e40af', fontWeight: '700' }}>VERSE OF THE DAY</Text>
+            <Text style={{ marginTop: 8, fontSize: 16, fontStyle: 'italic', lineHeight: 24, color: '#1e3a8a' }}>
+              "{verseOfTheDay.verse_text}"
+            </Text>
+            <Text style={{ marginTop: 8, fontSize: 14, fontWeight: '600', color: '#1e40af' }}>
+              — {verseOfTheDay.reference}
+            </Text>
+          </View>
+        )}
+
+        {/* Today's Devotion */}
         <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#e9d5ff', borderRadius: 12 }}>
           <Text style={{ fontSize: 12, color: '#6b21a8', fontWeight: '700' }}>TODAY’S DEVOTION</Text>
           {todayDevotion ? (

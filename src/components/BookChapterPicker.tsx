@@ -156,16 +156,15 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
       .not('translation', 'is', null)
       .limit(5000)
 
-    const uniq = Array.from(new Set((data ?? []).map(r => String((r as any).translation).toUpperCase())))
+    const dbTranslations = Array.from(new Set((data ?? []).map(r => String((r as any).translation).toUpperCase())))
       .sort((a, b) => a.localeCompare(b))
 
-    if (uniq.length) {
-      setTranslations(uniq)
-      if (!translation) setTranslation(uniq.includes('KJV') ? 'KJV' : uniq[0])
-    } else {
-      setTranslations(['KJV', 'WEB'])
-      if (!translation) setTranslation('KJV')
-    }
+    // Always include both KJV and WEB, plus any other translations from the database
+    const allTranslations = Array.from(new Set(['KJV', 'WEB', ...dbTranslations]))
+      .sort((a, b) => a.localeCompare(b))
+
+    setTranslations(allTranslations)
+    if (!translation) setTranslation(allTranslations.includes('KJV') ? 'KJV' : allTranslations[0])
   }, [translation])
 
   useEffect(() => { loadTranslations() }, [])
