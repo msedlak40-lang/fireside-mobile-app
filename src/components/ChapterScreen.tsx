@@ -12,6 +12,7 @@ import {
 import ChapterText from './ChapterText'
 import ExpandableSection from './ExpandableSection'
 import { supabase } from '../lib/supabaseClient'
+import { colors } from '../theme/colors'
 
 type RouteParams = { bookId: number; chapter: number; bookName?: string; translation?: string }
 
@@ -349,7 +350,7 @@ export default function ChapterScreen() {
 
       {/* Content */}
       {loading ? (
-        <View style={styles.center}><ActivityIndicator /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.accent.primary} /></View>
       ) : error ? (
         <View style={styles.center}><Text style={styles.error}>{error}</Text></View>
       ) : (
@@ -369,7 +370,7 @@ export default function ChapterScreen() {
               )}
 
               <View style={{ height: 12 }} />
-              <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#111827' }]} onPress={markChapterRead}>
+              <TouchableOpacity style={styles.completeBtn} onPress={markChapterRead}>
                 <Text style={styles.completeText}>✓ Mark Chapter Read</Text>
               </TouchableOpacity>
             </>
@@ -504,25 +505,25 @@ export default function ChapterScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: 'white' },
-  tabBar: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 8 },
-  tab: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: '#f3f4f6' },
-  tabActive: { backgroundColor: '#111827' },
-  tabText: { color: '#111827', fontWeight: '700' },
-  tabTextActive: { color: '#fff' },
+  screen: { flex: 1, backgroundColor: colors.background.primary },
+  tabBar: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 8, backgroundColor: colors.background.secondary, borderBottomWidth: 1, borderBottomColor: colors.border.default },
+  tab: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: colors.background.tertiary },
+  tabActive: { backgroundColor: colors.accent.primary },
+  tabText: { color: colors.text.secondary, fontWeight: '700' },
+  tabTextActive: { color: colors.text.primary },
 
   tierToggle: { marginLeft: 'auto', flexDirection: 'row', gap: 8 },
-  tierBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: '#f3f4f6' },
-  tierBtnActive: { backgroundColor: '#2563eb' },
-  tierText: { color: '#111827', fontWeight: '700' },
-  tierTextActive: { color: '#fff' },
+  tierBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: colors.background.tertiary },
+  tierBtnActive: { backgroundColor: colors.accent.secondary },
+  tierText: { color: colors.text.secondary, fontWeight: '700' },
+  tierTextActive: { color: colors.text.primary },
 
   body: { paddingHorizontal: 12, paddingBottom: 80 },
-  title: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#111827' },
-  muted: { color: '#6b7280' },
-  error: { color: '#b91c1c' },
+  title: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: colors.text.primary },
+  muted: { color: colors.text.muted },
+  error: { color: colors.error },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  completeBtn: { backgroundColor: '#10b981', height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  completeText: { color: 'white', fontWeight: '700' },
+  completeBtn: { backgroundColor: colors.accent.primary, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  completeText: { color: colors.text.primary, fontWeight: '700' },
 })

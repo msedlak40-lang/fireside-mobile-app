@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { supabase } from '../lib/supabaseClient'
 import MarkdownRenderer from './MarkdownRenderer'
+import { colors } from '../theme/colors'
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -247,7 +248,7 @@ export default function ExpandableSection({
                 <View key={idx} style={styles.paraWrap}>
                   <TouchableOpacity
                     activeOpacity={enableAnnotations ? 0.8 : 1}
-                    style={[styles.para, paraHighlights[idx] ? { backgroundColor: '#fffbe6', borderColor: '#fde68a' } : null]}
+                    style={[styles.para, paraHighlights[idx] ? { backgroundColor: colors.highlight.yellow, borderColor: colors.accent.tertiary } : null]}
                     onLongPress={() => enableAnnotations ? openNoteForPara(idx) : undefined}
                     onPress={() => enableAnnotations ? setHighlight(idx, 'yellow') : undefined}
                   >
@@ -313,29 +314,29 @@ export default function ExpandableSection({
 }
 
 const styles = StyleSheet.create({
-  wrap: { backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', marginVertical: 6 },
+  wrap: { backgroundColor: colors.background.tertiary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, marginVertical: 6 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12 },
-  title: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  chevron: { fontSize: 16, color: '#6b7280' },
+  title: { fontSize: 16, fontWeight: '800', color: colors.text.primary },
+  chevron: { fontSize: 16, color: colors.text.secondary },
   body: { paddingHorizontal: 12, paddingBottom: 10 },
 
   paraWrap: { marginTop: 8 },
-  para: { borderWidth: 1, borderColor: '#f3f4f6', borderRadius: 10, padding: 10 },
+  para: { borderWidth: 1, borderColor: colors.border.dark, borderRadius: 10, padding: 10 },
   paraActions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  paraActionText: { color: '#111827', fontWeight: '700' },
-  clearText: { color: '#b91c1c' },
-  dot: { color: '#9ca3af' },
+  paraActionText: { color: colors.accent.primary, fontWeight: '700' },
+  clearText: { color: colors.error },
+  dot: { color: colors.text.muted },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 16 },
-  modalCard: { width: '100%', backgroundColor: '#fff', borderRadius: 14, padding: 16 },
-  modalTitle: { fontSize: 16, fontWeight: '800', marginBottom: 10, color: '#111827' },
-  modalLabel: { fontSize: 12, color: '#6b7280', marginTop: 4 },
-  modalContext: { fontSize: 12, color: '#111827', fontWeight: '700' },
-  noteInput: { minHeight: 120, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 10, color: '#111827' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  modalCard: { width: '100%', backgroundColor: colors.background.elevated, borderRadius: 14, padding: 16 },
+  modalTitle: { fontSize: 16, fontWeight: '800', marginBottom: 10, color: colors.text.primary },
+  modalLabel: { fontSize: 12, color: colors.text.secondary, marginTop: 4 },
+  modalContext: { fontSize: 12, color: colors.text.primary, fontWeight: '700' },
+  noteInput: { minHeight: 120, borderWidth: 1, borderColor: colors.border.default, borderRadius: 10, padding: 10, color: colors.text.primary, backgroundColor: colors.background.secondary },
   modalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12, gap: 8 },
 
-  btn: { backgroundColor: '#111827', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 },
-  btnText: { color: '#fff', fontWeight: '800' },
+  btn: { backgroundColor: colors.accent.primary, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 },
+  btnText: { color: colors.text.primary, fontWeight: '800' },
   btnGhost: { backgroundColor: 'transparent' },
-  btnGhostText: { color: '#6b7280' },
+  btnGhostText: { color: colors.text.secondary },
 })

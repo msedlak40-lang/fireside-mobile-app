@@ -8,6 +8,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../lib/supabaseClient';
+import { colors } from '../theme/colors';
 
 // Screens
 import Auth from '../screens/Auth';
@@ -203,13 +204,15 @@ function MainTabs() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: '#111827',
+          backgroundColor: colors.tabBar.background,
+          borderTopColor: colors.border.default,
+          borderTopWidth: 1,
           height: 56 + bottomPad,
           paddingBottom: bottomPad,
           paddingTop: 6
         },
-        tabBarActiveTintColor: '#fff',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: colors.tabBar.active,
+        tabBarInactiveTintColor: colors.tabBar.inactive,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -380,15 +383,25 @@ export default function AppNavigator() {
   }, []);
 
   const theme = useMemo(
-    () => ({ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#fff' } }),
+    () => ({
+      ...DefaultTheme,
+      colors: {
+        ...DefaultTheme.colors,
+        background: colors.background.primary,
+        card: colors.background.secondary,
+        text: colors.text.primary,
+        border: colors.border.default,
+        primary: colors.accent.primary,
+      }
+    }),
     []
   );
 
   if (!ready) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
-        <Text style={{ marginTop: 8, color: '#6b7280' }}>Loading…</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
+        <ActivityIndicator color={colors.accent.primary} />
+        <Text style={{ marginTop: 8, color: colors.text.secondary }}>Loading…</Text>
       </View>
     );
   }
