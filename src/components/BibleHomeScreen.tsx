@@ -4,6 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/AppNavigator'
 import { fetchBooks, type Book } from '../services/scripture'
 import BookChapterPicker from '../components/BookChapterPicker'
+import { colors } from '../theme/colors'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BibleHome'>
 
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 12, gap: 12 },
   openBtn: {
     marginTop: 8,
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.accent.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

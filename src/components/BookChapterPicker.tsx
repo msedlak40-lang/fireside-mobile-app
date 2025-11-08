@@ -314,10 +314,6 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
         )}
       </View>
 
-      <TouchableOpacity style={styles.goBtn} onPress={go}>
-        <Text style={styles.goBtnText}>Go</Text>
-      </TouchableOpacity>
-
       <Modal visible={entryModalOpen} animationType="slide" transparent onRequestClose={() => setEntryModalOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>

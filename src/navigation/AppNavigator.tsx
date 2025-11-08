@@ -50,7 +50,17 @@ const Tab = createBottomTabNavigator();
 const BibleStack = createNativeStackNavigator();
 function BibleStackNavigator() {
   return (
-    <BibleStack.Navigator>
+    <BibleStack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.background.secondary,
+        },
+        headerTintColor: colors.text.primary,
+        headerTitleStyle: {
+          fontWeight: '700',
+        },
+      }}
+    >
       <BibleStack.Screen
         name="BibleHome"
         component={BibleHomeScreen}
@@ -59,7 +69,10 @@ function BibleStackNavigator() {
       <BibleStack.Screen
         name="Chapter"
         component={ChapterScreen}
-        options={{ headerTitle: 'Chapter' }}
+        options={{
+          headerTitle: 'Chapter',
+          contentStyle: { paddingTop: 0 }
+        }}
       />
       <BibleStack.Screen
         name="Verse"
