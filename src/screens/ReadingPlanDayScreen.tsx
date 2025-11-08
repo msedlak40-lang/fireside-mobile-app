@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabaseClient';
+import { colors } from '../theme/colors';
 import { completeReadingPlanDay } from '../services/readingPlans';
 
 type PlanDayRow = {
@@ -177,7 +178,13 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
     }
   };
 
-  if (loading || !day) return <ActivityIndicator style={{ marginTop: 24 }} />;
+  if (loading || !day) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
+        <ActivityIndicator color={colors.accent.primary} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -192,7 +199,7 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
           {scriptureBlocks}
         </>
       ) : (
-        <Text style={{ color: '#6b7280', marginTop: 12 }}>No scripture text found for this reference.</Text>
+        <Text style={{ color: colors.text.secondary, marginTop: 12 }}>No scripture text found for this reference.</Text>
       )}
 
       {!!day.verse_insight && (
@@ -226,7 +233,7 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
       <TouchableOpacity
         onPress={markDayComplete}
         disabled={completing}
-        style={[styles.btn, { backgroundColor: completing ? '#9ca3af' : '#10b981' }]}
+        style={[styles.btn, { backgroundColor: completing ? colors.text.tertiary : colors.accent.primary }]}
       >
         <Text style={styles.btnText}>{completing ? 'Saving…' : '✓ Mark Day Complete'}</Text>
       </TouchableOpacity>
@@ -235,16 +242,16 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 28, gap: 10 },
-  h1: { fontSize: 22, fontWeight: '800' },
-  theme: { marginTop: 4, color: '#64748b', fontStyle: 'italic' },
-  sub: { color: '#6b7280', marginTop: 4 },
-  section: { fontSize: 16, fontWeight: '700' },
-  body: { color: '#111827', lineHeight: 22 },
-  bullet: { marginRight: 8, color: '#111827', fontSize: 16, lineHeight: 22 },
-  scriptureCard: { marginTop: 8, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 10, backgroundColor: '#fff' },
-  scriptureHeader: { fontWeight: '700', marginBottom: 6, color: '#111827' },
-  scriptureText: { color: '#111827', lineHeight: 22 },
+  container: { padding: 16, paddingBottom: 28, gap: 10, backgroundColor: colors.background.primary },
+  h1: { fontSize: 22, fontWeight: '800', color: colors.text.primary },
+  theme: { marginTop: 4, color: colors.text.secondary, fontStyle: 'italic' },
+  sub: { color: colors.text.secondary, marginTop: 4 },
+  section: { fontSize: 16, fontWeight: '700', color: colors.text.primary },
+  body: { color: colors.text.primary, lineHeight: 22 },
+  bullet: { marginRight: 8, color: colors.text.primary, fontSize: 16, lineHeight: 22 },
+  scriptureCard: { marginTop: 8, borderWidth: 1, borderColor: colors.border.default, borderRadius: 10, padding: 10, backgroundColor: colors.background.secondary },
+  scriptureHeader: { fontWeight: '700', marginBottom: 6, color: colors.text.primary },
+  scriptureText: { color: colors.text.primary, lineHeight: 22 },
   btn: { marginTop: 20, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: '800' },
+  btnText: { color: colors.text.primary, fontWeight: '800' },
 });

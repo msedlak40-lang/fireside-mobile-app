@@ -260,10 +260,12 @@ const openTodayDevotion = useCallback(() => {
 
         {/* Reading Plan Progress */}
         {activePlan ? (
-          <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#dbeafe', borderRadius: 12 }}>
+          <TouchableOpacity
+            onPress={openPlans}
+            style={{ marginBottom: 16, padding: 16, backgroundColor: '#dbeafe', borderRadius: 12 }}
+          >
             <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>📅 Active Reading Plan</Text>
-            <Text style={{ fontSize: 18, fontWeight: '600' }}>{activePlan.plan_name}</Text>
-            <View style={{ marginTop: 12 }}>
+            <View style={{ marginTop: 4 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                 <Text style={{ fontSize: 14, color: '#374151' }}>Progress</Text>
                 <Text style={{ fontSize: 14, fontWeight: '600' }}>
@@ -286,7 +288,8 @@ const openTodayDevotion = useCallback(() => {
             <Text style={{ marginTop: 8, fontSize: 12, color: activePlan.on_track ? '#059669' : '#dc2626', fontWeight: '600' }}>
               {activePlan.on_track ? '✓ On track' : '⚠ Behind schedule'}
             </Text>
-          </View>
+            <Text style={{ marginTop: 8, fontSize: 12, color: '#2563eb', fontWeight: '600' }}>Tap to view plan →</Text>
+          </TouchableOpacity>
         ) : (
           <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#f3f4f6', borderRadius: 12 }}>
             <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>📅 Reading Plans</Text>
@@ -294,7 +297,7 @@ const openTodayDevotion = useCallback(() => {
               No active reading plan. Start one to track your daily Bible reading!
             </Text>
             <TouchableOpacity
-              onPress={openPlans} // ✅ uses top-level hook via callback
+              onPress={openPlans}
               style={{
                 padding: 12,
                 backgroundColor: '#2563eb',
@@ -306,49 +309,6 @@ const openTodayDevotion = useCallback(() => {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Devotions total */}
-        <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>🕊️ Daily Devotions</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 14, color: '#6b7280' }}>Total Completed</Text>
-            <Text style={{ fontSize: 32, fontWeight: '800', color: '#111827' }}>
-              {dashboard?.devotions?.total_completed || 0}
-            </Text>
-          </View>
-        </View>
-
-        {/* Character Studies */}
-        <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 12 }}>👤 Character Studies</Text>
-          <View style={{ marginBottom: 12 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={{ fontSize: 14, color: '#6b7280' }}>Characters Studied</Text>
-              <Text style={{ fontSize: 14, fontWeight: '600' }}>
-                {dashboard?.characters?.total_studied || 0} / {dashboard?.characters?.total_available || 0}
-              </Text>
-            </View>
-            <View style={{ height: 8, backgroundColor: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
-              <View
-                style={{
-                  height: '100%',
-                  width: `${((dashboard?.characters?.total_studied || 0) / (dashboard?.characters?.total_available || 1)) * 100}%`,
-                  backgroundColor: '#8b5cf6',
-                }}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Actions */}
-        <View style={{ gap: 12 }}>
-          <TouchableOpacity
-            onPress={openNotesSummary}
-            style={{ height: 48, backgroundColor: '#0ea5e9', borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Notes & Highlights Summary</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

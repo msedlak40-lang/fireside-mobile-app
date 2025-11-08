@@ -248,14 +248,6 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="DevotionsTab"
-        component={DevotionsStackNavigator}
-        options={{
-          title: 'Devotions',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🕊️</Text>
-        }}
-      />
-      <Tab.Screen
         name="CharactersTab"
         component={CharactersStackNavigator}
         options={{

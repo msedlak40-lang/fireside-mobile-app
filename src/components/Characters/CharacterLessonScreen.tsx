@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
+import { colors } from '../../theme/colors';
 import type { CharacterLesson } from '../../types/supabase-characters';
 
 // New table needed: user_character_lesson_progress
@@ -138,8 +139,8 @@ export default function CharacterLessonScreen() {
 
   if (loading || !lesson) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
+        <ActivityIndicator color={colors.accent.primary} />
       </View>
     );
   }
@@ -148,13 +149,13 @@ export default function CharacterLessonScreen() {
   const apps = Array.isArray(lesson.specific_applications) ? (lesson.specific_applications as any[]) : [];
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-      <Text style={{ fontSize: 22, fontWeight: '800' }}>{lesson.lesson_title ?? 'Lesson'}</Text>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, backgroundColor: colors.background.primary }}>
+      <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text.primary }}>{lesson.lesson_title ?? 'Lesson'}</Text>
       {!!lesson.lesson_number && (
-        <Text style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>Lesson {lesson.lesson_number}</Text>
+        <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>Lesson {lesson.lesson_number}</Text>
       )}
       {!!lesson.key_passage && (
-        <Text style={{ marginTop: 6, fontSize: 13, color: '#64748b' }}>{lesson.key_passage}</Text>
+        <Text style={{ marginTop: 6, fontSize: 13, color: colors.text.secondary }}>{lesson.key_passage}</Text>
       )}
 
       {/* Progress indicator */}
@@ -167,17 +168,17 @@ export default function CharacterLessonScreen() {
       )}
 
       {!!lesson.story_narrative && (
-        <Text style={{ marginTop: 14, fontSize: 16, lineHeight: 24 }}>{lesson.story_narrative}</Text>
+        <Text style={{ marginTop: 14, fontSize: 16, lineHeight: 24, color: colors.text.primary }}>{lesson.story_narrative}</Text>
       )}
 
       {vs.length ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700' }}>Verse Sections</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>Verse Sections</Text>
           {vs.map((s, i) => (
-            <View key={i} style={{ marginTop: 10, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10 }}>
-              {s.heading ? <Text style={{ fontSize: 14, fontWeight: '700' }}>{s.heading}</Text> : null}
-              {s.verses ? <Text style={{ marginTop: 2, fontSize: 12, color: '#6b7280' }}>vv. {s.verses}</Text> : null}
-              {s.content ? <Text style={{ marginTop: 6, fontSize: 15, lineHeight: 22 }}>{s.content}</Text> : null}
+            <View key={i} style={{ marginTop: 10, padding: 12, borderWidth: 1, borderColor: colors.border.default, borderRadius: 10, backgroundColor: colors.background.secondary }}>
+              {s.heading ? <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text.primary }}>{s.heading}</Text> : null}
+              {s.verses ? <Text style={{ marginTop: 2, fontSize: 12, color: colors.text.secondary }}>vv. {s.verses}</Text> : null}
+              {s.content ? <Text style={{ marginTop: 6, fontSize: 15, lineHeight: 22, color: colors.text.primary }}>{s.content}</Text> : null}
             </View>
           ))}
         </View>
@@ -185,9 +186,9 @@ export default function CharacterLessonScreen() {
 
       {lesson.key_insights?.length ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700' }}>Key Insights</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>Key Insights</Text>
           {lesson.key_insights!.map((t, i) => (
-            <Text key={i} style={{ marginTop: 6, fontSize: 15 }}>
+            <Text key={i} style={{ marginTop: 6, fontSize: 15, color: colors.text.primary }}>
               • {t}
             </Text>
           ))}
@@ -198,7 +199,7 @@ export default function CharacterLessonScreen() {
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#fff7ed', borderRadius: 10 }}>
           <Text style={{ fontSize: 12, color: '#9a3412', fontWeight: '700' }}>HARD TRUTHS</Text>
           {lesson.hard_truths!.map((t, i) => (
-            <Text key={i} style={{ marginTop: 6, fontSize: 15 }}>
+            <Text key={i} style={{ marginTop: 6, fontSize: 15, color: '#9a3412' }}>
               {t}
             </Text>
           ))}
@@ -207,32 +208,32 @@ export default function CharacterLessonScreen() {
 
       {lesson.about_god ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 12, color: '#6b7280', fontWeight: '700' }}>ABOUT GOD</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>{lesson.about_god}</Text>
+          <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '700' }}>ABOUT GOD</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: colors.text.primary }}>{lesson.about_god}</Text>
         </View>
       ) : null}
 
       {lesson.about_ourselves ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 12, color: '#6b7280', fontWeight: '700' }}>ABOUT US</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>{lesson.about_ourselves}</Text>
+          <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '700' }}>ABOUT US</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: colors.text.primary }}>{lesson.about_ourselves}</Text>
         </View>
       ) : null}
 
       {lesson.failures_struggles ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 12, color: '#6b7280', fontWeight: '700' }}>FAILURES / STRUGGLES</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>{lesson.failures_struggles}</Text>
+          <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '700' }}>FAILURES / STRUGGLES</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: colors.text.primary }}>{lesson.failures_struggles}</Text>
         </View>
       ) : null}
 
       {apps.length ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700' }}>Specific Applications</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>Specific Applications</Text>
           {apps.map((a, i) => (
             <View key={i} style={{ marginTop: 8 }}>
-              {a.situation ? <Text style={{ fontSize: 13, color: '#6b7280' }}>{a.situation}</Text> : null}
-              {a.application ? <Text style={{ fontSize: 15, marginTop: 4 }}>{a.application}</Text> : null}
+              {a.situation ? <Text style={{ fontSize: 13, color: colors.text.secondary }}>{a.situation}</Text> : null}
+              {a.application ? <Text style={{ fontSize: 15, marginTop: 4, color: colors.text.primary }}>{a.application}</Text> : null}
             </View>
           ))}
         </View>
@@ -240,9 +241,9 @@ export default function CharacterLessonScreen() {
 
       {lesson.reflection_questions?.length ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700' }}>Reflection</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>Reflection</Text>
           {lesson.reflection_questions!.map((q, i) => (
-            <Text key={i} style={{ marginTop: 6, fontSize: 15 }}>
+            <Text key={i} style={{ marginTop: 6, fontSize: 15, color: colors.text.primary }}>
               • {q}
             </Text>
           ))}
@@ -250,9 +251,9 @@ export default function CharacterLessonScreen() {
       ) : null}
 
       {lesson.next_lesson_preview ? (
-        <View style={{ marginTop: 18, padding: 12, backgroundColor: '#f8fafc', borderRadius: 10 }}>
-          <Text style={{ fontSize: 12, color: '#2563eb', fontWeight: '700' }}>NEXT</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>{lesson.next_lesson_preview}</Text>
+        <View style={{ marginTop: 18, padding: 12, backgroundColor: colors.background.secondary, borderRadius: 10 }}>
+          <Text style={{ fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>NEXT</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: colors.text.primary }}>{lesson.next_lesson_preview}</Text>
         </View>
       ) : null}
 
@@ -264,12 +265,12 @@ export default function CharacterLessonScreen() {
           style={{
             marginTop: 24,
             padding: 16,
-            backgroundColor: isCompleting ? '#9ca3af' : '#10b981',
+            backgroundColor: isCompleting ? colors.text.tertiary : colors.accent.primary,
             borderRadius: 12,
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+          <Text style={{ color: colors.text.primary, fontWeight: '700', fontSize: 16 }}>
             {isCompleting ? 'Saving...' : '✓ Mark Lesson Complete'}
           </Text>
         </TouchableOpacity>
