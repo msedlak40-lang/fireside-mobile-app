@@ -35,7 +35,7 @@ export default function OnePagerTab({
           initiallyExpanded={true}
           markdown={summary}
           studyTier={null}
-          sectionKey="onepager:summary"
+          sectionKey="onepager-summary"
           enableAnnotations={true}
           bookName={bookName}
           chapter={chapter}
@@ -49,7 +49,7 @@ export default function OnePagerTab({
           initiallyExpanded={false}
           markdown={theologicalThemes}
           studyTier={null}
-          sectionKey="onepager:theological-themes"
+          sectionKey="onepager-theological-themes"
           enableAnnotations={true}
           bookName={bookName}
           chapter={chapter}
@@ -63,7 +63,7 @@ export default function OnePagerTab({
           initiallyExpanded={false}
           markdown={keyVersesText}
           studyTier={null}
-          sectionKey="onepager:key-verses"
+          sectionKey="onepager-key-verses"
           enableAnnotations={true}
           bookName={bookName}
           chapter={chapter}
@@ -77,7 +77,7 @@ export default function OnePagerTab({
           initiallyExpanded={false}
           markdown={practicalAppsMarkdown}
           studyTier={null}
-          sectionKey="onepager:practical-applications"
+          sectionKey="onepager-practical-applications"
           enableAnnotations={true}
           bookName={bookName}
           chapter={chapter}
