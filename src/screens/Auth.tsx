@@ -78,7 +78,9 @@ export default function Auth() {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://ryzgtpexapmwugbdspjm.supabase.co/auth/v1/verify',
+      });
       if (error) throw error;
 
       Alert.alert(
