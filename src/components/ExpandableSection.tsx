@@ -21,7 +21,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
 
-type Tier = 'basic' | 'advanced'
+type Tier = 'basic' | 'advanced' | 'onepager'
 
 type Props = {
   title: string
@@ -80,7 +80,13 @@ async function insertSummaryEntry({
     }
     if (type === 'highlight') payload.highlight_color = color ?? 'yellow'
     if (type === 'note') payload.note_markdown = note ?? ''
-    await supabase.from('user_chapter_entries').insert(payload)
+    console.log('[ExpandableSection] Saving annotation:', payload)
+    const { error } = await supabase.from('user_chapter_entries').insert(payload)
+    if (error) {
+      console.error('[ExpandableSection] Insert error:', error)
+    } else {
+      console.log('[ExpandableSection] Annotation saved successfully')
+    }
   } catch (e) {
     console.warn('insertSummaryEntry failed', e)
   }

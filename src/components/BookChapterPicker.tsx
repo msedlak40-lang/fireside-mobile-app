@@ -207,6 +207,12 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
       .limit(50)
 
     const data = [...(d1 ?? []), ...(d2 ?? [])]
+    console.log(`[BookChapterPicker] Loaded ${data.length} recent entries`)
+    console.log('[BookChapterPicker] Sample entries:', data.slice(0, 3).map(e => ({
+      context_key: e.context_key,
+      study_tier: e.study_tier,
+      entry_type: e.entry_type
+    })))
     setRecent(data ?? [])
   }, [selectedBook, chapter])
 
