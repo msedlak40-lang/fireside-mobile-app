@@ -314,6 +314,8 @@ export default function ChapterScreen() {
               theologicalThemes={onePagerData.theologicalThemes}
               keyVersesText={onePagerData.keyVersesText}
               practicalApplications={onePagerData.practicalApplications}
+              bookName={bookNameResolved}
+              chapter={chapter}
             />
           )}
 
@@ -341,7 +343,9 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingTop: 8,
     gap: 8,
     backgroundColor: colors.background.secondary,
     borderBottomWidth: 1,

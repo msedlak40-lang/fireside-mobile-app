@@ -8,6 +8,8 @@ type Props = {
   theologicalThemes: string | null; // extracted from basic summary_content
   keyVersesText: string | null; // extracted from basic Key Verses section
   practicalApplications: string | null; // from advanced
+  bookName: string | null;
+  chapter: number;
 };
 
 export default function OnePagerTab({
@@ -15,6 +17,8 @@ export default function OnePagerTab({
   theologicalThemes,
   keyVersesText,
   practicalApplications,
+  bookName,
+  chapter,
 }: Props) {
   // Normalize practical applications to markdown string
   let practicalAppsMarkdown: string | null = null;
@@ -32,6 +36,9 @@ export default function OnePagerTab({
           markdown={summary}
           studyTier="onepager"
           sectionKey="summary"
+          enableAnnotations={true}
+          bookName={bookName}
+          chapter={chapter}
         />
       )}
 
@@ -43,6 +50,9 @@ export default function OnePagerTab({
           markdown={theologicalThemes}
           studyTier="onepager"
           sectionKey="theological-themes"
+          enableAnnotations={true}
+          bookName={bookName}
+          chapter={chapter}
         />
       )}
 
@@ -54,6 +64,9 @@ export default function OnePagerTab({
           markdown={keyVersesText}
           studyTier="onepager"
           sectionKey="key-verses"
+          enableAnnotations={true}
+          bookName={bookName}
+          chapter={chapter}
         />
       )}
 
@@ -65,6 +78,9 @@ export default function OnePagerTab({
           markdown={practicalAppsMarkdown}
           studyTier="onepager"
           sectionKey="practical-applications"
+          enableAnnotations={true}
+          bookName={bookName}
+          chapter={chapter}
         />
       )}
 

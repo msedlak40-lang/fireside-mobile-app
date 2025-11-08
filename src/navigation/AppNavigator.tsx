@@ -69,10 +69,7 @@ function BibleStackNavigator() {
       <BibleStack.Screen
         name="Chapter"
         component={ChapterScreen}
-        options={{
-          headerTitle: 'Chapter',
-          contentStyle: { paddingTop: 0 }
-        }}
+        options={{ headerTitle: 'Chapter' }}
       />
       <BibleStack.Screen
         name="Verse"
