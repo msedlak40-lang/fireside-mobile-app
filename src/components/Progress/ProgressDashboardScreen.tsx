@@ -1,12 +1,24 @@
 // src/components/Progress/ProgressDashboardScreen.tsx
-import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import type { UserDashboard } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
+import { colors } from '../../theme/colors';
+
+const CACHE_KEY = 'fireside.dashboard';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+type CachedData = {
+  dashboard: UserDashboard | null;
+  activePlan: ActivePlanWithReading | null;
+  todayDevotion: any | null;
+  timestamp: number;
+};
 
 function getLocalISODate(tz: string) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -27,31 +39,93 @@ function formatISODateYYYYMMDD(iso?: string | null) {
 }
 
 export default function ProgressDashboardScreen() {
-  const navigation = useNavigation<any>(); // ✅ hook at top-level
+  const navigation = useNavigation<any>();
 
   const [dashboard, setDashboard] = useState<UserDashboard | null>(null);
   const [activePlan, setActivePlan] = useState<ActivePlanWithReading | null>(null);
   const [todayDevotion, setTodayDevotion] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
+  // Load cached data from AsyncStorage
+  const loadFromCache = async (): Promise<CachedData | null> => {
+    try {
+      const cached = await AsyncStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed: CachedData = JSON.parse(cached);
+        const age = Date.now() - parsed.timestamp;
+        if (age < CACHE_DURATION) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.warn('[ProgressDashboard] Cache load failed', err);
+    }
+    return null;
+  };
+
+  // Save data to cache
+  const saveToCache = async (data: Omit<CachedData, 'timestamp'>) => {
+    try {
+      const cacheData: CachedData = {
+        ...data,
+        timestamp: Date.now(),
+      };
+      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    } catch (err) {
+      console.warn('[ProgressDashboard] Cache save failed', err);
+    }
+  };
+
+  // Fetch fresh data from API
+  const fetchFreshData = async () => {
     try {
       const [dashData, planData] = await Promise.all([
         fetchUserDashboard(),
         fetchActiveReadingPlan(),
       ]);
-      setDashboard(dashData);
-      setActivePlan(planData);
 
-      // today’s devotion
+      // today's devotion
       const today = getLocalISODate('America/Chicago');
       const { data } = await supabase
         .from('daily_devotions')
         .select('id,title,devotion_date')
         .eq('devotion_date', today)
         .maybeSingle();
-      setTodayDevotion(data ?? null);
+
+      const freshData = {
+        dashboard: dashData,
+        activePlan: planData,
+        todayDevotion: data ?? null,
+      };
+
+      setDashboard(freshData.dashboard);
+      setActivePlan(freshData.activePlan);
+      setTodayDevotion(freshData.todayDevotion);
+
+      // Save to cache
+      await saveToCache(freshData);
+    } catch (err) {
+      console.error('[ProgressDashboard] Fetch failed', err);
+    }
+  };
+
+  // Initial load - try cache first, then fetch if needed
+  const load = async () => {
+    setLoading(true);
+    try {
+      const cached = await loadFromCache();
+      if (cached) {
+        // Use cached data immediately
+        setDashboard(cached.dashboard);
+        setActivePlan(cached.activePlan);
+        setTodayDevotion(cached.todayDevotion);
+        setLoading(false);
+        // Don't fetch fresh data on initial load if cache is valid
+        return;
+      }
+      // No valid cache, fetch fresh data
+      await fetchFreshData();
     } catch (err) {
       console.error('[ProgressDashboard] Load failed', err);
     } finally {
@@ -59,7 +133,17 @@ export default function ProgressDashboardScreen() {
     }
   };
 
-  useFocusEffect(useCallback(() => { load(); }, []));
+  // Pull to refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchFreshData();
+    setRefreshing(false);
+  };
+
+  // Load data only once on mount
+  useEffect(() => {
+    load();
+  }, []);
 
   const openPlans = useCallback(() => {
     // ✅ just switch to the Plans tab — avoids nested hook issues
@@ -80,15 +164,25 @@ const openTodayDevotion = useCallback(() => {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
+        <ActivityIndicator color={colors.accent.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent.primary}
+            colors={[colors.accent.primary]}
+          />
+        }
+      >
         <Text style={{ fontSize: 24, fontWeight: '800', marginBottom: 20 }}>Your Progress</Text>
 
         {/* Streak Card */}
