@@ -259,7 +259,7 @@ export type CharacterProgress = {
   completed_at: string | null
   notes: string | null
   favorite: boolean
-  started_at: string
+  created_at: string
 }
 
 export type ActiveCharacterStudy = {
@@ -304,7 +304,7 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
       .from('user_character_progress')
       .select(`
         character_id,
-        started_at,
+        created_at,
         bible_characters (
           name,
           character_type,
@@ -314,7 +314,7 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
       `)
       .eq('user_id', user_id)
       .eq('completed', false)
-      .order('started_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
@@ -356,7 +356,7 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
       total_lessons: totalLessons,
       completed_lessons: completedLessons,
       percentage,
-      started_at: progressData.started_at
+      started_at: (progressData as any).created_at || new Date().toISOString()
     }
   } catch (err) {
     console.warn('[fetchActiveCharacterStudy] Failed:', err)
