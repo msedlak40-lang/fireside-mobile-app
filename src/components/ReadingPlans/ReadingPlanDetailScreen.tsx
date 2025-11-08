@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Pressable } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { colors } from '../../theme/colors';
 import {
   fetchReadingPlanDetails,
   startReadingPlan,
@@ -97,26 +98,26 @@ export default function ReadingPlanDetailScreen() {
 
   if (loading || !plan) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
+        <ActivityIndicator color={colors.accent.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-      <Text style={{ fontSize: 22, fontWeight: '800' }}>{plan.plan_name}</Text>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, backgroundColor: colors.background.primary }}>
+      <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text.primary }}>{plan.plan_name}</Text>
 
-      {plan.theme_name && <Text style={{ marginTop: 4, fontSize: 14, color: '#6b7280' }}>Theme: {plan.theme_name}</Text>}
+      {plan.theme_name && <Text style={{ marginTop: 4, fontSize: 14, color: colors.text.secondary }}>Theme: {plan.theme_name}</Text>}
 
-      {plan.plan_description && <Text style={{ marginTop: 12, fontSize: 16, lineHeight: 24 }}>{plan.plan_description}</Text>}
+      {plan.plan_description && <Text style={{ marginTop: 12, fontSize: 16, lineHeight: 24, color: colors.text.primary }}>{plan.plan_description}</Text>}
 
       <View style={{ marginTop: 12, flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-        <Text style={{ fontSize: 14, color: '#6b7280' }}>📅 {plan.total_days} days</Text>
+        <Text style={{ fontSize: 14, color: colors.text.secondary }}>📅 {plan.total_days} days</Text>
         {plan.difficulty_level && (
           <>
-            <Text style={{ fontSize: 14, color: '#6b7280' }}>•</Text>
-            <Text style={{ fontSize: 14, color: '#6b7280' }}>{plan.difficulty_level}</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary }}>•</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary }}>{plan.difficulty_level}</Text>
           </>
         )}
       </View>
@@ -125,10 +126,10 @@ export default function ReadingPlanDetailScreen() {
       {userProgress ? (
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 10 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#1e40af' }}>YOUR PROGRESS</Text>
-          <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '600', color: '#1e40af' }}>
             Day {userProgress.current_day} of {plan.total_days}
           </Text>
-          <Text style={{ marginTop: 2, fontSize: 14, color: '#6b7280' }}>
+          <Text style={{ marginTop: 2, fontSize: 14, color: '#1e40af' }}>
             {dayProgress.filter((dp) => dp.completed).length} days completed
           </Text>
         </View>
@@ -139,12 +140,12 @@ export default function ReadingPlanDetailScreen() {
           style={{
             marginTop: 16,
             padding: 16,
-            backgroundColor: starting ? '#9ca3af' : '#2563eb',
+            backgroundColor: starting ? colors.text.tertiary : colors.accent.primary,
             borderRadius: 12,
             alignItems: 'center'
           }}
         >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+          <Text style={{ color: colors.text.primary, fontWeight: '700', fontSize: 16 }}>
             {starting ? 'Starting...' : '🚀 Start This Plan'}
           </Text>
         </TouchableOpacity>
@@ -152,7 +153,7 @@ export default function ReadingPlanDetailScreen() {
 
       {/* Days List */}
       <View style={{ marginTop: 24 }}>
-        <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12 }}>Daily Readings</Text>
+        <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: colors.text.primary }}>Daily Readings</Text>
         {days.map((day) => {
           const isComplete = isDayComplete(day.day_number);
           const isCurrent = userProgress?.current_day === day.day_number;
@@ -165,19 +166,19 @@ export default function ReadingPlanDetailScreen() {
                 marginBottom: 12,
                 padding: 12,
                 borderWidth: 1,
-                borderColor: isCurrent ? '#3b82f6' : '#e5e7eb',
+                borderColor: isCurrent ? colors.accent.primary : colors.border.default,
                 borderRadius: 10,
-                backgroundColor: isComplete ? '#f0fdf4' : '#fff'
+                backgroundColor: isComplete ? '#f0fdf4' : colors.background.secondary
               }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text.primary }}>
                     Day {day.day_number}: {day.day_title}
                   </Text>
-                  <Text style={{ marginTop: 4, fontSize: 14, color: '#6b7280' }}>{day.full_reference}</Text>
+                  <Text style={{ marginTop: 4, fontSize: 14, color: colors.text.secondary }}>{day.full_reference}</Text>
                   {day.daily_theme && (
-                    <Text style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>Theme: {day.daily_theme}</Text>
+                    <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>Theme: {day.daily_theme}</Text>
                   )}
                 </View>
                 {isComplete && <Text style={{ fontSize: 20 }}>✓</Text>}
@@ -186,9 +187,9 @@ export default function ReadingPlanDetailScreen() {
               <View style={{ marginTop: 10, flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity
                   onPress={() => openDayReading(day)}
-                  style={{ paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#111827', borderRadius: 8 }}
+                  style={{ paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.accent.primary, borderRadius: 8 }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>Open Reading</Text>
+                  <Text style={{ color: colors.text.primary, fontWeight: '700' }}>Open Reading</Text>
                 </TouchableOpacity>
 
                 {isCurrent && userProgress && !isComplete ? (
@@ -196,7 +197,7 @@ export default function ReadingPlanDetailScreen() {
                     onPress={() => handleCompleteDay(day)}
                     style={{ paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#10b981', borderRadius: 8 }}
                   >
-                    <Text style={{ color: '#fff', fontWeight: '700' }}>✓ Mark Complete</Text>
+                    <Text style={{ color: colors.text.primary, fontWeight: '700' }}>✓ Mark Complete</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>

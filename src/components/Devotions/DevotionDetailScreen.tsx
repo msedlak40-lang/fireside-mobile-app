@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
+import { colors } from '../../theme/colors';
 import { completeDevotionProgress } from '../../services/progress';
 import type { Devotion } from '../../types/supabase-devotions';
 
@@ -154,8 +155,8 @@ export default function DevotionDetailScreen() {
 
   if (loading || !devotion) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
+        <ActivityIndicator color={colors.accent.primary} />
       </View>
     );
   }
@@ -167,16 +168,16 @@ export default function DevotionDetailScreen() {
   const situations = Array.isArray(devotion.situation_tags) ? devotion.situation_tags : [];
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, backgroundColor: colors.background.primary }}>
       {/* Title & Share button */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Text style={{ fontSize: 22, fontWeight: '800', flex: 1 }}>{devotion.title}</Text>
+        <Text style={{ fontSize: 22, fontWeight: '800', flex: 1, color: colors.text.primary }}>{devotion.title}</Text>
         <TouchableOpacity
           onPress={shareDevotion}
           style={{
             marginLeft: 12,
             padding: 8,
-            backgroundColor: '#f3f4f6',
+            backgroundColor: colors.background.secondary,
             borderRadius: 8,
           }}
         >
@@ -186,7 +187,7 @@ export default function DevotionDetailScreen() {
 
       {/* Meta line */}
       {(dateText || keyRef) ? (
-        <Text style={{ marginTop: 6, fontSize: 14, color: '#6b7280' }}>
+        <Text style={{ marginTop: 6, fontSize: 14, color: colors.text.secondary }}>
           {dateText ? `${dateText} • ` : ''}{keyRef}
         </Text>
       ) : null}
@@ -197,20 +198,20 @@ export default function DevotionDetailScreen() {
           marginTop: 14,
           padding: 12,
           borderLeftWidth: 3,
-          borderLeftColor: '#2563eb',
-          backgroundColor: '#f8fafc',
+          borderLeftColor: colors.accent.primary,
+          backgroundColor: colors.background.secondary,
           borderRadius: 8,
         }}
       >
-        <Text style={{ fontSize: 15, fontStyle: 'italic' }}>{devotion.key_verse_text}</Text>
-        <Text style={{ marginTop: 4, fontSize: 12, color: '#64748b' }}>
+        <Text style={{ fontSize: 15, fontStyle: 'italic', color: colors.text.primary }}>{devotion.key_verse_text}</Text>
+        <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>
           {devotion.key_verse_book} {devotion.key_verse_chapter}:{keyRangeOrNum}
         </Text>
       </View>
 
       {/* Body */}
       {devotion.devotional_text ? (
-        <Text style={{ marginTop: 16, fontSize: 16, lineHeight: 24 }}>
+        <Text style={{ marginTop: 16, fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
           {devotion.devotional_text}
         </Text>
       ) : null}
@@ -219,7 +220,7 @@ export default function DevotionDetailScreen() {
       {devotion.hard_truth ? (
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#fff7ed', borderRadius: 8 }}>
           <Text style={{ fontSize: 12, color: '#9a3412', fontWeight: '700' }}>HARD TRUTH</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>{devotion.hard_truth}</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: '#9a3412' }}>{devotion.hard_truth}</Text>
         </View>
       ) : null}
 
@@ -227,7 +228,7 @@ export default function DevotionDetailScreen() {
       {devotion.today_challenge ? (
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#ecfeff', borderRadius: 8 }}>
           <Text style={{ fontSize: 12, color: '#155e75', fontWeight: '700' }}>TODAY'S CHALLENGE</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>{devotion.today_challenge}</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: '#155e75' }}>{devotion.today_challenge}</Text>
         </View>
       ) : null}
 
@@ -235,14 +236,14 @@ export default function DevotionDetailScreen() {
       {devotion.prayer_starter ? (
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#eef2ff', borderRadius: 8 }}>
           <Text style={{ fontSize: 12, color: '#3730a3', fontWeight: '700' }}>PRAYER STARTER</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>{devotion.prayer_starter}</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: '#3730a3' }}>{devotion.prayer_starter}</Text>
         </View>
       ) : null}
 
       {/* Tags */}
       {tags.length ? (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 12, color: '#6b7280', fontWeight: '700' }}>TAGS</Text>
+          <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '700' }}>TAGS</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
             {tags.map((t) => (
               <View
@@ -251,12 +252,12 @@ export default function DevotionDetailScreen() {
                   paddingHorizontal: 8,
                   paddingVertical: 2,
                   borderRadius: 9999,
-                  backgroundColor: '#f1f5f9',
+                  backgroundColor: colors.background.secondary,
                   marginRight: 6,
                   marginBottom: 6,
                 }}
               >
-                <Text style={{ fontSize: 12, color: '#334155' }}>#{t}</Text>
+                <Text style={{ fontSize: 12, color: colors.text.primary }}>#{t}</Text>
               </View>
             ))}
           </View>
@@ -266,7 +267,7 @@ export default function DevotionDetailScreen() {
       {/* Situation tags */}
       {situations.length ? (
         <View style={{ marginTop: 12 }}>
-          <Text style={{ fontSize: 12, color: '#6b7280', fontWeight: '700' }}>SITUATIONS</Text>
+          <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '700' }}>SITUATIONS</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
             {situations.map((t) => (
               <View
@@ -275,14 +276,14 @@ export default function DevotionDetailScreen() {
                   paddingHorizontal: 8,
                   paddingVertical: 2,
                   borderRadius: 9999,
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: colors.background.secondary,
                   borderWidth: 1,
-                  borderColor: '#e5e7eb',
+                  borderColor: colors.border.default,
                   marginRight: 6,
                   marginBottom: 6,
                 }}
               >
-                <Text style={{ fontSize: 12, color: '#334155' }}>{t}</Text>
+                <Text style={{ fontSize: 12, color: colors.text.primary }}>{t}</Text>
               </View>
             ))}
           </View>
@@ -293,10 +294,10 @@ export default function DevotionDetailScreen() {
       {typeof devotion.related_character_id === 'number' ? (
         <Pressable
           onPress={() => navigation.navigate('CharacterDetail', { id: devotion.related_character_id })}
-          style={{ marginTop: 16, padding: 12, backgroundColor: '#f0f9ff', borderRadius: 10 }}
+          style={{ marginTop: 16, padding: 12, backgroundColor: colors.background.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default }}
         >
-          <Text style={{ fontSize: 12, color: '#0369a1', fontWeight: '700' }}>RELATED CHARACTER</Text>
-          <Text style={{ marginTop: 6, fontSize: 15 }}>Open character profile</Text>
+          <Text style={{ fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>RELATED CHARACTER</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, color: colors.text.primary }}>Open character profile</Text>
         </Pressable>
       ) : null}
 
@@ -308,12 +309,12 @@ export default function DevotionDetailScreen() {
           style={{
             marginTop: 24,
             padding: 16,
-            backgroundColor: isCompleting ? '#9ca3af' : '#10b981',
+            backgroundColor: isCompleting ? colors.text.tertiary : colors.accent.primary,
             borderRadius: 12,
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+          <Text style={{ color: colors.text.primary, fontWeight: '700', fontSize: 16 }}>
             {isCompleting ? 'Saving...' : '✓ Mark as Complete'}
           </Text>
         </TouchableOpacity>
