@@ -70,6 +70,32 @@ export default function Auth() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Email Required', 'Please enter your email address to reset your password');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'fireside://reset-password',
+      });
+      if (error) throw error;
+
+      Alert.alert(
+        'Check Your Email',
+        `We've sent password reset instructions to ${email}. Click the link in the email to set a new password.`,
+        [{ text: 'OK' }]
+      );
+    } catch (e: any) {
+      console.warn('[AUTH] resetPassword failed:', e?.message || e);
+      Alert.alert('Reset Failed', e?.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <KeyboardAvoidingView
@@ -151,6 +177,19 @@ export default function Auth() {
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* Forgot Password - only show on sign in */}
+            {!isSignUp && (
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                disabled={loading}
+                style={{ alignItems: 'center', marginTop: 12 }}
+              >
+                <Text style={{ color: colors.accent.secondary, fontWeight: '600', fontSize: 14 }}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
               <Text style={{ color: colors.text.secondary }}>
