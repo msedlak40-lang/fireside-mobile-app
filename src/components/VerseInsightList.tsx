@@ -1,14 +1,25 @@
 import React from 'react'
-import { View, Text, FlatList, StyleSheet } from 'react-native'
-import type { VerseInsight } from '../../services/scripture'
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native'
+import type { VerseInsight } from '../services/scripture'
 
-export default function VerseInsightList({ insights }: { insights: VerseInsight[] }) {
+type Props = {
+  insights: VerseInsight[]
+  ListHeaderComponent?: React.ReactElement | null
+  ListFooterComponent?: React.ReactElement | null
+  onPressInsight?: (it: VerseInsight) => void
+}
+
+export default function VerseInsightList({ insights, ListHeaderComponent, ListFooterComponent, onPressInsight }: Props) {
   return (
     <FlatList
       data={insights}
-      keyExtractor={(it) => String(it.id)}
+      keyExtractor={(_it, index) => String(index)} // avoids duplicate "null" keys
       renderItem={({ item }) => (
-        <View style={styles.card}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => onPressInsight?.(item)}
+          style={styles.card}
+        >
           <Text style={styles.verse}>
             {item.verse_number ? `v${item.verse_number}` : 'Chapter'} • {item.insight_type}
           </Text>
@@ -17,8 +28,10 @@ export default function VerseInsightList({ insights }: { insights: VerseInsight[
           {!!item.related_verses?.length && (
             <Text style={styles.related}>Related: {item.related_verses.join(', ')}</Text>
           )}
-        </View>
+        </TouchableOpacity>
       )}
+      ListHeaderComponent={ListHeaderComponent ?? null}
+      ListFooterComponent={ListFooterComponent ?? null}
       contentContainerStyle={{ padding: 12, gap: 12 }}
     />
   )

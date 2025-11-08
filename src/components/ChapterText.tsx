@@ -1,0 +1,425 @@
+// src/components/ChapterText.tsx — COMPLETE FINAL VERSION
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import {
+  View, Text, StyleSheet, TouchableOpacity, ActionSheetIOS,
+  Modal, TextInput, Alert
+} from 'react-native'
+import { supabase } from '../lib/supabaseClient'
+import InsightModal from './InsightModal'
+
+type RawVerse = any
+type Keyword = { word: string; insight?: string; detailed_explanation?: string }
+
+type Props = {
+  bookName?: string
+  book_name?: string
+  chapter: number
+  verses: RawVerse[]
+
+  /** map from bible_verse_insights — { [verseNumber]: insight } */
+  verseInsightsByVerse?: Record<number, string>
+
+  /** list from biblical_terms — each with a display word and optional insight */
+  biblicalTerms?: Keyword[]
+
+  /** Optional chapter-wide keyword list (kept for backward compat) */
+  chapterKeyWords?: Keyword[]
+}
+
+/** Extract verse number from your shape */
+function extractVerseNumber(v: RawVerse): number | null {
+  const n = v?.number ?? v?.verse ?? v?.verse_number ?? v?.n
+  if (typeof n === 'number' && Number.isFinite(n)) return n
+  if (typeof n === 'string' && /^\d+$/.test(n)) return parseInt(n, 10)
+  if (typeof v?.id === 'string') {
+    const m = v.id.match(/:(\d+)\s*$/)
+    if (m) return parseInt(m[1], 10)
+  }
+  return null
+}
+
+/** Extract an insight string if this is a "key verse" (fallback only) */
+function extractVerseInsightFromVerse(v: RawVerse): string {
+  return v?.insight || v?.key_insight || v?.verse_insight || ''
+}
+
+/** Merge keywords: biblicalTerms (preferred) + per-verse keywords + chapterKeyWords (legacy) */
+function collectKeywordsForVerse(v: RawVerse, biblicalTerms?: Keyword[], chapterKeyWords?: Keyword[]): Keyword[] {
+  const legacyLocal = Array.isArray(v?.key_words) ? v.key_words :
+                      Array.isArray(v?.keywords)  ? v.keywords  : []
+  const legacyGlobal = Array.isArray(chapterKeyWords) ? chapterKeyWords : []
+  const preferred = Array.isArray(biblicalTerms) ? biblicalTerms : []
+
+  const merged = [...preferred, ...legacyLocal, ...legacyGlobal]
+  const seen = new Set<string>()
+  
+  const result = merged
+    .map(k => {
+      const mapped = {
+        word: String(k?.word ?? k?.term ?? '').trim(),
+        insight: String(k?.insight ?? k?.note ?? k?.simple_definition ?? '').trim(),
+        detailed_explanation: String(k?.detailed_explanation ?? '').trim()
+      }
+      return mapped
+    })
+    .filter(k => k.word && !seen.has(k.word.toLowerCase()) && (seen.add(k.word.toLowerCase()) || true))
+  
+  // Log first result for debugging
+  if (result.length > 0) {
+    console.log('[collectKeywordsForVerse] First keyword:', JSON.stringify(result[0], null, 2))
+  }
+  
+  return result
+}
+
+export default function ChapterText(props: Props) {
+  const book = useMemo(() => props.bookName ?? props.book_name ?? null, [props.bookName, props.book_name])
+  const chapter = props.chapter
+  const verses = props.verses ?? []
+  const verseInsightsByVerse = props.verseInsightsByVerse ?? {}
+  const biblicalTerms = props.biblicalTerms
+  const chapterKeyWords = props.chapterKeyWords
+
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  const [activeVerse, setActiveVerse] = useState<number | null>(null)
+
+  // READ-ONLY verse view (kept)
+  const [viewOpen, setViewOpen] = useState(false)
+  const [viewVerseNum, setViewVerseNum] = useState<number | null>(null)
+  const [viewVerseText, setViewVerseText] = useState<string>('')
+
+  // INSIGHT modal (key verse / key word)
+  const [insightOpen, setInsightOpen] = useState(false)
+  const [insightTitle, setInsightTitle] = useState('')
+  const [insightBody, setInsightBody] = useState('')
+  const [insightDetailed, setInsightDetailed] = useState('')
+
+  const [highlightMap, setHighlightMap] = useState<Map<number, string>>(new Map())
+
+  const loadHighlights = useCallback(async () => {
+    try {
+      if (!book) return
+      const { data: auth } = await supabase.auth.getUser()
+      const userId = auth?.user?.id
+      if (!userId) return
+      const { data, error } = await supabase
+        .from('user_chapter_entries')
+        .select('context_key,highlight_color')
+        .eq('user_id', userId)
+        .eq('book_name', book)
+        .eq('chapter_number', chapter)
+        .eq('context_type', 'verse')
+        .eq('entry_type', 'highlight')
+
+      if (error) { console.warn('[ChapterText] load highlights error:', error); return }
+      const map = new Map<number, string>()
+      for (const r of data ?? []) {
+        const key = String(r.context_key ?? '')
+        const m = key.match(/^v:(\d+)$/)
+        if (m) map.set(parseInt(m[1], 10), String(r.highlight_color ?? ''))
+      }
+      setHighlightMap(map)
+    } catch (e) {
+      console.warn('[ChapterText] load highlights error:', e)
+    }
+  }, [book, chapter])
+
+  useEffect(() => {
+    setHighlightMap(new Map())
+    loadHighlights()
+  }, [loadHighlights])
+
+  function openVerseActions(rawVerse: RawVerse) {
+    if (!book) {
+      console.warn('[ChapterText] Missing bookName/book_name; cannot annotate.')
+      Alert.alert('Missing book', 'Cannot add note/highlight because book is unknown.')
+      return
+    }
+    const v = extractVerseNumber(rawVerse)
+    if (!v) { Alert.alert('Unknown verse', 'Could not determine verse number.'); return }
+
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: `Verse ${v}`,
+        options: ['Add Note', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel'],
+        cancelButtonIndex: 5,
+        userInterfaceStyle: 'dark',
+      },
+      async (idx) => {
+        if (idx === 0) { setActiveVerse(v); setNoteOpen(true) }
+        else if (idx >= 1 && idx <= 4) {
+          const colors = ['yellow', 'green', 'pink', 'blue'] as const
+          await insertHighlight(v, colors[idx - 1])
+          await loadHighlights()
+        }
+      }
+    )
+  }
+
+  // Simple view modal (kept)
+  function openVerseView(rawVerse: RawVerse) {
+    const v = extractVerseNumber(rawVerse)
+    const t = rawVerse?.text ?? String(rawVerse ?? '')
+    setViewVerseNum(v)
+    setViewVerseText(t)
+    setViewOpen(true)
+  }
+
+  // Tap on verse number -> open INSIGHT if available; otherwise open view modal
+  function onPressVerseNum(rawVerse: RawVerse) {
+    const v = extractVerseNumber(rawVerse)
+    const direct = v ? verseInsightsByVerse[v] : undefined
+    const fallback = extractVerseInsightFromVerse(rawVerse)
+    const insight = direct ?? fallback
+    
+    if (insight && v) {
+      setInsightTitle(`${book ?? ''} ${chapter}:${v}`)
+      setInsightBody(String(insight))
+      setInsightDetailed('')
+      setInsightOpen(true)
+    } else {
+      openVerseView(rawVerse)
+    }
+  }
+
+  async function insertNote(v: number, markdown: string) {
+    try {
+      if (!book) throw new Error('Missing book name')
+      const { data: auth } = await supabase.auth.getUser()
+      const userId = auth?.user?.id
+      if (!userId) throw new Error('Not signed in')
+
+      const { data, error } = await supabase
+        .from('user_chapter_entries')
+        .insert({
+          user_id: userId,
+          book_name: book,
+          chapter_number: chapter,
+          context_type: 'verse',
+          context_key: `v:${v}`,
+          entry_type: 'note',
+          note_markdown: markdown,
+        })
+        .select()
+        .single()
+
+      if (error || !data) throw error || new Error('Insert failed')
+      Alert.alert('Saved', `Note added to v.${v}`)
+    } catch (err: any) {
+      console.warn('[ChapterText] insert note error:', err)
+      Alert.alert('Could not save', err?.message ?? 'Check permissions/policies.')
+    }
+  }
+
+  async function insertHighlight(v: number, color: 'yellow' | 'green' | 'pink' | 'blue') {
+    try {
+      if (!book) throw new Error('Missing book name')
+      const { data: auth } = await supabase.auth.getUser()
+      const userId = auth?.user?.id
+      if (!userId) throw new Error('Not signed in')
+
+      const { data, error } = await supabase
+        .from('user_chapter_entries')
+        .insert({
+          user_id: userId,
+          book_name: book,
+          chapter_number: chapter,
+          context_type: 'verse',
+          context_key: `v:${v}`,
+          entry_type: 'highlight',
+          highlight_color: color,
+        })
+        .select()
+        .single()
+
+      if (error || !data) throw error || new Error('Insert failed')
+    } catch (err: any) {
+      console.warn('[ChapterText] insert highlight error:', err)
+      Alert.alert('Could not save', err?.message ?? 'Check permissions/policies.')
+    }
+  }
+
+  return (
+    <View style={styles.wrap}>
+      {verses.map((raw, idx) => {
+        const vNum = extractVerseNumber(raw)
+        const highlighted = vNum ? highlightMap.has(vNum) : false
+        const keywords = collectKeywordsForVerse(raw, biblicalTerms, chapterKeyWords)
+
+        // verse-level insight (prefer table map; fallback per-verse field)
+        const insightDirect = vNum ? verseInsightsByVerse[vNum] : undefined
+        const insightFallback = extractVerseInsightFromVerse(raw)
+        const verseInsight = insightDirect ?? insightFallback
+
+        return (
+          <View
+            key={`${book ?? 'unknown'}-${chapter}-${vNum ?? idx}-${idx}`}
+            style={[styles.verseRow, highlighted && styles.verseRowHighlighted]}
+          >
+            <TouchableOpacity
+              onPress={() => onPressVerseNum(raw)}
+              onLongPress={() => openVerseActions(raw)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.verseNum, (verseInsight ? styles.keyTint : null)]}>
+                {vNum ?? ''}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{ flex: 1 }}
+              onPress={() => openVerseView(raw)}
+              onLongPress={() => openVerseActions(raw)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.verseText, highlighted && styles.verseTextHighlighted]}>
+                {renderTextWithKeywords(raw?.text ?? String(raw ?? ''), keywords, (w, ins, detailed) => {
+                  console.log('[ChapterText] Keyword tapped:', w)
+                  console.log('[ChapterText] Insight:', ins)
+                  console.log('[ChapterText] Detailed:', detailed)
+                  setInsightTitle(w)
+                  setInsightBody(ins || `Insight on ${w}`)
+                  setInsightDetailed(detailed || '')
+                  setInsightOpen(true)
+                })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )
+      })}
+
+      {/* NOTE MODAL */}
+      <Modal visible={noteOpen} transparent animationType="fade" onRequestClose={() => setNoteOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Note for v.{activeVerse ?? ''}</Text>
+            <TextInput
+              style={styles.input}
+              multiline
+              placeholder="Write your note…"
+              value={noteText}
+              onChangeText={setNoteText}
+            />
+            <View style={styles.modalRow}>
+              <TouchableOpacity
+                style={[styles.btn, styles.btnGhost]}
+                onPress={() => { setNoteOpen(false); setNoteText(''); setActiveVerse(null) }}
+              >
+                <Text style={styles.btnGhostText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.btn}
+                onPress={async () => {
+                  const text = noteText.trim()
+                  const v = typeof activeVerse === 'number' ? activeVerse : null
+                  setNoteOpen(false); setNoteText(''); setActiveVerse(null)
+                  if (v && text) await insertNote(v, text)
+                }}
+              >
+                <Text style={styles.btnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* VIEW VERSE MODAL (read-only) */}
+      <Modal visible={viewOpen} transparent animationType="fade" onRequestClose={() => setViewOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{book ?? ''} {chapter}:{viewVerseNum ?? ''}</Text>
+            <Text style={{ color: '#111827', lineHeight: 22 }}>{viewVerseText}</Text>
+            <View style={styles.modalRow}>
+              <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={() => setViewOpen(false)}>
+                <Text style={styles.btnGhostText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* INSIGHT MODAL (key verses / key words) */}
+      <InsightModal
+        visible={insightOpen}
+        onClose={() => setInsightOpen(false)}
+        title={insightTitle}
+        content={insightBody}
+        detailedExplanation={insightDetailed}
+      />
+    </View>
+  )
+}
+
+/** Turn matching keywords into blue, tappable spans */
+function renderTextWithKeywords(
+  text: string,
+  words: Keyword[],
+  onTap: (w: string, ins?: string, detailed?: string) => void
+) {
+  if (!Array.isArray(words) || words.length === 0) return text
+  const escaped = words.map(w => escapeRegex(w.word)).filter(Boolean)
+  if (escaped.length === 0) return text
+  const re = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi')
+
+  const parts: React.ReactNode[] = []
+  let lastIdx = 0
+  let m: RegExpExecArray | null
+  let i = 0
+
+  while ((m = re.exec(text)) !== null) {
+    const [match] = m
+    const start = m.index
+    const end = start + match.length
+
+    if (start > lastIdx) parts.push(<Text key={`t-${i++}`}>{text.slice(lastIdx, start)}</Text>)
+
+    const orig = match
+    const found = words.find(w => w.word.toLowerCase() === orig.toLowerCase())
+    const insight = found?.insight
+    const detailed = found?.detailed_explanation
+
+    parts.push(
+      <Text
+        key={`kw-${i++}`}
+        style={styles.keyword}
+        onPress={() => onTap(orig, insight, detailed)}
+      >
+        {orig}
+      </Text>
+    )
+
+    lastIdx = end
+  }
+
+  if (lastIdx < text.length) parts.push(<Text key={`t-${i++}`}>{text.slice(lastIdx)}</Text>)
+  return parts
+}
+
+function escapeRegex(s: string) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+const styles = StyleSheet.create({
+  wrap: { paddingHorizontal: 12, paddingBottom: 60 },
+  verseRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, borderRadius: 6, paddingRight: 6 },
+  verseRowHighlighted: { backgroundColor: '#fff7cc' },
+
+  verseNum: { width: 28, textAlign: 'right', marginRight: 8, color: '#6b7280', fontWeight: '700' },
+  keyTint: { color: '#2563eb', textDecorationLine: 'underline' },
+
+  verseText: { flex: 1, color: '#111827', lineHeight: 22 },
+  verseTextHighlighted: { fontWeight: '600' },
+
+  keyword: { color: '#2563eb', textDecorationLine: 'underline' },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  modalCard: { width: '90%', backgroundColor: '#fff', borderRadius: 12, padding: 14 },
+  modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
+  input: { minHeight: 100, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 10, textAlignVertical: 'top' },
+  modalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10, gap: 8 },
+  btn: { backgroundColor: '#111827', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  btnText: { color: '#fff', fontWeight: '700' },
+  btnGhost: { backgroundColor: '#f3f4f6' },
+  btnGhostText: { color: '#111827', fontWeight: '700' },
+})

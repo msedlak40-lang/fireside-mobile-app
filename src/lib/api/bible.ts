@@ -1,11 +1,12 @@
 // lib/api/bible.ts
-import { supabase } from '../supabase';
+import { supabase } from '../lib/supabase';
 
 export async function getChapterPage(bookId: number, chapter: number) {
   const { data, error } = await supabase.rpc('rpc_get_chapter_page', {
     p_book_id: bookId,
     p_chapter: chapter,
-  });
+  }).single();
+
   if (error) throw error;
   return data; // { book, chapter, key_verses, insights, ... }
 }
@@ -15,7 +16,8 @@ export async function getVersePage(bookId: number, chapter: number, verse: numbe
     p_book_id: bookId,
     p_chapter: chapter,
     p_verse: verse,
-  });
+  }).single();
+
   if (error) throw error;
   return data;
 }

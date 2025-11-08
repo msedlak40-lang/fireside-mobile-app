@@ -3,9 +3,27 @@
     "scheme": "fireside",
     "name": "Fireside",
     "slug": "fireside-mobile",
+ "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Fireside needs access to your photos to upload journal entries.",
+          "cameraPermission": "Fireside needs camera access to capture journal entries."
+        }
+      ]
+    ],
     "extra": {
       "supabaseUrl": "https://ryzgtpexapmwugbdspjm.supabase.co",
-      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5emd0cGV4YXBtd3VnYmRzcGptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNTU3NDgsImV4cCI6MjA3MDkzMTc0OH0.qmTlUMEhupcVd9LlHKzVuNh7cj3s5T0fhzwYOiv6Omk"
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5emd0cGV4YXBtd3VnYmRzcGptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNTU3NDgsImV4cCI6MjA3MDkzMTc0OH0.qmTlUMEhupcVd9LlHKzVuNh7cj3s5T0fhzwYOiv6Omk",
+      "eas": {
+        "projectId": "1798fa36-7c32-4e97-8188-6151c5a4d464"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.msedlak40.firesidemobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }

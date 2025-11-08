@@ -1,0 +1,245 @@
+// src/components/MarkdownRenderer.tsx
+import React from 'react'
+import { View, Text, StyleSheet, Linking, Platform } from 'react-native'
+
+type Props = {
+  /** Preferred prop */
+  content?: string | null
+  /** Legacy prop (kept for back-compat) */
+  markdown?: string | null
+}
+
+export default function MarkdownRenderer({ content, markdown }: Props) {
+  const raw = typeof content === 'string' ? content : markdown
+  const safe = typeof raw === 'string' ? raw : ''
+  if (!safe.trim()) return null
+
+  const lines = safe.replace(/\r\n/g, '\n').split('\n')
+
+  const elements: React.ReactNode[] = []
+  let inCode = false
+  let codeBuf: string[] = []
+  let listBuf: string[] = []
+  let inList = false
+  let listType: 'ul' | 'ol' = 'ul'
+  let idx = 0
+
+  const flushParagraph = (para: string) => {
+    const children = renderInline(para)
+    elements.push(
+      <Text key={`p-${idx++}`} style={styles.paragraph}>
+        {children}
+      </Text>
+    )
+  }
+
+  const flushCode = () => {
+    const code = codeBuf.join('\n')
+    elements.push(
+      <View key={`code-${idx++}`} style={styles.codeBlock}>
+        <Text style={styles.codeText}>{code}</Text>
+      </View>
+    )
+    codeBuf = []
+  }
+
+  const flushList = () => {
+    if (listBuf.length === 0) return
+    const items = listBuf.map((item, i) => {
+      const t = item.replace(/^\s*([-*+]|\d+\.)\s+/, '')
+      return (
+        <View key={`li-${idx++}-${i}`} style={styles.listItem}>
+          <Text style={styles.bullet}>{listType === 'ul' ? '•' : `${i + 1}.`}</Text>
+          <Text style={styles.listText}>{renderInline(t)}</Text>
+        </View>
+      )
+    })
+    elements.push(<View key={`list-${idx++}`} style={styles.listWrap}>{items}</View>)
+    listBuf = []
+    inList = false
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // Fences
+    if (/^\s*```/.test(line)) {
+      if (!inCode) {
+        // starting code
+        inCode = true
+        codeBuf = []
+      } else {
+        // closing code
+        inCode = false
+        flushCode()
+      }
+      continue
+    }
+    if (inCode) {
+      codeBuf.push(line)
+      continue
+    }
+
+    // horizontal rule
+    if (/^\s*(---|\*\*\*)\s*$/.test(line)) {
+      flushList()
+      elements.push(<View key={`hr-${idx++}`} style={styles.horizontalRule} />)
+      continue
+    }
+
+    // Headings
+    if (/^#####\s+/.test(line)) {
+      flushList()
+      elements.push(<Text key={`h5-${idx++}`} style={styles.h5}>{renderInline(line.replace(/^#####\s+/, ''))}</Text>)
+      continue
+    }
+    if (/^####\s+/.test(line)) {
+      flushList()
+      elements.push(<Text key={`h4-${idx++}`} style={styles.h4}>{renderInline(line.replace(/^####\s+/, ''))}</Text>)
+      continue
+    }
+    if (/^###\s+/.test(line)) {
+      flushList()
+      elements.push(<Text key={`h3-${idx++}`} style={styles.h3}>{renderInline(line.replace(/^###\s+/, ''))}</Text>)
+      continue
+    }
+    if (/^##\s+/.test(line)) {
+      flushList()
+      elements.push(<Text key={`h2-${idx++}`} style={styles.h2}>{renderInline(line.replace(/^##\s+/, ''))}</Text>)
+      continue
+    }
+    if (/^#\s+/.test(line)) {
+      flushList()
+      elements.push(<Text key={`h1-${idx++}`} style={styles.h1}>{renderInline(line.replace(/^#\s+/, ''))}</Text>)
+      continue
+    }
+
+    // Blockquote
+    if (/^\s*>\s?/.test(line)) {
+      flushList()
+      const text = line.replace(/^\s*>\s?/, '')
+      elements.push(
+        <View key={`quote-${idx++}`} style={styles.quote}>
+          <Text style={styles.quoteText}>{renderInline(text)}</Text>
+        </View>
+      )
+      continue
+    }
+
+    // List item
+    if (/^\s*([-*+])\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
+      if (!inList) {
+        inList = true
+        listType = /^\s*\d+\.\s+/.test(line) ? 'ol' : 'ul'
+        listBuf = []
+      }
+      listBuf.push(line)
+      continue
+    } else if (inList && line.trim() === '') {
+      flushList()
+      continue
+    } else if (inList) {
+      // continuation of list item
+      const last = listBuf.pop() || ''
+      listBuf.push(`${last} ${line.trim()}`)
+      continue
+    }
+
+    // empty line -> new paragraph
+    if (line.trim() === '') {
+      continue
+    }
+
+    // default paragraph
+    flushParagraph(line)
+  }
+
+  // flush tail
+  if (inCode) flushCode()
+  if (inList) flushList()
+
+  return <View style={styles.root}>{elements}</View>
+}
+
+// --- Inline renderer -------------------------------------------------------
+
+function renderInline(text: string): React.ReactNode {
+  const nodes: React.ReactNode[] = []
+  let i = 0
+  const push = (t: string) => {
+    if (!t) return
+    nodes.push(<Text key={`t-${i++}`}>{t}</Text>)
+  }
+
+  // links: [text](url)
+  text = text.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => {
+    nodes.push(
+      <Text key={`a-${i++}`} style={styles.link} onPress={() => Linking.openURL(url)}>
+        {label}
+      </Text>
+    )
+    return ''
+  })
+
+  // strong **bold**
+  text = text.replace(/\*\*(.+?)\*\*/g, (_m, bold) => {
+    nodes.push(<Text key={`b-${i++}`} style={styles.bold}>{bold}</Text>)
+    return ''
+  })
+
+  // emphasis *italic*
+  text = text.replace(/\*(.+?)\*/g, (_m, em) => {
+    nodes.push(<Text key={`i-${i++}`} style={styles.italic}>{em}</Text>)
+    return ''
+  })
+
+  // inline code `code`
+  text = text.replace(/`([^`]+)`/g, (_m, code) => {
+    nodes.push(<Text key={`c-${i++}`} style={styles.inlineCode}>{code}</Text>)
+    return ''
+  })
+
+  // whatever remains as normal text
+  push(text)
+  return nodes
+}
+
+// --- Styles ----------------------------------------------------------------
+
+const styles = StyleSheet.create({
+  root: { gap: 4 },
+  h1: { fontSize: 21, fontWeight: '800', marginTop: 20, marginBottom: 10, color: '#111827' },
+  h2: { fontSize: 19, fontWeight: '800', marginTop: 16, marginBottom: 8, color: '#111827' },
+  h3: { fontSize: 16, fontWeight: '700', marginTop: 12, marginBottom: 6, color: '#1f2937' },
+  h4: { fontSize: 15, fontWeight: '700', marginTop: 10, marginBottom: 6, color: '#1f2937' },
+  h5: { fontSize: 14, fontWeight: '700', marginTop: 8, marginBottom: 4, color: '#1f2937' },
+
+  paragraph: { fontSize: 15, lineHeight: 23, color: '#374151' },
+  quote: { borderLeftWidth: 3, borderLeftColor: '#d1d5db', paddingLeft: 10, marginVertical: 6 },
+  quoteText: { fontStyle: 'italic', color: '#4b5563' },
+
+  listWrap: { marginVertical: 4 },
+  listItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  bullet: { width: 18, textAlign: 'left', fontSize: 14, lineHeight: 22, color: '#374151' },
+  listText: { flex: 1, fontSize: 15, lineHeight: 23, color: '#374151' },
+
+  horizontalRule: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 8 },
+
+  bold: { fontWeight: '800' },
+  italic: { fontStyle: 'italic' },
+  link: { textDecorationLine: 'underline' },
+
+  codeBlock: {
+    backgroundColor: '#0b1021',
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 6,
+  },
+  codeText: { color: '#e5e7eb', fontFamily: Platform?.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 13 },
+  inlineCode: {
+    fontFamily: Platform?.OS === 'ios' ? 'Menlo' : 'monospace',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 4,
+    borderRadius: 4,
+  },
+})
