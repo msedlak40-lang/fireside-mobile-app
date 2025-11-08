@@ -1,6 +1,6 @@
 // src/navigation/AppNavigator.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { Linking, ActivityIndicator, View, Text, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, Platform } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -328,15 +328,7 @@ const linking = {
   }
 };
 
-// ---- Auth helpers ----
-function getHashTokens(url: string) {
-  const i = url.indexOf('#');
-  if (i === -1) return null;
-  const qs = new URLSearchParams(url.slice(i + 1));
-  const access_token = qs.get('access_token') || undefined;
-  const refresh_token = qs.get('refresh_token') || undefined;
-  return access_token && refresh_token ? { access_token, refresh_token } : null;
-}
+// ---- Auth helpers removed (no longer using magic links) ----
 
 // ---- Root Navigator ----
 export default function AppNavigator() {
@@ -351,24 +343,8 @@ export default function AppNavigator() {
   }, []);
 
   useEffect(() => {
-    const handleUrl = async (url: string | null) => {
-      if (!url) return;
-      try {
-        const tokens = getHashTokens(url);
-        if (tokens) {
-          const { data } = await supabase.auth.setSession(tokens);
-          if (data.session) { setIsAuthed(true); return; }
-        }
-        await supabase.auth.exchangeCodeForSession(url);
-      } catch (err) {
-        console.warn('[Linking] exchange failed', err);
-      }
-    };
-
     (async () => {
       try {
-        const url = await ExpoLinking.getInitialURL();
-        await handleUrl(url);
         const { data } = await supabase.auth.getSession();
         setIsAuthed(!!data.session);
       } catch (err) {
@@ -377,9 +353,6 @@ export default function AppNavigator() {
         setReady(true);
       }
     })();
-
-    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
-    return () => sub.remove();
   }, []);
 
   const theme = useMemo(

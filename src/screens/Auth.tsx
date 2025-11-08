@@ -1,69 +1,172 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import * as Linking from 'expo-linking';
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
-// ⬇️ NEW: read app.json fallback directly so we can show it
-import appConfig from '../../app.json';
+import { colors } from '../theme/colors';
 
 export default function Auth() {
-  const [email, setEmail] = useState(''); 
-  const [sending, setSending] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const sendMagicLink = async () => {
+  const signInWithEmail = async () => {
+    if (!email || !password) {
+      Alert.alert('Required', 'Please enter both email and password');
+      return;
+    }
+
     try {
-      setSending(true);
-      const redirect = Linking.createURL('auth/callback', { scheme: 'fireside' });
-      console.log('[AUTH] redirect =>', redirect);
-      const { error } = await supabase.auth.signInWithOtp({
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        options: { emailRedirectTo: redirect, shouldCreateUser: true }
+        password,
       });
       if (error) throw error;
-      Alert.alert('Check your email', 'Tap the link to sign in.');
+      // Navigation will happen automatically via onAuthStateChange in AppNavigator
     } catch (e: any) {
-      console.warn('[AUTH] signInWithOtp failed:', e?.message || e);
-      const extra = (appConfig as any)?.expo?.extra || {};
-      Alert.alert(
-        'Sign-in failed',
-        `Message: ${e?.message || e}\n\nSupabase URL present: ${!!extra.supabaseUrl}\nAnon key present: ${!!extra.supabaseAnonKey}`
-      );
-    } finally { setSending(false); }
+      console.warn('[AUTH] signInWithPassword failed:', e?.message || e);
+      Alert.alert('Sign in failed', e?.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ⬇️ NEW: quick debug button to verify config values
-  const debugConfig = () => {
-    const extra = (appConfig as any)?.expo?.extra || {};
-    Alert.alert(
-      'Runtime config',
-      `supabaseUrl: ${extra.supabaseUrl || 'MISSING'}\n\nanonKey length: ${extra.supabaseAnonKey ? String(extra.supabaseAnonKey).length : 'MISSING'}`
-    );
+  const signUpWithEmail = async () => {
+    if (!email || !password) {
+      Alert.alert('Required', 'Please enter both email and password');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Password too short', 'Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) throw error;
+      Alert.alert(
+        'Account created!',
+        'Please check your email to confirm your account, then sign in.',
+        [{ text: 'OK', onPress: () => setIsSignUp(false) }]
+      );
+    } catch (e: any) {
+      console.warn('[AUTH] signUp failed:', e?.message || e);
+      Alert.alert('Sign up failed', e?.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (isSignUp) {
+      signUpWithEmail();
+    } else {
+      signInWithEmail();
+    }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-        <View style={{ gap: 12 }}>
-          <Text style={{ fontSize: 24, fontWeight: '700' }}>Sign in</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="you@example.com"
-            placeholderTextColor="#9ca3af"
-            style={{ height: 48, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12 }}
-          />
-          <TouchableOpacity onPress={sendMagicLink} disabled={sending || !email}
-            style={{ height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
-              backgroundColor: sending || !email ? '#9ca3af' : '#111827' }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{sending ? 'Sending…' : 'Send magic link'}</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, padding: 24, justifyContent: 'center' }}
+      >
+        <View style={{ gap: 16 }}>
+          <View style={{ gap: 8, marginBottom: 8 }}>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text.primary }}>
+              {isSignUp ? 'Create Account' : 'Welcome Back'}
+            </Text>
+            <Text style={{ fontSize: 16, color: colors.text.secondary }}>
+              {isSignUp ? 'Sign up to get started' : 'Sign in to continue'}
+            </Text>
+          </View>
 
-          {/* ⬇️ NEW debug button */}
-          <TouchableOpacity onPress={debugConfig}
-            style={{ height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e5e7eb' }}>
-            <Text style={{ color: '#111827', fontWeight: '600' }}>Debug config</Text>
-          </TouchableOpacity>
+          <View style={{ gap: 12 }}>
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.secondary }}>Email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="you@example.com"
+                placeholderTextColor={colors.text.muted}
+                style={{
+                  height: 48,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border.default,
+                  paddingHorizontal: 12,
+                  backgroundColor: colors.background.secondary,
+                  color: colors.text.primary,
+                }}
+                editable={!loading}
+              />
+            </View>
+
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.secondary }}>Password</Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
+                secureTextEntry
+                placeholder={isSignUp ? 'At least 6 characters' : 'Enter your password'}
+                placeholderTextColor={colors.text.muted}
+                style={{
+                  height: 48,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border.default,
+                  paddingHorizontal: 12,
+                  backgroundColor: colors.background.secondary,
+                  color: colors.text.primary,
+                }}
+                editable={!loading}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={loading || !email || !password}
+              style={{
+                height: 48,
+                borderRadius: 8,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: (loading || !email || !password) ? colors.border.default : colors.accent.primary,
+                marginTop: 8,
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.text.primary} />
+              ) : (
+                <Text style={{ color: colors.text.primary, fontWeight: '700', fontSize: 16 }}>
+                  {isSignUp ? 'Sign Up' : 'Sign In'}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
+              <Text style={{ color: colors.text.secondary }}>
+                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsSignUp(!isSignUp)}
+                disabled={loading}
+                style={{ marginLeft: 4 }}
+              >
+                <Text style={{ color: colors.accent.primary, fontWeight: '700' }}>
+                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
