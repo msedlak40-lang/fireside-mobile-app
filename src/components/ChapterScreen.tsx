@@ -158,8 +158,8 @@ export default function ChapterScreen() {
 
   // One Pager data preparation - extract only specific sections
   const onePagerData = useMemo(() => {
-    // Extract ONLY the summary section from advanced
-    const summaryText = extractSection(advancedSummaryString, 'Summary') || advancedSummaryString
+    // Extract ONLY the summary section from advanced (no fallback to entire advanced)
+    const summaryText = extractSection(advancedSummaryString, 'Summary')
 
     // Extract theological themes from basic
     const theologicalThemes = extractTheologicalThemes(basic?.summary_content || null)
@@ -194,7 +194,7 @@ export default function ChapterScreen() {
   }, [advancedSummaryString, extractSection])
 
   const hebrewWordsData = useMemo(() => {
-    const hebrewText = extractSection(advancedSummaryString, '(Hebrew|Key) Words?( Studies)?')
+    const hebrewText = extractSection(advancedSummaryString, 'Key Hebrew Words and Insights')
     return hebrewText
   }, [advancedSummaryString, extractSection])
 

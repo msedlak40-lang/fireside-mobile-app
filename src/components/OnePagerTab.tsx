@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ExpandableSection from './ExpandableSection';
-import MarkdownRenderer from './MarkdownRenderer';
 import { colors } from '../theme/colors';
 
 type Props = {
@@ -21,12 +20,24 @@ export default function OnePagerTab({
   bookName,
   chapter,
 }: Props) {
-  // Normalize practical applications to array
-  const apps = Array.isArray(practicalApplications)
-    ? practicalApplications
-    : typeof practicalApplications === 'string'
-    ? [practicalApplications]
-    : [];
+  // Normalize practical applications to markdown string
+  let practicalAppsMarkdown: string | null = null;
+  if (Array.isArray(practicalApplications)) {
+    practicalAppsMarkdown = practicalApplications.map(app => `- ${app}`).join('\n');
+  } else if (typeof practicalApplications === 'string') {
+    practicalAppsMarkdown = practicalApplications;
+  }
+
+  // Convert key verses to markdown for annotation support
+  const keyVersesMarkdown = keyVerses.length > 0
+    ? keyVerses.map(kv => {
+        let md = `**${bookName} ${chapter}:${kv.verse_number}**\n\n"${kv.text}"`;
+        if (kv.insight) {
+          md += `\n\n*Context:*\n${kv.insight}`;
+        }
+        return md;
+      }).join('\n\n---\n\n')
+    : null;
 
   return (
     <View style={styles.container}>
@@ -36,6 +47,8 @@ export default function OnePagerTab({
           title="Summary"
           initiallyExpanded={true}
           markdown={summary}
+          studyTier="onepager"
+          sectionKey="summary"
         />
       )}
 
@@ -45,52 +58,34 @@ export default function OnePagerTab({
           title="Theological Themes"
           initiallyExpanded={false}
           markdown={theologicalThemes}
+          studyTier="onepager"
+          sectionKey="theological-themes"
         />
       )}
 
       {/* Key Verses with Context */}
-      {keyVerses.length > 0 && (
+      {keyVersesMarkdown && (
         <ExpandableSection
           title="Key Verses with Context"
           initiallyExpanded={false}
-        >
-          <View style={{ gap: 12 }}>
-            {keyVerses.map((kv, idx) => (
-              <View key={idx} style={styles.keyVerseCard}>
-                <Text style={styles.keyVerseRef}>
-                  {bookName} {chapter}:{kv.verse_number}
-                </Text>
-                <Text style={styles.keyVerseText}>"{kv.text}"</Text>
-                {kv.insight && (
-                  <View style={styles.insightBox}>
-                    <Text style={styles.insightLabel}>Context</Text>
-                    <MarkdownRenderer content={kv.insight} />
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-        </ExpandableSection>
+          markdown={keyVersesMarkdown}
+          studyTier="onepager"
+          sectionKey="key-verses"
+        />
       )}
 
       {/* Practical Applications */}
-      {apps.length > 0 && (
+      {practicalAppsMarkdown && (
         <ExpandableSection
           title="Practical Applications"
           initiallyExpanded={false}
-        >
-          <View style={{ gap: 8 }}>
-            {apps.map((app, idx) => (
-              <View key={idx} style={styles.applicationItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.applicationText}>{app}</Text>
-              </View>
-            ))}
-          </View>
-        </ExpandableSection>
+          markdown={practicalAppsMarkdown}
+          studyTier="onepager"
+          sectionKey="practical-applications"
+        />
       )}
 
-      {!summary && !theologicalThemes && keyVerses.length === 0 && apps.length === 0 && (
+      {!summary && !theologicalThemes && !keyVersesMarkdown && !practicalAppsMarkdown && (
         <Text style={styles.muted}>No summary content available for this chapter.</Text>
       )}
     </View>
@@ -100,53 +95,4 @@ export default function OnePagerTab({
 const styles = StyleSheet.create({
   container: { padding: 12, gap: 8 },
   muted: { color: colors.text.muted, textAlign: 'center', marginTop: 20 },
-
-  keyVerseCard: {
-    backgroundColor: colors.background.tertiary,
-    borderRadius: 10,
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accent.primary,
-  },
-  keyVerseRef: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.accent.primary,
-    marginBottom: 4,
-  },
-  keyVerseText: {
-    fontSize: 15,
-    color: colors.text.primary,
-    fontStyle: 'italic',
-    marginBottom: 8,
-  },
-  insightBox: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 4,
-  },
-  insightLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.accent.tertiary,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-
-  applicationItem: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  bullet: {
-    fontSize: 16,
-    color: colors.accent.primary,
-    fontWeight: '700',
-  },
-  applicationText: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.text.primary,
-    lineHeight: 22,
-  },
 });

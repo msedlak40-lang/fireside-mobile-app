@@ -1,6 +1,7 @@
 // src/components/MarkdownRenderer.tsx
 import React from 'react'
 import { View, Text, StyleSheet, Linking, Platform } from 'react-native'
+import { colors } from '../theme/colors'
 
 type Props = {
   /** Preferred prop */
@@ -208,38 +209,39 @@ function renderInline(text: string): React.ReactNode {
 
 const styles = StyleSheet.create({
   root: { gap: 4 },
-  h1: { fontSize: 21, fontWeight: '800', marginTop: 20, marginBottom: 10, color: '#111827' },
-  h2: { fontSize: 19, fontWeight: '800', marginTop: 16, marginBottom: 8, color: '#111827' },
-  h3: { fontSize: 16, fontWeight: '700', marginTop: 12, marginBottom: 6, color: '#1f2937' },
-  h4: { fontSize: 15, fontWeight: '700', marginTop: 10, marginBottom: 6, color: '#1f2937' },
-  h5: { fontSize: 14, fontWeight: '700', marginTop: 8, marginBottom: 4, color: '#1f2937' },
+  h1: { fontSize: 21, fontWeight: '800', marginTop: 20, marginBottom: 10, color: colors.text.primary },
+  h2: { fontSize: 19, fontWeight: '800', marginTop: 16, marginBottom: 8, color: colors.text.primary },
+  h3: { fontSize: 16, fontWeight: '700', marginTop: 12, marginBottom: 6, color: colors.text.primary },
+  h4: { fontSize: 15, fontWeight: '700', marginTop: 10, marginBottom: 6, color: colors.text.primary },
+  h5: { fontSize: 14, fontWeight: '700', marginTop: 8, marginBottom: 4, color: colors.text.primary },
 
-  paragraph: { fontSize: 15, lineHeight: 23, color: '#374151' },
-  quote: { borderLeftWidth: 3, borderLeftColor: '#d1d5db', paddingLeft: 10, marginVertical: 6 },
-  quoteText: { fontStyle: 'italic', color: '#4b5563' },
+  paragraph: { fontSize: 15, lineHeight: 23, color: colors.text.secondary },
+  quote: { borderLeftWidth: 3, borderLeftColor: colors.border.default, paddingLeft: 10, marginVertical: 6 },
+  quoteText: { fontStyle: 'italic', color: colors.text.secondary },
 
   listWrap: { marginVertical: 4 },
   listItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
-  bullet: { width: 18, textAlign: 'left', fontSize: 14, lineHeight: 22, color: '#374151' },
-  listText: { flex: 1, fontSize: 15, lineHeight: 23, color: '#374151' },
+  bullet: { width: 18, textAlign: 'left', fontSize: 14, lineHeight: 22, color: colors.text.secondary },
+  listText: { flex: 1, fontSize: 15, lineHeight: 23, color: colors.text.secondary },
 
-  horizontalRule: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 8 },
+  horizontalRule: { height: 1, backgroundColor: colors.border.default, marginVertical: 8 },
 
-  bold: { fontWeight: '800' },
-  italic: { fontStyle: 'italic' },
-  link: { textDecorationLine: 'underline' },
+  bold: { fontWeight: '800', color: colors.text.primary },
+  italic: { fontStyle: 'italic', color: colors.text.primary },
+  link: { textDecorationLine: 'underline', color: colors.accent.primary },
 
   codeBlock: {
-    backgroundColor: '#0b1021',
+    backgroundColor: colors.background.tertiary,
     borderRadius: 10,
     padding: 10,
     marginVertical: 6,
   },
-  codeText: { color: '#e5e7eb', fontFamily: Platform?.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 13 },
+  codeText: { color: colors.text.primary, fontFamily: Platform?.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 13 },
   inlineCode: {
     fontFamily: Platform?.OS === 'ios' ? 'Menlo' : 'monospace',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.background.tertiary,
     paddingHorizontal: 4,
     borderRadius: 4,
+    color: colors.text.primary,
   },
 })
