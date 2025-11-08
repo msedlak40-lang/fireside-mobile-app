@@ -37,6 +37,16 @@ const parseContextKey = (ck?: string | null) => {
     const n = parseInt(s.slice(2), 10)
     return { type: 'verse' as const, label: `v.${isFinite(n) ? n : '?'}`, verse: isFinite(n) ? n : null }
   }
+  if (s.startsWith('p:')) {
+    // Format: p:tier:section:index (e.g., p:onepager:summary:0)
+    const m = s.match(/^p:([^:]+):([^:]+):(\d+)$/)
+    if (m) {
+      const [, tier, section, index] = m
+      const sectionLabel = section.replace(/-/g, ' ')
+      return { type: 'paragraph' as const, label: `${sectionLabel} • p.${index}`, tier, section, paraIndex: parseInt(index, 10) }
+    }
+    return { type: 'paragraph' as const, label: s.slice(2) || 'paragraph' }
+  }
   if (s.startsWith('s:')) {
     const m = s.match(/^s:([^:]+)(?::p(\d+))?$/)
     if (m) {
@@ -49,6 +59,16 @@ const parseContextKey = (ck?: string | null) => {
 }
 
 const contextDisplay = (ck?: string | null) => parseContextKey(ck).label
+
+// Helper to extract a section from markdown
+const extractSection = (markdown: string | null, sectionName: string): string | null => {
+  if (!markdown) return null
+  const content = String(markdown)
+  const escapedName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`##\\s*${escapedName}([\\s\\S]*?)(?=\\n\\n---\\n\\n|\\n##\\s|$)`, 'i')
+  const match = content.match(regex)
+  return match && match[1] ? match[1].trim() : null
+}
 
 export default function BookChapterPicker({ books, initialBookName, initialChapter, onGo, onSelectionChange }: Props) {
   const [bookPickerOpen, setBookPickerOpen] = useState(false)
@@ -259,6 +279,55 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
           : '(Highlighted section)'
         setEntryModalBody(content)
       }
+      setEntryModalLoading(false)
+      return
+    }
+
+    if (ctx.type === 'paragraph' && 'tier' in ctx && ctx.tier === 'onepager') {
+      // Handle One Pager highlights
+      const sectionName = ctx.section || ''
+      let content = '(Highlighted section)'
+
+      if (sectionName === 'summary') {
+        // Fetch from advanced summary - Original Summary section
+        const { data: summaryData } = await supabase
+          .from('bible_chapter_summaries_strongs')
+          .select('summary_advanced')
+          .eq('book_name', item.book_name)
+          .eq('chapter_number', item.chapter_number ?? chapter)
+          .maybeSingle()
+
+        if (typeof summaryData?.summary_advanced === 'string') {
+          content = extractSection(summaryData.summary_advanced, 'Original Summary') || '(Section not found)'
+        }
+      } else if (sectionName === 'theological-themes' || sectionName === 'key-verses') {
+        // Fetch from basic summary
+        const { data: summaryData } = await supabase
+          .from('bible_chapter_summaries')
+          .select('summary_content')
+          .eq('book_id', selectedBook?.id)
+          .eq('chapter_number', item.chapter_number ?? chapter)
+          .maybeSingle()
+
+        if (summaryData?.summary_content) {
+          const sectionTitle = sectionName === 'theological-themes' ? 'Theological Themes' : 'Key Verses'
+          content = extractSection(summaryData.summary_content, sectionTitle) || '(Section not found)'
+        }
+      } else if (sectionName === 'practical-applications') {
+        // Fetch from advanced summary - Practical Applications section
+        const { data: summaryData } = await supabase
+          .from('bible_chapter_summaries_strongs')
+          .select('summary_advanced')
+          .eq('book_name', item.book_name)
+          .eq('chapter_number', item.chapter_number ?? chapter)
+          .maybeSingle()
+
+        if (typeof summaryData?.summary_advanced === 'string') {
+          content = extractSection(summaryData.summary_advanced, 'Practical Applications') || '(Section not found)'
+        }
+      }
+
+      setEntryModalBody(content)
       setEntryModalLoading(false)
       return
     }
