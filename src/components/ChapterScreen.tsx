@@ -1,4 +1,4 @@
-// src/components/ChapterScreen.tsx — FIXED VERSION
+// src/components/ChapterScreen.tsx — UPDATED WITH NEW TABS
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, RefreshControl } from 'react-native'
 import { useRoute } from '@react-navigation/native'
@@ -8,19 +8,19 @@ import {
   fetchAdvancedChapterSummary,
   fetchChapterPage,
   fetchTermsInChapter,
+  fetchChapterKeyVerses,
 } from '../services/scripture'
 import ChapterText from './ChapterText'
-import ExpandableSection from './ExpandableSection'
+import OnePagerTab from './OnePagerTab'
+import CrossReferencesTab from './CrossReferencesTab'
+import DiscussionQuestionsTab from './DiscussionQuestionsTab'
+import KeyHebrewWordsTab from './KeyHebrewWordsTab'
 import { supabase } from '../lib/supabaseClient'
 import { colors } from '../theme/colors'
 
 type RouteParams = { bookId: number; chapter: number; bookName?: string; translation?: string }
-
 type Verse = { number: number; text: string }
-
-type Section = { title: string; body: string }
-
-type OutlineNode = { title: string; body?: string; children?: Section[] }
+type TabType = 'read' | 'onepager' | 'crossrefs' | 'discussion' | 'hebrew'
 
 export default function ChapterScreen() {
   const route = useRoute<any>() as { params?: Partial<RouteParams> }
@@ -34,12 +34,12 @@ export default function ChapterScreen() {
   const [bookNameResolved, setBookNameResolved] = useState<string | null>(paramBookName ?? null)
   const [translation] = useState<string | null>(paramTranslation ?? null)
 
-  const [tab, setTab] = useState<'read' | 'summary'>('read')
-  const [studyTier, setStudyTier] = useState<'basic' | 'advanced'>('basic')
+  const [tab, setTab] = useState<TabType>('read')
 
   const [verses, setVerses] = useState<Verse[]>([])
-  const [basic, setBasic] = useState<{ summary_title?: string; summary_content?: string; book_name?: string } | null>(null)
+  const [basic, setBasic] = useState<{ summary_title?: string; summary_content?: string } | null>(null)
   const [advRaw, setAdvRaw] = useState<any>(null)
+  const [keyVerses, setKeyVerses] = useState<Array<{ verse_number: number; text: string }>>([])
 
   const [verseInsightsByVerse, setVerseInsightsByVerse] = useState<Record<number, string>>({})
   const [biblicalTerms, setBiblicalTerms] = useState<Array<{ word: string; insight?: string; related_verses?: string[] }>>([])
@@ -56,72 +56,17 @@ export default function ChapterScreen() {
     setRefreshing(false)
   }, [])
 
-  // Split helpers ------------------------------------------------------------
-  const splitOnH2 = useCallback((md: string): Section[] => {
-    const src = String(md ?? '').trim()
-    if (!src) return []
-    const parts = src.split(/\n(?=##\s)/g).map(p => p.trim()).filter(Boolean)
-    if (parts.length <= 1 && !/^##\s/.test(parts[0] || '')) {
-      return [{ title: 'Summary', body: src }]
+  // Extract theological themes from basic summary_content
+  const extractTheologicalThemes = useCallback((summaryContent: string | null): string | null => {
+    if (!summaryContent) return null
+    const content = String(summaryContent)
+
+    // Look for "Theological Themes" section (could be ## or ###)
+    const match = content.match(/###?\s*Theological Themes([\s\S]*?)(?=\n###?\s|\n##\s|$)/i)
+    if (match && match[1]) {
+      return match[1].trim()
     }
-    const out: Section[] = []
-    for (const block of parts) {
-      const [first, ...rest] = block.split('\n')
-      const title = first.replace(/^##\s+/, '').trim() || 'Section'
-      const body = rest.join('\n').trim()
-      if (body) out.push({ title, body })
-    }
-    return out
-  }, [])
-
-  const normalizeAdvanced = useCallback((raw: any) => {
-    const s = raw?.summary_advanced
-    // Don't expect a title from advanced summaries
-    const title = undefined
-    const out: Section[] = []
-
-    if (typeof s === 'string') {
-      out.push(...splitOnH2(s))
-    } else if (Array.isArray(s)) {
-      for (const it of s) {
-        const h = it?.title || it?.section || 'Section'
-        const body = (it?.content || it?.body || '').trim()
-        if (body) out.push({ title: String(h), body })
-      }
-    } else if (s && typeof s === 'object') {
-      for (const [k, v] of Object.entries(s)) {
-        const body = String(v ?? '').trim()
-        if (body) out.push({ title: String(k), body })
-      }
-    } else if (raw?.summary_content) {
-      out.push(...splitOnH2(String(raw.summary_content)))
-    }
-
-    return { title, sections: out }
-  }, [splitOnH2])
-
-  const normalizeBasic = useCallback((raw: any) => {
-    const title = typeof raw?.summary_title === 'string' ? raw.summary_title : undefined
-    const body = String(raw?.summary_content ?? '').trim()
-    const sections = body ? splitOnH2(body) : []
-    return { title, sections }
-  }, [splitOnH2])
-
-  const splitOnH3 = useCallback((md: string): Section[] | null => {
-    if (!md || !md.includes('###')) return null
-    const parts = String(md).split(/\n(?=###\s)/g).map(p => p.trim()).filter(Boolean)
-    const result: Section[] = []
-    for (const part of parts) {
-      const [first, ...rest] = part.split('\n')
-      if (!/^###\s/.test(first)) {
-        result.push({ title: first || 'Section', body: rest.join('\n').trim() })
-        continue
-      }
-      const title = first.replace(/^###\s+/, '').trim() || 'Section'
-      const body = rest.join('\n').trim()
-      if (body) result.push({ title, body })
-    }
-    return result
+    return null
   }, [])
 
   // Data load ---------------------------------------------------------------
@@ -131,12 +76,13 @@ export default function ChapterScreen() {
     setError(null)
 
     try {
-      const [textRes, basicRes, advRes, pageRes, termsRes] = await Promise.all([
+      const [textRes, basicRes, advRes, pageRes, termsRes, keyVersesRes] = await Promise.all([
         fetchChapterText(bookId, chapter, translation ?? undefined),
         fetchChapterSummary(bookId, chapter),
         fetchAdvancedChapterSummary(bookId, chapter),
         fetchChapterPage(bookId, chapter),
         fetchTermsInChapter(bookId, chapter),
+        fetchChapterKeyVerses(bookId, chapter),
       ])
 
       // normalize verses
@@ -151,6 +97,7 @@ export default function ChapterScreen() {
 
       setBasic(basicRes ?? null)
       setAdvRaw(advRes ?? null)
+      setKeyVerses(Array.isArray(keyVersesRes) ? keyVersesRes : [])
 
       const nameFromText = (rawVerses?.book_name || rawVerses?.book || rawVerses?.name) ?? null
       if (!bookNameResolved && nameFromText) setBookNameResolved(String(nameFromText))
@@ -171,11 +118,7 @@ export default function ChapterScreen() {
         insight: t.simple_definition || '',
         detailed_explanation: t.detailed_explanation || '',
       })).filter((t: any) => t.word.length > 0)
-      
-      console.log('[ChapterScreen] Fetched', terms.length, 'biblical terms')
-      if (terms.length > 0) {
-        console.log('[ChapterScreen] Sample term:', terms[0])
-      }
+
       setBiblicalTerms(terms)
 
     } catch (e: any) {
@@ -190,28 +133,43 @@ export default function ChapterScreen() {
     mountTimeRef.current = Date.now()
   }, [loadAll])
 
-  const advanced = useMemo(() => normalizeAdvanced(advRaw || {}), [advRaw, normalizeAdvanced])
-  const basicParsed = useMemo(() => normalizeBasic(basic || {}), [basic, normalizeBasic])
-
-  const advancedOutline: OutlineNode[] = useMemo(() => {
-    const nodes: OutlineNode[] = []
-    for (const sec of advanced.sections) {
-      const children = splitOnH3(sec.body)
-      if (children && children.length) nodes.push({ title: sec.title, children })
-      else nodes.push({ title: sec.title, body: sec.body })
+  // One Pager data preparation
+  const onePagerData = useMemo(() => {
+    // Extract summary from advanced
+    let summaryText = null
+    const adv = advRaw?.summary_advanced
+    if (typeof adv === 'string') {
+      summaryText = adv
+    } else if (Array.isArray(adv)) {
+      summaryText = adv.map((s: any) => {
+        const title = s?.title || s?.section || ''
+        const body = s?.content || s?.body || ''
+        return title ? `## ${title}\n\n${body}` : body
+      }).join('\n\n')
+    } else if (adv && typeof adv === 'object') {
+      summaryText = Object.entries(adv).map(([k, v]) => `## ${k}\n\n${v}`).join('\n\n')
     }
-    return nodes
-  }, [advanced.sections, splitOnH3])
 
-  const basicOutline: OutlineNode[] = useMemo(() => {
-    const nodes: OutlineNode[] = []
-    for (const sec of basicParsed.sections) {
-      const children = splitOnH3(sec.body)
-      if (children && children.length) nodes.push({ title: sec.title, children })
-      else nodes.push({ title: sec.title, body: sec.body })
+    // Extract theological themes from basic
+    const theologicalThemes = extractTheologicalThemes(basic?.summary_content || null)
+
+    // Build key verses with context
+    const keyVersesWithContext = keyVerses.map(kv => ({
+      verse_number: kv.verse_number,
+      text: kv.text,
+      insight: verseInsightsByVerse[kv.verse_number] || '',
+    }))
+
+    // Get practical applications
+    const practicalApplications = advRaw?.practical_applications || null
+
+    return {
+      summary: summaryText,
+      theologicalThemes,
+      keyVersesWithContext,
+      practicalApplications,
     }
-    return nodes
-  }, [basicParsed.sections, splitOnH3])
+  }, [advRaw, basic, keyVerses, verseInsightsByVerse, extractTheologicalThemes])
 
   // ---- Progress: direct DB writes ----
   const markChapterRead = useCallback(async () => {
@@ -267,86 +225,29 @@ export default function ChapterScreen() {
     }
   }, [bookNameResolved, chapter])
 
-  const markSummaryComplete = useCallback(async () => {
-    try {
-      if (!bookNameResolved) {
-        Alert.alert('Error', 'Book name not available')
-        return
-      }
-      const { data: auth } = await supabase.auth.getUser()
-      const userId = auth?.user?.id
-      if (!userId) {
-        Alert.alert('Error', 'Not signed in')
-        return
-      }
-
-      // Check if row exists first
-      const { data: existing } = await supabase
-        .from('user_summary_progress')
-        .select('user_id')
-        .eq('user_id', userId)
-        .eq('book_name', bookNameResolved)
-        .eq('chapter_number', chapter)
-        .eq('study_tier', studyTier)
-        .maybeSingle()
-
-      if (existing) {
-        // Update existing row - only update completed_at (no seconds_spent column)
-        const { error } = await supabase
-          .from('user_summary_progress')
-          .update({ completed_at: new Date().toISOString() })
-          .eq('user_id', userId)
-          .eq('book_name', bookNameResolved)
-          .eq('chapter_number', chapter)
-          .eq('study_tier', studyTier)
-
-        if (error) throw error
-      } else {
-        // Insert new row - only include columns that exist
-        const { error } = await supabase
-          .from('user_summary_progress')
-          .insert({
-            user_id: userId,
-            book_name: bookNameResolved,
-            chapter_number: chapter,
-            study_tier: studyTier,
-            completed_at: new Date().toISOString(),
-          })
-
-        if (error) throw error
-      }
-
-      Alert.alert('✓ Complete!', `${studyTier === 'basic' ? 'Basic' : 'Advanced'} summary marked complete`)
-    } catch (e: any) {
-      console.error('[markSummaryComplete] error:', e)
-      Alert.alert('Error', e?.message ?? 'Unable to mark complete')
-    }
-  }, [bookNameResolved, chapter, studyTier])
-
   const noVerses = !verses || verses.length === 0
+
+  // Tab button helper
+  const TabButton = ({ tabKey, label }: { tabKey: TabType; label: string }) => (
+    <TouchableOpacity onPress={() => setTab(tabKey)} style={[styles.tab, tab === tabKey && styles.tabActive]}>
+      <Text style={[styles.tabText, tab === tabKey && styles.tabTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  )
 
   return (
     <View style={styles.screen}>
       {/* Tabs */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity onPress={() => setTab('read')} style={[styles.tab, tab === 'read' && styles.tabActive]}>
-          <Text style={[styles.tabText, tab === 'read' && styles.tabTextActive]}>Read</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setTab('summary')} style={[styles.tab, tab === 'summary' && styles.tabActive]}>
-          <Text style={[styles.tabText, tab === 'summary' && styles.tabTextActive]}>Summary</Text>
-        </TouchableOpacity>
-
-        {tab === 'summary' && (
-          <View style={styles.tierToggle}>
-            <TouchableOpacity onPress={() => setStudyTier('basic')} style={[styles.tierBtn, studyTier === 'basic' && styles.tierBtnActive]}>
-              <Text style={[styles.tierText, studyTier === 'basic' && styles.tierTextActive]}>Basic</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setStudyTier('advanced')} style={[styles.tierBtn, studyTier === 'advanced' && styles.tierBtnActive]}>
-              <Text style={[styles.tierText, studyTier === 'advanced' && styles.tierTextActive]}>Advanced</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabBar}
+      >
+        <TabButton tabKey="read" label="Read" />
+        <TabButton tabKey="onepager" label="One Pager" />
+        <TabButton tabKey="crossrefs" label="Cross-Refs" />
+        <TabButton tabKey="discussion" label="Discussion" />
+        <TabButton tabKey="hebrew" label="Hebrew" />
+      </ScrollView>
 
       {/* Content */}
       {loading ? (
@@ -354,8 +255,8 @@ export default function ChapterScreen() {
       ) : error ? (
         <View style={styles.center}><Text style={styles.error}>{error}</Text></View>
       ) : (
-        <ScrollView contentContainerStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>          
-          {tab === 'read' ? (
+        <ScrollView contentContainerStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+          {tab === 'read' && (
             <>
               {noVerses ? (
                 <Text style={styles.muted}>No verses available for this chapter{translation ? ` (${translation})` : ''}.</Text>
@@ -374,127 +275,29 @@ export default function ChapterScreen() {
                 <Text style={styles.completeText}>✓ Mark Chapter Read</Text>
               </TouchableOpacity>
             </>
-          ) : (
-            <>
-              {studyTier === 'basic' ? (
-                <View>
-                  {typeof basicParsed.title === 'string' ? <Text style={styles.title}>{basicParsed.title}</Text> : null}
-                  {basicOutline.length === 0 ? (
-                    <Text style={styles.muted}>No summary available.</Text>
-                  ) : (
-                    <View>
-                      {basicOutline.map((node, idx) => {
-                        const baseKey = `${bookNameResolved ?? 'book'}-${chapter}-${node.title}-basic-${idx}`
-                        if (node.children?.length) {
-                          return (
-                            <ExpandableSection
-                              key={baseKey}
-                              title={node.title}
-                              initiallyExpanded={idx === 0}
-                              enableAnnotations
-                              book_name={bookNameResolved ?? undefined}
-                              chapter={chapter}
-                              studyTier="basic"
-                              sectionKey={node.title}
-                            >
-                              <View style={{ gap: 8 }}>
-                                {node.children.map((c, cIdx) => (
-                                  <ExpandableSection
-                                    key={`${baseKey}-child-${cIdx}`}
-                                    title={c.title}
-                                    initiallyExpanded={false}
-                                    enableAnnotations
-                                    book_name={bookNameResolved ?? undefined}
-                                    chapter={chapter}
-                                    studyTier="basic"
-                                    sectionKey={`${node.title}::${c.title}`}
-                                    markdown={String(c.body ?? '')}
-                                  />
-                                ))}
-                              </View>
-                            </ExpandableSection>
-                          )
-                        }
-                        return (
-                          <ExpandableSection
-                            key={baseKey}
-                            title={node.title}
-                            initiallyExpanded={idx === 0}
-                            enableAnnotations
-                            book_name={bookNameResolved ?? undefined}
-                            chapter={chapter}
-                            studyTier="basic"
-                            sectionKey={node.title}
-                            markdown={String(node.body ?? '')}
-                          />
-                        )
-                      })}
-                    </View>
-                  )}
-                </View>
-              ) : (
-                <View>
-                  {typeof advanced.title === 'string' ? <Text style={styles.title}>{advanced.title}</Text> : null}
-                  {advancedOutline.length === 0 ? (
-                    <Text style={styles.muted}>No advanced content available.</Text>
-                  ) : (
-                    <View>
-                      {advancedOutline.map((node, idx) => {
-                        const baseKey = `${bookNameResolved ?? 'book'}-${chapter}-${node.title}-${idx}`
-                        if (node.children?.length) {
-                          return (
-                            <ExpandableSection
-                              key={baseKey}
-                              title={node.title}
-                              initiallyExpanded={idx === 0}
-                              enableAnnotations
-                              book_name={bookNameResolved ?? undefined}
-                              chapter={chapter}
-                              studyTier={studyTier}
-                              sectionKey={node.title}
-                            >
-                              <View style={{ gap: 8 }}>
-                                {node.children.map((c, cIdx) => (
-                                  <ExpandableSection
-                                    key={`${baseKey}-child-${cIdx}`}
-                                    title={c.title}
-                                    initiallyExpanded={false}
-                                    enableAnnotations
-                                    book_name={bookNameResolved ?? undefined}
-                                    chapter={chapter}
-                                    studyTier={studyTier}
-                                    sectionKey={`${node.title}::${c.title}`}
-                                    markdown={String(c.body ?? '')}
-                                  />
-                                ))}
-                              </View>
-                            </ExpandableSection>
-                          )
-                        }
-                        return (
-                          <ExpandableSection
-                            key={baseKey}
-                            title={node.title}
-                            initiallyExpanded={idx === 0}
-                            enableAnnotations
-                            book_name={bookNameResolved ?? undefined}
-                            chapter={chapter}
-                            studyTier={studyTier}
-                            sectionKey={node.title}
-                            markdown={String(node.body ?? '')}
-                          />
-                        )
-                      })}
-                    </View>
-                  )}
-                </View>
-              )}
+          )}
 
-              <View style={{ height: 12 }} />
-              <TouchableOpacity style={styles.completeBtn} onPress={markSummaryComplete}>
-                <Text style={styles.completeText}>✓ Mark Summary Complete</Text>
-              </TouchableOpacity>
-            </>
+          {tab === 'onepager' && (
+            <OnePagerTab
+              summary={onePagerData.summary}
+              theologicalThemes={onePagerData.theologicalThemes}
+              keyVerses={onePagerData.keyVersesWithContext}
+              practicalApplications={onePagerData.practicalApplications}
+              bookName={bookNameResolved}
+              chapter={chapter}
+            />
+          )}
+
+          {tab === 'crossrefs' && (
+            <CrossReferencesTab crossReferences={advRaw?.cross_references || null} />
+          )}
+
+          {tab === 'discussion' && (
+            <DiscussionQuestionsTab discussionQuestions={advRaw?.discussion_questions || null} />
+          )}
+
+          {tab === 'hebrew' && (
+            <KeyHebrewWordsTab wordStudies={advRaw?.word_studies || null} />
           )}
 
           <View style={{ height: 40 }} />
@@ -506,24 +309,25 @@ export default function ChapterScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background.primary },
-  tabBar: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 8, backgroundColor: colors.background.secondary, borderBottomWidth: 1, borderBottomColor: colors.border.default },
-  tab: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: colors.background.tertiary },
+  tabBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 8,
+    backgroundColor: colors.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.default
+  },
+  tab: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: colors.background.tertiary },
   tabActive: { backgroundColor: colors.accent.primary },
-  tabText: { color: colors.text.secondary, fontWeight: '700' },
+  tabText: { color: colors.text.secondary, fontWeight: '700', fontSize: 13 },
   tabTextActive: { color: colors.text.primary },
 
-  tierToggle: { marginLeft: 'auto', flexDirection: 'row', gap: 8 },
-  tierBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: colors.background.tertiary },
-  tierBtnActive: { backgroundColor: colors.accent.secondary },
-  tierText: { color: colors.text.secondary, fontWeight: '700' },
-  tierTextActive: { color: colors.text.primary },
-
-  body: { paddingHorizontal: 12, paddingBottom: 80 },
-  title: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: colors.text.primary },
-  muted: { color: colors.text.muted },
-  error: { color: colors.error },
+  body: { paddingBottom: 80 },
+  muted: { color: colors.text.muted, padding: 16 },
+  error: { color: colors.error, padding: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  completeBtn: { backgroundColor: colors.accent.primary, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  completeBtn: { backgroundColor: colors.accent.primary, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginHorizontal: 12, marginTop: 12 },
   completeText: { color: colors.text.primary, fontWeight: '700' },
 })
