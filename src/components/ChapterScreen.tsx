@@ -61,15 +61,16 @@ export default function ChapterScreen() {
     if (!markdown) return null
     const content = String(markdown)
 
+    // Escape special regex characters in section name
+    const escapedName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
     // Sections are separated by \n\n---\n\n (horizontal rules)
-    // Match heading, then capture everything until the next --- separator or end of string
-    const regex = new RegExp(`^#{1,4}\\s*${sectionName}\\s*\n([\\s\\S]*?)(?=\n\n---\n\n|$)`, 'im')
+    // Match heading (## Section Name), then capture everything until the next --- separator or end
+    const regex = new RegExp(`^#{1,4}\\s*${escapedName}\\s*\n([\\s\\S]*?)(?=\\n\\n---\\n\\n|$)`, 'im')
     const match = content.match(regex)
     if (match && match[1]) {
-      console.log(`✓ Found section "${sectionName}"`)
       return match[1].trim()
     }
-    console.log(`✗ Section "${sectionName}" not found in markdown`)
     return null
   }, [])
 
@@ -145,12 +146,7 @@ export default function ChapterScreen() {
   // Get advanced summary as string
   const advancedSummaryString = useMemo(() => {
     const adv = advRaw?.summary_advanced
-    if (typeof adv === 'string') {
-      // Extract all headings for debugging
-      const headings = adv.match(/^#{1,4}\s+.+$/gm) || []
-      console.log('Advanced summary headings:', headings)
-      return adv
-    }
+    if (typeof adv === 'string') return adv
     if (Array.isArray(adv)) {
       return adv.map((s: any) => {
         const title = s?.title || s?.section || ''
