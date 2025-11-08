@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import ExpandableSection from './ExpandableSection';
 import { colors } from '../theme/colors';
 
@@ -11,6 +11,17 @@ type Props = {
   bookName: string | null;
   chapter: number;
 };
+
+// Helper to strip basic markdown formatting
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/#{1,6}\s+/g, '') // Remove heading markers
+    .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold
+    .replace(/\*(.+?)\*/g, '$1') // Remove italic
+    .replace(/`(.+?)`/g, '$1') // Remove inline code
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
+    .trim();
+}
 
 export default function OnePagerTab({
   summary,
@@ -26,8 +37,46 @@ export default function OnePagerTab({
     practicalAppsMarkdown = practicalApplications;
   }
 
+  // Share One Pager
+  const shareOnePager = async () => {
+    let message = `${bookName} ${chapter}\nONE PAGER SUMMARY\n\n`;
+
+    if (summary) {
+      message += `SUMMARY\n${stripMarkdown(summary)}\n\n`;
+    }
+
+    if (theologicalThemes) {
+      message += `THEOLOGICAL THEMES\n${stripMarkdown(theologicalThemes)}\n\n`;
+    }
+
+    if (keyVersesText) {
+      message += `KEY VERSES\n${stripMarkdown(keyVersesText)}\n\n`;
+    }
+
+    if (practicalAppsMarkdown) {
+      message += `PRACTICAL APPLICATIONS\n${stripMarkdown(practicalAppsMarkdown)}\n\n`;
+    }
+
+    try {
+      await Share.share({
+        message: message.trim(),
+      });
+    } catch (error) {
+      console.error('[OnePagerTab] Share failed', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
+      {/* Share button */}
+      <TouchableOpacity
+        onPress={shareOnePager}
+        style={styles.shareButton}
+      >
+        <Text style={styles.shareIcon}>📤</Text>
+        <Text style={styles.shareText}>Share One Pager</Text>
+      </TouchableOpacity>
+
       {/* Summary */}
       {summary && (
         <ExpandableSection
@@ -94,4 +143,24 @@ export default function OnePagerTab({
 const styles = StyleSheet.create({
   container: { padding: 12, gap: 8 },
   muted: { color: colors.text.muted, textAlign: 'center', marginTop: 20 },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  shareIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  shareText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
 });

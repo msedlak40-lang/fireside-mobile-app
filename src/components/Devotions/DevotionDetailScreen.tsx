@@ -1,6 +1,6 @@
 // src/components/Devotions/DevotionDetailScreen.tsx
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
 import { completeDevotionProgress } from '../../services/progress';
@@ -108,6 +108,50 @@ export default function DevotionDetailScreen() {
     }
   };
 
+  // Share devotion
+  const shareDevotion = async () => {
+    if (!devotion) return;
+
+    const dateText = formatISODateYYYYMMDD(devotion.devotion_date);
+    const keyRangeOrNum = devotion.key_verse_range ?? String(devotion.key_verse_number);
+
+    let message = `${devotion.title}\n`;
+    if (dateText) message += `${dateText}\n`;
+    message += `\n`;
+
+    // Key verse
+    message += `"${devotion.key_verse_text}"\n`;
+    message += `— ${devotion.key_verse_book} ${devotion.key_verse_chapter}:${keyRangeOrNum}\n\n`;
+
+    // Devotional text
+    if (devotion.devotional_text) {
+      message += `${devotion.devotional_text}\n`;
+    }
+
+    // Hard truth
+    if (devotion.hard_truth) {
+      message += `\nHARD TRUTH\n${devotion.hard_truth}\n`;
+    }
+
+    // Today's challenge
+    if (devotion.today_challenge) {
+      message += `\nTODAY'S CHALLENGE\n${devotion.today_challenge}\n`;
+    }
+
+    // Prayer starter
+    if (devotion.prayer_starter) {
+      message += `\nPRAYER STARTER\n${devotion.prayer_starter}\n`;
+    }
+
+    try {
+      await Share.share({
+        message: message.trim(),
+      });
+    } catch (error) {
+      console.error('[DevotionDetail] Share failed', error);
+    }
+  };
+
   if (loading || !devotion) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -124,8 +168,21 @@ export default function DevotionDetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-      {/* Title */}
-      <Text style={{ fontSize: 22, fontWeight: '800' }}>{devotion.title}</Text>
+      {/* Title & Share button */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', flex: 1 }}>{devotion.title}</Text>
+        <TouchableOpacity
+          onPress={shareDevotion}
+          style={{
+            marginLeft: 12,
+            padding: 8,
+            backgroundColor: '#f3f4f6',
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ fontSize: 16 }}>📤</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Meta line */}
       {(dateText || keyRef) ? (
