@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
 import { fetchChapterText, fetchChapterSummary, fetchAdvancedChapterSummary } from '../services/scripture';
+import { colors } from '../theme/colors';
 
 type Entry = {
   id: string; book_name: string; chapter_number: number;
@@ -109,9 +110,9 @@ export default function NotesHighlightsSummary() {
     finally { setLoading(false); }
   })(); }, []);
 
-  const colorForType = useCallback((t: 'note'|'highlight') => (t==='note' ? '#0ea5e9' : '#f59e0b'), []);
+  const colorForType = useCallback((t: 'note'|'highlight') => (t==='note' ? colors.accent.secondary : colors.accent.tertiary), []);
   const Empty = useMemo(() => <Text style={s.muted}>Nothing yet.</Text>, []);
-  if (loading) return <View style={s.center}><ActivityIndicator /></View>;
+  if (loading) return <View style={s.center}><ActivityIndicator color={colors.accent.primary} /></View>;
 
   return (
     <ScrollView contentContainerStyle={s.wrap}>
@@ -153,20 +154,20 @@ export default function NotesHighlightsSummary() {
 }
 
 const s = StyleSheet.create({
-  wrap:{ padding:12, paddingBottom:40, backgroundColor:'#fff' },
-  center:{ flex:1, alignItems:'center', justifyContent:'center' },
-  h:{ fontWeight:'800', color:'#111827', marginBottom:8, fontSize:16 },
-  muted:{ color:'#6b7280' },
-  card:{ backgroundColor:'#fff', borderWidth:1, borderColor:'#e5e7eb', borderRadius:12, padding:12, marginBottom:10 },
+  wrap:{ padding:12, paddingBottom:40, backgroundColor: colors.background.primary },
+  center:{ flex:1, alignItems:'center', justifyContent:'center', backgroundColor: colors.background.primary },
+  h:{ fontWeight:'800', color: colors.text.primary, marginBottom:8, fontSize:16 },
+  muted:{ color: colors.text.muted },
+  card:{ backgroundColor: colors.background.tertiary, borderWidth:1, borderColor: colors.border.default, borderRadius:12, padding:12, marginBottom:10 },
   row:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
-  title:{ fontWeight:'700', color:'#111827', marginBottom:6, flex:1, marginRight:8 },
-  body:{ color:'#111827' },
-  badge:{ color:'#fff', fontWeight:'800', fontSize:12, paddingHorizontal:8, paddingVertical:2, borderRadius:999 },
-  backdrop:{ flex:1, backgroundColor:'rgba(0,0,0,0.4)', alignItems:'center', justifyContent:'center' },
-  modalCard:{ width:'92%', backgroundColor:'#fff', borderRadius:12, padding:14 },
-  modalTitle:{ fontSize:16, fontWeight:'800', marginBottom:10, color:'#111827' },
-  modalBody:{ color:'#111827', lineHeight:20 },
-  btn:{ backgroundColor:'#111827', borderRadius:10, paddingHorizontal:16, paddingVertical:10, marginTop:10 },
-  btnGhost:{ backgroundColor:'#f3f4f6' },
-  btnGhostText:{ color:'#111827', fontWeight:'800' },
+  title:{ fontWeight:'700', color: colors.text.primary, marginBottom:6, flex:1, marginRight:8 },
+  body:{ color: colors.text.secondary },
+  badge:{ color: colors.text.primary, fontWeight:'800', fontSize:12, paddingHorizontal:8, paddingVertical:2, borderRadius:999 },
+  backdrop:{ flex:1, backgroundColor:'rgba(0,0,0,0.75)', alignItems:'center', justifyContent:'center' },
+  modalCard:{ width:'92%', backgroundColor: colors.background.elevated, borderRadius:12, padding:14 },
+  modalTitle:{ fontSize:16, fontWeight:'800', marginBottom:10, color: colors.text.primary },
+  modalBody:{ color: colors.text.secondary, lineHeight:20 },
+  btn:{ backgroundColor: colors.accent.primary, borderRadius:10, paddingHorizontal:16, paddingVertical:10, marginTop:10 },
+  btnGhost:{ backgroundColor: colors.background.tertiary },
+  btnGhostText:{ color: colors.text.primary, fontWeight:'800' },
 });
