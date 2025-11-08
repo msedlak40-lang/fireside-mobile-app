@@ -66,9 +66,9 @@ export default function ChapterScreen() {
 
     // Sections end at either:
     // - \n\n---\n\n (horizontal rules in advanced summary)
-    // - Next ## heading (in basic summary)
+    // - \n## or \n### (next heading in basic summary)
     // - End of string
-    const regex = new RegExp(`^#{1,4}\\s*${escapedName}\\s*\n([\\s\\S]*?)(?=\\n\\n---\\n\\n|^##\\s|$)`, 'im')
+    const regex = new RegExp(`###?\\s*${escapedName}([\\s\\S]*?)(?=\\n\\n---\\n\\n|\\n###?\\s|\\n##\\s|$)`, 'i')
     const match = content.match(regex)
     if (match && match[1]) {
       return match[1].trim()
