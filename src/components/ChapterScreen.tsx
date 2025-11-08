@@ -61,9 +61,9 @@ export default function ChapterScreen() {
     if (!markdown) return null
     const content = String(markdown)
 
-    // Try to match section with any heading level (# to ####)
-    // Using ^ to match start of line and multiline flag
-    const regex = new RegExp(`^#{1,4}\\s*${sectionName}\\s*:?\\s*\n([\\s\\S]*?)(?=^#{1,4}\\s|$)`, 'im')
+    // Sections are separated by \n\n---\n\n (horizontal rules)
+    // Match heading, then capture everything until the next --- separator or end of string
+    const regex = new RegExp(`^#{1,4}\\s*${sectionName}\\s*\n([\\s\\S]*?)(?=\n\n---\n\n|$)`, 'im')
     const match = content.match(regex)
     if (match && match[1]) {
       console.log(`✓ Found section "${sectionName}"`)
