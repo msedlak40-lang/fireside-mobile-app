@@ -66,9 +66,9 @@ export default function ChapterScreen() {
 
     // Sections end at either:
     // - \n\n---\n\n (horizontal rules in advanced summary)
-    // - \n## or \n### (next heading in basic summary)
+    // - \n## (next main section - NOT ### which are subsections within a section)
     // - End of string
-    const regex = new RegExp(`###?\\s*${escapedName}([\\s\\S]*?)(?=\\n\\n---\\n\\n|\\n###?\\s|\\n##\\s|$)`, 'i')
+    const regex = new RegExp(`##\\s*${escapedName}([\\s\\S]*?)(?=\\n\\n---\\n\\n|\\n##\\s|$)`, 'i')
     const match = content.match(regex)
     if (match && match[1]) {
       return match[1].trim()
@@ -153,11 +153,7 @@ export default function ChapterScreen() {
   // Get advanced summary as string
   const advancedSummaryString = useMemo(() => {
     const adv = advRaw?.summary_advanced
-    if (typeof adv === 'string') {
-      const headings = adv.match(/^##[^#].*$/gm) || []
-      console.log('Available ## headings:', headings)
-      return adv
-    }
+    if (typeof adv === 'string') return adv
     if (Array.isArray(adv)) {
       return adv.map((s: any) => {
         const title = s?.title || s?.section || ''
@@ -203,9 +199,7 @@ export default function ChapterScreen() {
   }, [advancedSummaryString, extractSection])
 
   const hebrewWordsData = useMemo(() => {
-    const result = extractSection(advancedSummaryString, 'Key Hebrew Words & Insights')
-    console.log('Hebrew section extracted:', result ? `${result.substring(0, 100)}...` : 'NULL')
-    return result
+    return extractSection(advancedSummaryString, 'Key Hebrew Words & Insights')
   }, [advancedSummaryString, extractSection])
 
   // ---- Progress: direct DB writes ----
