@@ -65,7 +65,9 @@ async function insertSummaryEntry({
     const { data: auth } = await supabase.auth.getUser()
     const userId = auth?.user?.id
     if (!userId) return
-    const context_key = `s:${sectionSlug}:p${paraIndex}`
+    const context_key = studyTier
+      ? `p:${studyTier}:${sectionSlug}:${paraIndex}`
+      : `s:${sectionSlug}:p${paraIndex}`
     const payload: any = {
       user_id: userId,
       book_name: book,
@@ -164,9 +166,8 @@ export default function ExpandableSection({
 
   const sectionSlug = useMemo(() => {
     const base = String(sectionKey || title)
-    const tier = studyTier ? `${studyTier}-` : ''
-    return `${tier}${slugify(base)}`
-  }, [sectionKey, title, studyTier])
+    return slugify(base)
+  }, [sectionKey, title])
 
   const contextKey = useMemo(() => {
     const b = String(book_name || bookName || '').trim()
