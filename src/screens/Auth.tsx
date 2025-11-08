@@ -78,14 +78,12 @@ export default function Auth() {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'fireside://reset-password',
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) throw error;
 
       Alert.alert(
         'Check Your Email',
-        `We've sent password reset instructions to ${email}. Click the link in the email to set a new password.`,
+        `We've sent password reset instructions to ${email}. Click the link in the email, set your new password, then come back to the app to sign in.`,
         [{ text: 'OK' }]
       );
     } catch (e: any) {
