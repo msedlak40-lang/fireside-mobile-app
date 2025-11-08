@@ -64,9 +64,11 @@ export default function ChapterScreen() {
     // Escape special regex characters in section name
     const escapedName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-    // Sections are separated by \n\n---\n\n (horizontal rules)
-    // Match heading (## Section Name), then capture everything until the next --- separator or end
-    const regex = new RegExp(`^#{1,4}\\s*${escapedName}\\s*\n([\\s\\S]*?)(?=\\n\\n---\\n\\n|$)`, 'im')
+    // Sections end at either:
+    // - \n\n---\n\n (horizontal rules in advanced summary)
+    // - Next ## heading (in basic summary)
+    // - End of string
+    const regex = new RegExp(`^#{1,4}\\s*${escapedName}\\s*\n([\\s\\S]*?)(?=\\n\\n---\\n\\n|^##\\s|$)`, 'im')
     const match = content.match(regex)
     if (match && match[1]) {
       return match[1].trim()
@@ -77,6 +79,11 @@ export default function ChapterScreen() {
   // Extract theological themes from basic summary_content
   const extractTheologicalThemes = useCallback((summaryContent: string | null): string | null => {
     return extractSection(summaryContent, 'Theological Themes')
+  }, [extractSection])
+
+  // Extract key verses from basic summary_content
+  const extractKeyVersesFromBasic = useCallback((summaryContent: string | null): string | null => {
+    return extractSection(summaryContent, 'Key Verses')
   }, [extractSection])
 
   // Data load ---------------------------------------------------------------
@@ -168,12 +175,8 @@ export default function ChapterScreen() {
     // Extract theological themes from basic
     const theologicalThemes = extractTheologicalThemes(basic?.summary_content || null)
 
-    // Build key verses with context
-    const keyVersesWithContext = keyVerses.map(kv => ({
-      verse_number: kv.verse_number,
-      text: kv.text,
-      insight: verseInsightsByVerse[kv.verse_number] || '',
-    }))
+    // Extract key verses from basic summary (already formatted as markdown)
+    const keyVersesText = extractKeyVersesFromBasic(basic?.summary_content || null)
 
     // Extract practical applications from advanced summary markdown
     const practicalApplications = extractSection(advancedSummaryString, 'Practical Applications')
@@ -181,10 +184,10 @@ export default function ChapterScreen() {
     return {
       summary: summaryText,
       theologicalThemes,
-      keyVersesWithContext,
+      keyVersesText,
       practicalApplications,
     }
-  }, [advancedSummaryString, basic, keyVerses, verseInsightsByVerse, extractTheologicalThemes, extractSection])
+  }, [advancedSummaryString, basic, extractTheologicalThemes, extractKeyVersesFromBasic, extractSection])
 
   // Extract data for other tabs from advanced summary sections
   const crossRefsData = useMemo(() => {
@@ -312,10 +315,8 @@ export default function ChapterScreen() {
             <OnePagerTab
               summary={onePagerData.summary}
               theologicalThemes={onePagerData.theologicalThemes}
-              keyVerses={onePagerData.keyVersesWithContext}
+              keyVersesText={onePagerData.keyVersesText}
               practicalApplications={onePagerData.practicalApplications}
-              bookName={bookNameResolved}
-              chapter={chapter}
             />
           )}
 

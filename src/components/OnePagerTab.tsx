@@ -6,38 +6,21 @@ import { colors } from '../theme/colors';
 type Props = {
   summary: string | null; // from advanced summary_advanced
   theologicalThemes: string | null; // extracted from basic summary_content
-  keyVerses: Array<{ verse_number: number; text: string; insight: string }>; // verses with context
-  practicalApplications: string[] | string | null; // from advanced
-  bookName: string | null;
-  chapter: number;
+  keyVersesText: string | null; // extracted from basic Key Verses section
+  practicalApplications: string | null; // from advanced
 };
 
 export default function OnePagerTab({
   summary,
   theologicalThemes,
-  keyVerses,
+  keyVersesText,
   practicalApplications,
-  bookName,
-  chapter,
 }: Props) {
   // Normalize practical applications to markdown string
   let practicalAppsMarkdown: string | null = null;
-  if (Array.isArray(practicalApplications)) {
-    practicalAppsMarkdown = practicalApplications.map(app => `- ${app}`).join('\n');
-  } else if (typeof practicalApplications === 'string') {
+  if (typeof practicalApplications === 'string') {
     practicalAppsMarkdown = practicalApplications;
   }
-
-  // Convert key verses to markdown for annotation support
-  const keyVersesMarkdown = keyVerses.length > 0
-    ? keyVerses.map(kv => {
-        let md = `**${bookName} ${chapter}:${kv.verse_number}**\n\n"${kv.text}"`;
-        if (kv.insight) {
-          md += `\n\n*Context:*\n${kv.insight}`;
-        }
-        return md;
-      }).join('\n\n---\n\n')
-    : null;
 
   return (
     <View style={styles.container}>
@@ -64,11 +47,11 @@ export default function OnePagerTab({
       )}
 
       {/* Key Verses with Context */}
-      {keyVersesMarkdown && (
+      {keyVersesText && (
         <ExpandableSection
           title="Key Verses with Context"
           initiallyExpanded={false}
-          markdown={keyVersesMarkdown}
+          markdown={keyVersesText}
           studyTier="onepager"
           sectionKey="key-verses"
         />
@@ -85,7 +68,7 @@ export default function OnePagerTab({
         />
       )}
 
-      {!summary && !theologicalThemes && !keyVersesMarkdown && !practicalAppsMarkdown && (
+      {!summary && !theologicalThemes && !keyVersesText && !practicalAppsMarkdown && (
         <Text style={styles.muted}>No summary content available for this chapter.</Text>
       )}
     </View>
