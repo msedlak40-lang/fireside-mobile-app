@@ -76,6 +76,51 @@ const extractSection = (markdown: string | null, sectionName: string): string | 
   return match && match[1] ? match[1].trim() : null
 }
 
+// Helper to split markdown into blocks (paragraphs)
+const splitMarkdownIntoBlocks = (markdown: string | null): string[] => {
+  const src = String(markdown ?? '')
+  if (!src.trim()) return []
+  const lines = src.split('\n')
+
+  const blocks: string[] = []
+  let buf: string[] = []
+  let inCode = false
+
+  const flush = () => {
+    if (buf.length) blocks.push(buf.join('\n').trim())
+    buf = []
+  }
+
+  for (const line of lines) {
+    const isFence = /^```/.test(line)
+    if (isFence) {
+      inCode = !inCode
+      buf.push(line)
+      if (!inCode) flush()
+      continue
+    }
+    if (!inCode && /^\s*$/.test(line)) {
+      flush()
+      continue
+    }
+    buf.push(line)
+  }
+  flush()
+
+  // Merge solitary headings with the next para for nicer reading
+  const merged: string[] = []
+  for (let i = 0; i < blocks.length; i++) {
+    const cur = blocks[i]
+    if (/^#{1,6}\s+/.test(cur) && (i + 1) < blocks.length && !/^```/.test(blocks[i + 1])) {
+      merged.push([cur, blocks[i + 1]].join('\n'))
+      i++
+    } else {
+      merged.push(cur)
+    }
+  }
+  return merged
+}
+
 export default function BookChapterPicker({ books, initialBookName, initialChapter, onGo, onSelectionChange }: Props) {
   const [bookPickerOpen, setBookPickerOpen] = useState(false)
   const [chapterPickerOpen, setChapterPickerOpen] = useState(false)
@@ -270,6 +315,7 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
       // Check if this is a One Pager section (format: onepager-summary, onepager-theological-themes, etc.)
       if ('section' in ctx && ctx.section?.startsWith('onepager-')) {
         const sectionName = ctx.section.replace('onepager-', '')
+        const paraIndex = 'paraIndex' in ctx && typeof ctx.paraIndex === 'number' ? ctx.paraIndex : null
         let content = '(Highlighted section)'
 
         if (sectionName === 'summary') {
@@ -282,7 +328,13 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
             .maybeSingle()
 
           if (typeof summaryData?.summary_advanced === 'string') {
-            content = extractSection(summaryData.summary_advanced, 'Original Summary') || '(Section not found)'
+            const sectionContent = extractSection(summaryData.summary_advanced, 'Original Summary')
+            if (sectionContent && paraIndex !== null) {
+              const blocks = splitMarkdownIntoBlocks(sectionContent)
+              content = blocks[paraIndex] || sectionContent
+            } else {
+              content = sectionContent || '(Section not found)'
+            }
           }
         } else if (sectionName === 'theological-themes' || sectionName === 'key-verses') {
           // Fetch from basic summary
@@ -295,7 +347,13 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
 
           if (summaryData?.summary_content) {
             const sectionTitle = sectionName === 'theological-themes' ? 'Theological Themes' : 'Key Verses'
-            content = extractSection(summaryData.summary_content, sectionTitle) || '(Section not found)'
+            const sectionContent = extractSection(summaryData.summary_content, sectionTitle)
+            if (sectionContent && paraIndex !== null) {
+              const blocks = splitMarkdownIntoBlocks(sectionContent)
+              content = blocks[paraIndex] || sectionContent
+            } else {
+              content = sectionContent || '(Section not found)'
+            }
           }
         } else if (sectionName === 'practical-applications') {
           // Fetch from advanced summary - Practical Applications section
@@ -307,7 +365,13 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
             .maybeSingle()
 
           if (typeof summaryData?.summary_advanced === 'string') {
-            content = extractSection(summaryData.summary_advanced, 'Practical Applications') || '(Section not found)'
+            const sectionContent = extractSection(summaryData.summary_advanced, 'Practical Applications')
+            if (sectionContent && paraIndex !== null) {
+              const blocks = splitMarkdownIntoBlocks(sectionContent)
+              content = blocks[paraIndex] || sectionContent
+            } else {
+              content = sectionContent || '(Section not found)'
+            }
           }
         }
 
