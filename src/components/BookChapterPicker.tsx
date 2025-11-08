@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../lib/supabaseClient'
+import { colors } from '../theme/colors'
 
 export type Book = { id: number; book_name: string }
 
@@ -389,25 +390,25 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 10 },
-  label: { fontSize: 12, color: '#6b7280', marginBottom: 6 },
-  dropdown: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dropdownText: { color: '#111827', fontWeight: '700' },
-  dropdownChevron: { color: '#9ca3af' },
-  card: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 12 },
-  cardTitle: { fontWeight: '800', color: '#111827', marginBottom: 6 },
-  cardText: { color: '#111827' },
-  cardTextMuted: { color: '#9ca3af' },
+  container: { padding: 16, gap: 10, backgroundColor: colors.background.primary },
+  label: { fontSize: 12, color: colors.text.secondary, marginBottom: 6 },
+  dropdown: { borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.background.tertiary, borderRadius: 10, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dropdownText: { color: colors.text.primary, fontWeight: '700' },
+  dropdownChevron: { color: colors.text.muted },
+  card: { backgroundColor: colors.background.tertiary, borderWidth: 1, borderColor: colors.border.default, borderRadius: 12, padding: 12 },
+  cardTitle: { fontWeight: '800', color: colors.text.primary, marginBottom: 6 },
+  cardText: { color: colors.text.secondary },
+  cardTextMuted: { color: colors.text.muted },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  rowTitle: { fontWeight: '800', color: '#111827' },
-  rowSub: { color: '#6b7280' },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#d1d5db' },
-  goBtn: { backgroundColor: '#111827', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 16 },
-  goBtnText: { color: 'white', fontWeight: '800' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 16 },
-  modalCard: { width: '100%', backgroundColor: '#fff', borderRadius: 14, padding: 16 },
-  modalTitle: { fontWeight: '800', color: '#111827', marginBottom: 6 },
-  modalBody: { color: '#111827' },
+  rowTitle: { fontWeight: '800', color: colors.text.primary },
+  rowSub: { color: colors.text.secondary },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.border.default },
+  goBtn: { backgroundColor: colors.accent.primary, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 16 },
+  goBtnText: { color: colors.text.primary, fontWeight: '800' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  modalCard: { width: '100%', backgroundColor: colors.background.elevated, borderRadius: 14, padding: 16 },
+  modalTitle: { fontWeight: '800', color: colors.text.primary, marginBottom: 6 },
+  modalBody: { color: colors.text.secondary },
   pickerRow: { paddingVertical: 10 },
-  pickerRowText: { color: '#111827', fontWeight: '700' },
+  pickerRowText: { color: colors.text.primary, fontWeight: '700' },
 })

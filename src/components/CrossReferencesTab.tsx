@@ -1,19 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import MarkdownRenderer from './MarkdownRenderer';
 import { colors } from '../theme/colors';
 
-type CrossRef = {
-  from?: string;
-  to?: string;
-  note?: string;
-} | string;
-
 type Props = {
-  crossReferences: CrossRef[] | null;
+  markdownContent: string | null;
 };
 
-export default function CrossReferencesTab({ crossReferences }: Props) {
-  if (!crossReferences || crossReferences.length === 0) {
+export default function CrossReferencesTab({ markdownContent }: Props) {
+  if (!markdownContent) {
     return (
       <View style={styles.container}>
         <Text style={styles.muted}>No cross-references available for this chapter.</Text>
@@ -22,34 +17,12 @@ export default function CrossReferencesTab({ crossReferences }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Cross-References</Text>
-      <View style={{ gap: 12 }}>
-        {crossReferences.map((ref, idx) => {
-          if (typeof ref === 'string') {
-            return (
-              <View key={idx} style={styles.refCard}>
-                <Text style={styles.refText}>{ref}</Text>
-              </View>
-            );
-          }
-
-          return (
-            <View key={idx} style={styles.refCard}>
-              {ref.from && (
-                <Text style={styles.refFrom}>From: {ref.from}</Text>
-              )}
-              {ref.to && (
-                <Text style={styles.refTo}>→ {ref.to}</Text>
-              )}
-              {ref.note && (
-                <Text style={styles.refNote}>{ref.note}</Text>
-              )}
-            </View>
-          );
-        })}
+      <View style={styles.content}>
+        <MarkdownRenderer content={markdownContent} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -61,39 +34,16 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 16,
   },
-  muted: {
-    color: colors.text.muted,
-    textAlign: 'center',
-    marginTop: 20,
-  },
-
-  refCard: {
+  content: {
     backgroundColor: colors.background.tertiary,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     borderLeftWidth: 3,
     borderLeftColor: colors.accent.secondary,
   },
-  refFrom: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.accent.secondary,
-    marginBottom: 4,
-  },
-  refTo: {
-    fontSize: 15,
-    color: colors.text.primary,
-    fontWeight: '600',
-    marginBottom: ref => ref ? 6 : 0,
-  },
-  refText: {
-    fontSize: 15,
-    color: colors.text.primary,
-  },
-  refNote: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: 6,
-    lineHeight: 20,
+  muted: {
+    color: colors.text.muted,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

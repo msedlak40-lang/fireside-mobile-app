@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { supabase } from '../lib/supabaseClient'
 import InsightModal from './InsightModal'
+import { colors } from '../theme/colors'
 
 type RawVerse = any
 type Keyword = { word: string; insight?: string; detailed_explanation?: string }
@@ -403,23 +404,23 @@ function escapeRegex(s: string) {
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 12, paddingBottom: 60 },
   verseRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, borderRadius: 6, paddingRight: 6 },
-  verseRowHighlighted: { backgroundColor: '#fff7cc' },
+  verseRowHighlighted: { backgroundColor: colors.highlight.yellow },
 
-  verseNum: { width: 28, textAlign: 'right', marginRight: 8, color: '#6b7280', fontWeight: '700' },
-  keyTint: { color: '#2563eb', textDecorationLine: 'underline' },
+  verseNum: { width: 28, textAlign: 'right', marginRight: 8, color: colors.text.muted, fontWeight: '700' },
+  keyTint: { color: colors.accent.tertiary, textDecorationLine: 'underline' },
 
-  verseText: { flex: 1, color: '#111827', lineHeight: 22 },
+  verseText: { flex: 1, color: colors.text.primary, lineHeight: 22 },
   verseTextHighlighted: { fontWeight: '600' },
 
-  keyword: { color: '#2563eb', textDecorationLine: 'underline' },
+  keyword: { color: colors.accent.tertiary, textDecorationLine: 'underline' },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
-  modalCard: { width: '90%', backgroundColor: '#fff', borderRadius: 12, padding: 14 },
-  modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  input: { minHeight: 100, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 10, textAlignVertical: 'top' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center' },
+  modalCard: { width: '90%', backgroundColor: colors.background.elevated, borderRadius: 12, padding: 14 },
+  modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8, color: colors.text.primary },
+  input: { minHeight: 100, borderWidth: 1, borderColor: colors.border.default, borderRadius: 10, padding: 10, textAlignVertical: 'top', color: colors.text.primary, backgroundColor: colors.background.secondary },
   modalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10, gap: 8 },
-  btn: { backgroundColor: '#111827', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  btnText: { color: '#fff', fontWeight: '700' },
-  btnGhost: { backgroundColor: '#f3f4f6' },
-  btnGhostText: { color: '#111827', fontWeight: '700' },
+  btn: { backgroundColor: colors.accent.primary, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  btnText: { color: colors.text.primary, fontWeight: '700' },
+  btnGhost: { backgroundColor: colors.background.tertiary },
+  btnGhostText: { color: colors.text.secondary, fontWeight: '700' },
 })

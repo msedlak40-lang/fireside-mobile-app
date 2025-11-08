@@ -56,18 +56,24 @@ export default function ChapterScreen() {
     setRefreshing(false)
   }, [])
 
-  // Extract theological themes from basic summary_content
-  const extractTheologicalThemes = useCallback((summaryContent: string | null): string | null => {
-    if (!summaryContent) return null
-    const content = String(summaryContent)
+  // Helper: Extract a section from markdown by heading
+  const extractSection = useCallback((markdown: string | null, sectionName: string): string | null => {
+    if (!markdown) return null
+    const content = String(markdown)
 
-    // Look for "Theological Themes" section (could be ## or ###)
-    const match = content.match(/###?\s*Theological Themes([\s\S]*?)(?=\n###?\s|\n##\s|$)/i)
+    // Try to match section with ## or ### heading
+    const regex = new RegExp(`###?\\s*${sectionName}[:\\s]*([\\s\\S]*?)(?=\\n###?\\s|\\n##\\s|$)`, 'i')
+    const match = content.match(regex)
     if (match && match[1]) {
       return match[1].trim()
     }
     return null
   }, [])
+
+  // Extract theological themes from basic summary_content
+  const extractTheologicalThemes = useCallback((summaryContent: string | null): string | null => {
+    return extractSection(summaryContent, 'Theological Themes')
+  }, [extractSection])
 
   // Data load ---------------------------------------------------------------
   const loadAll = useCallback(async () => {
@@ -133,22 +139,27 @@ export default function ChapterScreen() {
     mountTimeRef.current = Date.now()
   }, [loadAll])
 
-  // One Pager data preparation
-  const onePagerData = useMemo(() => {
-    // Extract summary from advanced
-    let summaryText = null
+  // Get advanced summary as string
+  const advancedSummaryString = useMemo(() => {
     const adv = advRaw?.summary_advanced
-    if (typeof adv === 'string') {
-      summaryText = adv
-    } else if (Array.isArray(adv)) {
-      summaryText = adv.map((s: any) => {
+    if (typeof adv === 'string') return adv
+    if (Array.isArray(adv)) {
+      return adv.map((s: any) => {
         const title = s?.title || s?.section || ''
         const body = s?.content || s?.body || ''
         return title ? `## ${title}\n\n${body}` : body
       }).join('\n\n')
-    } else if (adv && typeof adv === 'object') {
-      summaryText = Object.entries(adv).map(([k, v]) => `## ${k}\n\n${v}`).join('\n\n')
     }
+    if (adv && typeof adv === 'object') {
+      return Object.entries(adv).map(([k, v]) => `## ${k}\n\n${v}`).join('\n\n')
+    }
+    return null
+  }, [advRaw])
+
+  // One Pager data preparation - extract only specific sections
+  const onePagerData = useMemo(() => {
+    // Extract ONLY the summary section from advanced
+    const summaryText = extractSection(advancedSummaryString, 'Summary') || advancedSummaryString
 
     // Extract theological themes from basic
     const theologicalThemes = extractTheologicalThemes(basic?.summary_content || null)
@@ -160,7 +171,7 @@ export default function ChapterScreen() {
       insight: verseInsightsByVerse[kv.verse_number] || '',
     }))
 
-    // Get practical applications
+    // Get practical applications from database field
     const practicalApplications = advRaw?.practical_applications || null
 
     return {
@@ -169,7 +180,23 @@ export default function ChapterScreen() {
       keyVersesWithContext,
       practicalApplications,
     }
-  }, [advRaw, basic, keyVerses, verseInsightsByVerse, extractTheologicalThemes])
+  }, [advancedSummaryString, basic, keyVerses, verseInsightsByVerse, extractTheologicalThemes, extractSection, advRaw])
+
+  // Extract data for other tabs from advanced summary sections
+  const crossRefsData = useMemo(() => {
+    const crossRefsText = extractSection(advancedSummaryString, 'Cross[- ]?References')
+    return crossRefsText
+  }, [advancedSummaryString, extractSection])
+
+  const discussionData = useMemo(() => {
+    const discussionText = extractSection(advancedSummaryString, 'Discussion Questions?')
+    return discussionText
+  }, [advancedSummaryString, extractSection])
+
+  const hebrewWordsData = useMemo(() => {
+    const hebrewText = extractSection(advancedSummaryString, '(Hebrew|Key) Words?( Studies)?')
+    return hebrewText
+  }, [advancedSummaryString, extractSection])
 
   // ---- Progress: direct DB writes ----
   const markChapterRead = useCallback(async () => {
@@ -289,15 +316,15 @@ export default function ChapterScreen() {
           )}
 
           {tab === 'crossrefs' && (
-            <CrossReferencesTab crossReferences={advRaw?.cross_references || null} />
+            <CrossReferencesTab markdownContent={crossRefsData} />
           )}
 
           {tab === 'discussion' && (
-            <DiscussionQuestionsTab discussionQuestions={advRaw?.discussion_questions || null} />
+            <DiscussionQuestionsTab markdownContent={discussionData} />
           )}
 
           {tab === 'hebrew' && (
-            <KeyHebrewWordsTab wordStudies={advRaw?.word_studies || null} />
+            <KeyHebrewWordsTab markdownContent={hebrewWordsData} />
           )}
 
           <View style={{ height: 40 }} />
