@@ -61,12 +61,15 @@ export default function ChapterScreen() {
     if (!markdown) return null
     const content = String(markdown)
 
-    // Try to match section with ## or ### heading
-    const regex = new RegExp(`###?\\s*${sectionName}[:\\s]*([\\s\\S]*?)(?=\\n###?\\s|\\n##\\s|$)`, 'i')
+    // Try to match section with any heading level (# to ####)
+    // Using ^ to match start of line and multiline flag
+    const regex = new RegExp(`^#{1,4}\\s*${sectionName}\\s*:?\\s*\n([\\s\\S]*?)(?=^#{1,4}\\s|$)`, 'im')
     const match = content.match(regex)
     if (match && match[1]) {
+      console.log(`✓ Found section "${sectionName}"`)
       return match[1].trim()
     }
+    console.log(`✗ Section "${sectionName}" not found in markdown`)
     return null
   }, [])
 
@@ -142,7 +145,12 @@ export default function ChapterScreen() {
   // Get advanced summary as string
   const advancedSummaryString = useMemo(() => {
     const adv = advRaw?.summary_advanced
-    if (typeof adv === 'string') return adv
+    if (typeof adv === 'string') {
+      // Extract all headings for debugging
+      const headings = adv.match(/^#{1,4}\s+.+$/gm) || []
+      console.log('Advanced summary headings:', headings)
+      return adv
+    }
     if (Array.isArray(adv)) {
       return adv.map((s: any) => {
         const title = s?.title || s?.section || ''
@@ -173,6 +181,7 @@ export default function ChapterScreen() {
 
     // Get practical applications from database field
     const practicalApplications = advRaw?.practical_applications || null
+    console.log('Practical applications from DB:', practicalApplications ? 'Found' : 'Not found')
 
     return {
       summary: summaryText,
