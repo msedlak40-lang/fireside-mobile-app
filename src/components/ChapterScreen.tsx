@@ -191,18 +191,15 @@ export default function ChapterScreen() {
 
   // Extract data for other tabs from advanced summary sections
   const crossRefsData = useMemo(() => {
-    const crossRefsText = extractSection(advancedSummaryString, 'Cross[- ]?References')
-    return crossRefsText
+    return extractSection(advancedSummaryString, 'Cross-References')
   }, [advancedSummaryString, extractSection])
 
   const discussionData = useMemo(() => {
-    const discussionText = extractSection(advancedSummaryString, 'Discussion Questions?')
-    return discussionText
+    return extractSection(advancedSummaryString, 'Discussion Questions')
   }, [advancedSummaryString, extractSection])
 
   const hebrewWordsData = useMemo(() => {
-    const hebrewText = extractSection(advancedSummaryString, 'Key Hebrew Words & Insights')
-    return hebrewText
+    return extractSection(advancedSummaryString, 'Key Hebrew Words & Insights')
   }, [advancedSummaryString, extractSection])
 
   // ---- Progress: direct DB writes ----
