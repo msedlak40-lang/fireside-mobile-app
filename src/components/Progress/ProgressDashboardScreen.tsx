@@ -4,9 +4,9 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaVi
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
-import { fetchUserDashboard } from '../../services/progress';
+import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
-import type { UserDashboard } from '../../services/progress';
+import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
 
@@ -16,6 +16,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 type CachedData = {
   dashboard: UserDashboard | null;
   activePlan: ActivePlanWithReading | null;
+  activeCharacterStudy: ActiveCharacterStudy | null;
   todayDevotion: any | null;
   timestamp: number;
 };
@@ -43,6 +44,7 @@ export default function ProgressDashboardScreen() {
 
   const [dashboard, setDashboard] = useState<UserDashboard | null>(null);
   const [activePlan, setActivePlan] = useState<ActivePlanWithReading | null>(null);
+  const [activeCharacterStudy, setActiveCharacterStudy] = useState<ActiveCharacterStudy | null>(null);
   const [todayDevotion, setTodayDevotion] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,9 +82,10 @@ export default function ProgressDashboardScreen() {
   // Fetch fresh data from API
   const fetchFreshData = async () => {
     try {
-      const [dashData, planData] = await Promise.all([
+      const [dashData, planData, characterStudyData] = await Promise.all([
         fetchUserDashboard(),
         fetchActiveReadingPlan(),
+        fetchActiveCharacterStudy(),
       ]);
 
       // today's devotion
@@ -96,11 +99,13 @@ export default function ProgressDashboardScreen() {
       const freshData = {
         dashboard: dashData,
         activePlan: planData,
+        activeCharacterStudy: characterStudyData,
         todayDevotion: data ?? null,
       };
 
       setDashboard(freshData.dashboard);
       setActivePlan(freshData.activePlan);
+      setActiveCharacterStudy(freshData.activeCharacterStudy);
       setTodayDevotion(freshData.todayDevotion);
 
       // Save to cache
@@ -119,6 +124,7 @@ export default function ProgressDashboardScreen() {
         // Use cached data immediately
         setDashboard(cached.dashboard);
         setActivePlan(cached.activePlan);
+        setActiveCharacterStudy(cached.activeCharacterStudy);
         setTodayDevotion(cached.todayDevotion);
         setLoading(false);
         // Don't fetch fresh data on initial load if cache is valid
@@ -148,6 +154,10 @@ export default function ProgressDashboardScreen() {
   const openPlans = useCallback(() => {
     // ✅ just switch to the Plans tab — avoids nested hook issues
     navigation.navigate('PlansTab', { screen: 'ReadingPlansHome' });
+  }, [navigation]);
+
+  const openCharacters = useCallback(() => {
+    navigation.navigate('CharactersTab', { screen: 'CharactersHome' });
   }, [navigation]);
 
   const openNotesSummary = useCallback(() => {
@@ -306,6 +316,55 @@ const openTodayDevotion = useCallback(() => {
               }}
             >
               <Text style={{ color: '#fff', fontWeight: '600' }}>Browse Reading Plans</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Character Study Progress */}
+        {activeCharacterStudy ? (
+          <TouchableOpacity
+            onPress={openCharacters}
+            style={{ marginBottom: 16, padding: 16, backgroundColor: '#fef3c7', borderRadius: 12 }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>✨ Active Character Study</Text>
+            <View style={{ marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={{ fontSize: 14, color: '#374151' }}>Progress</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600' }}>
+                  {activeCharacterStudy.completed_lessons} / {activeCharacterStudy.total_lessons} lessons
+                </Text>
+              </View>
+              <View style={{ height: 8, backgroundColor: '#fde68a', borderRadius: 4, overflow: 'hidden' }}>
+                <View
+                  style={{
+                    height: '100%',
+                    width: `${activeCharacterStudy.percentage}%`,
+                    backgroundColor: '#f59e0b',
+                  }}
+                />
+              </View>
+              <Text style={{ marginTop: 4, fontSize: 12, color: '#374151', textAlign: 'right' }}>
+                {activeCharacterStudy.percentage}% complete
+              </Text>
+            </View>
+            <Text style={{ marginTop: 8, fontSize: 12, color: '#f59e0b', fontWeight: '600' }}>Tap to view study →</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#f3f4f6', borderRadius: 12 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>✨ Character Studies</Text>
+            <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 12 }}>
+              No active character study. Start one to learn from Biblical characters!
+            </Text>
+            <TouchableOpacity
+              onPress={openCharacters}
+              style={{
+                padding: 12,
+                backgroundColor: '#f59e0b',
+                borderRadius: 8,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600' }}>Browse Characters</Text>
             </TouchableOpacity>
           </View>
         )}

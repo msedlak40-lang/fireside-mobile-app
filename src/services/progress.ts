@@ -250,25 +250,118 @@ export async function completeDevotionProgress(devotion_id: number) {
     if (insErr) throw insErr
   }
 }
-// --- Character study tracking helpers (legacy stub) ---
-export async function fetchCharacterProgress(character_id?: number) {
+// --- Character study tracking helpers ---
+
+export type CharacterProgress = {
+  user_id: string
+  character_id: number
+  completed: boolean
+  completed_at: string | null
+  notes: string | null
+  favorite: boolean
+  started_at: string
+}
+
+export type ActiveCharacterStudy = {
+  character_id: number
+  character_name: string
+  character_type: string | null
+  testament: string | null
+  total_lessons: number
+  completed_lessons: number
+  percentage: number
+  started_at: string
+}
+
+export async function fetchCharacterProgress(character_id?: number): Promise<CharacterProgress | null> {
   const { data: auth } = await supabase.auth.getUser()
   const user_id = auth?.user?.id
-  if (!user_id || !character_id) return { completed: false }
+  if (!user_id || !character_id) return null
 
   const { data, error } = await supabase
     .from('user_character_progress')
-    .select('completed_at')
+    .select('*')
     .eq('user_id', user_id)
     .eq('character_id', character_id)
     .maybeSingle()
 
   if (error) {
     console.warn('[fetchCharacterProgress] error', error)
-    return { completed: false }
+    return null
   }
 
-  return { completed: !!data?.completed_at }
+  return data as CharacterProgress | null
+}
+
+export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy | null> {
+  const { data: auth } = await supabase.auth.getUser()
+  const user_id = auth?.user?.id
+  if (!user_id) return null
+
+  try {
+    // Get the most recent character study in progress (not completed)
+    const { data: progressData, error: progressError } = await supabase
+      .from('user_character_progress')
+      .select(`
+        character_id,
+        started_at,
+        characters (
+          name,
+          character_type,
+          testament,
+          total_lessons
+        )
+      `)
+      .eq('user_id', user_id)
+      .eq('completed', false)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (progressError) throw progressError
+    if (!progressData) return null
+
+    const character = (progressData as any).characters
+    if (!character) return null
+
+    // Count completed lessons
+    const { data: lessonProgressData, error: lessonError } = await supabase
+      .from('user_character_lesson_progress')
+      .select('lesson_id')
+      .eq('user_id', user_id)
+      .eq('completed', true)
+
+    if (lessonError) {
+      console.warn('[fetchActiveCharacterStudy] lesson progress error', lessonError)
+    }
+
+    // Get lesson IDs for this character
+    const { data: lessonsData } = await supabase
+      .from('character_lessons')
+      .select('id')
+      .eq('character_id', progressData.character_id)
+
+    const lessonIds = (lessonsData || []).map((l: any) => l.id)
+    const completedLessonIds = (lessonProgressData || []).map((lp: any) => lp.lesson_id)
+    const completedLessons = completedLessonIds.filter((id: number) => lessonIds.includes(id)).length
+
+    const totalLessons = character.total_lessons || lessonIds.length || 0
+    const percentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+
+    return {
+      character_id: progressData.character_id,
+      character_name: character.name,
+      character_type: character.character_type,
+      testament: character.testament,
+      total_lessons: totalLessons,
+      completed_lessons: completedLessons,
+      percentage,
+      started_at: progressData.started_at
+    }
+  } catch (err) {
+    console.warn('[fetchActiveCharacterStudy] Failed:', err)
+    return null
+  }
 }
 
 export async function completeCharacterProgress(character_id: number) {
@@ -280,4 +373,41 @@ export async function completeCharacterProgress(character_id: number) {
   await supabase
     .from('user_character_progress')
     .upsert({ user_id, character_id, completed_at: nowIso }, { onConflict: 'user_id,character_id' })
+}
+
+export async function completeCharacterStudy(character_id: number) {
+  const { data: auth } = await supabase.auth.getUser()
+  const user_id = auth?.user?.id
+  if (!user_id || !character_id) return
+
+  const nowIso = new Date().toISOString()
+  await supabase
+    .from('user_character_progress')
+    .update({ completed: true, completed_at: nowIso })
+    .eq('user_id', user_id)
+    .eq('character_id', character_id)
+}
+
+export async function toggleCharacterFavorite(character_id: number) {
+  const { data: auth } = await supabase.auth.getUser()
+  const user_id = auth?.user?.id
+  if (!user_id || !character_id) return
+
+  // Get current state
+  const { data: existing } = await supabase
+    .from('user_character_progress')
+    .select('favorite')
+    .eq('user_id', user_id)
+    .eq('character_id', character_id)
+    .maybeSingle()
+
+  const newFavoriteState = !(existing?.favorite ?? false)
+
+  // Upsert with toggled favorite state
+  await supabase
+    .from('user_character_progress')
+    .upsert(
+      { user_id, character_id, favorite: newFavoriteState },
+      { onConflict: 'user_id,character_id' }
+    )
 }
