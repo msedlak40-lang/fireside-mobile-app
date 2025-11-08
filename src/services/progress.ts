@@ -305,7 +305,7 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
       .select(`
         character_id,
         started_at,
-        characters (
+        bible_characters (
           name,
           character_type,
           testament,
@@ -321,7 +321,7 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
     if (progressError) throw progressError
     if (!progressData) return null
 
-    const character = (progressData as any).characters
+    const character = (progressData as any).bible_characters
     if (!character) return null
 
     // Count completed lessons

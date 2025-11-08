@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { colors } from '../../theme/colors';
 import { supabase } from '../../lib/supabaseClient';
 import { getCharacterWithLessons } from '../../lib/characters';
 import { completeCharacterStudy, fetchCharacterProgress, toggleCharacterFavorite } from '../../services/progress';
@@ -129,8 +130,8 @@ export default function CharacterDetailScreen() {
 
   if (loading || !character) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
+        <ActivityIndicator color={colors.accent.primary} />
       </View>
     );
   }
@@ -139,12 +140,12 @@ export default function CharacterDetailScreen() {
   const isCompleted = characterProgress?.completed;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, backgroundColor: colors.background.primary }}>
       {/* Header with favorite */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: '800' }}>{character.name}</Text>
-          <Text style={{ marginTop: 6, fontSize: 13, color: '#6b7280' }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text.primary }}>{character.name}</Text>
+          <Text style={{ marginTop: 6, fontSize: 13, color: colors.text.secondary }}>
             {character.character_type ?? ''} {character.testament ? `• ${character.testament}` : ''}
           </Text>
         </View>
@@ -181,19 +182,19 @@ export default function CharacterDetailScreen() {
 
       {/* One sentence summary */}
       {character.one_sentence_summary ? (
-        <Text style={{ marginTop: 12, fontSize: 16, lineHeight: 24 }}>
+        <Text style={{ marginTop: 12, fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
           {character.one_sentence_summary}
         </Text>
       ) : null}
 
       {/* Appearance info */}
-      <View style={{ marginTop: 12 }}>
-        <Text style={{ fontSize: 12, color: '#6b7280' }}>
-          {(character.first_appearance || character.last_appearance)
-            ? `${character.first_appearance ?? ''}${character.first_appearance && character.last_appearance ? ' → ' : ''}${character.last_appearance ?? ''}`
-            : ''}
-        </Text>
-      </View>
+      {(character.first_appearance || character.last_appearance) && (
+        <View style={{ marginTop: 12, flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+          <Text style={{ fontSize: 14, color: colors.text.secondary }}>
+            📍 {character.first_appearance ?? ''}{character.first_appearance && character.last_appearance ? ' → ' : ''}{character.last_appearance ?? ''}
+          </Text>
+        </View>
+      )}
 
       {/* Start Study Button */}
       {!hasStarted && lessons.length > 0 && (
@@ -203,21 +204,21 @@ export default function CharacterDetailScreen() {
           style={{
             marginTop: 16,
             padding: 16,
-            backgroundColor: isStarting ? '#9ca3af' : '#2563eb',
+            backgroundColor: isStarting ? colors.text.tertiary : colors.accent.primary,
             borderRadius: 12,
             alignItems: 'center'
           }}
         >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+          <Text style={{ color: colors.text.primary, fontWeight: '700', fontSize: 16 }}>
             {isStarting ? 'Starting...' : '🚀 Start Character Study'}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Lessons section */}
-      <View style={{ marginTop: 18 }}>
+      <View style={{ marginTop: 24 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700' }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
             Lessons {lessons.length > 0 && `(${lessons.length})`}
           </Text>
 
@@ -225,9 +226,9 @@ export default function CharacterDetailScreen() {
             <TouchableOpacity
               onPress={markCharacterComplete}
               disabled={isCompleting}
-              style={{ paddingVertical: 8, paddingHorizontal: 14, backgroundColor: isCompleting ? '#9ca3af' : '#10b981', borderRadius: 8 }}
+              style={{ paddingVertical: 8, paddingHorizontal: 14, backgroundColor: isCompleting ? colors.text.tertiary : '#10b981', borderRadius: 8 }}
             >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+              <Text style={{ color: colors.text.primary, fontWeight: '700', fontSize: 14 }}>
                 {isCompleting ? 'Saving...' : '✓ Mark Complete'}
               </Text>
             </TouchableOpacity>
@@ -235,7 +236,7 @@ export default function CharacterDetailScreen() {
         </View>
 
         {lessons.length === 0 ? (
-          <Text style={{ fontSize: 14, color: '#6b7280', fontStyle: 'italic' }}>
+          <Text style={{ fontSize: 14, color: colors.text.secondary, fontStyle: 'italic' }}>
             No lessons available yet.
           </Text>
         ) : (
@@ -246,27 +247,27 @@ export default function CharacterDetailScreen() {
                 key={l.id}
                 onPress={() => navigation.navigate('CharacterLesson', { id: l.id })}
                 style={{
-                  marginTop: 10,
+                  marginBottom: 12,
                   padding: 12,
                   borderWidth: 1,
-                  borderColor: '#e5e7eb',
+                  borderColor: colors.border.default,
                   borderRadius: 10,
-                  backgroundColor: lessonComplete ? '#f0fdf4' : '#fff'
+                  backgroundColor: lessonComplete ? '#f0fdf4' : colors.background.secondary
                 }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700' }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text.primary }}>
                       {l.lesson_number != null ? `Lesson ${l.lesson_number}: ` : ''}
                       {l.lesson_title ?? 'Untitled'}
                     </Text>
                     {!!l.key_passage && (
-                      <Text style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
+                      <Text style={{ marginTop: 4, fontSize: 14, color: colors.text.secondary }}>
                         {l.key_passage}
                       </Text>
                     )}
                     {!!l.life_stage && (
-                      <Text style={{ marginTop: 4, fontSize: 12, color: '#94a3b8' }}>
+                      <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>
                         {l.life_stage}
                       </Text>
                     )}

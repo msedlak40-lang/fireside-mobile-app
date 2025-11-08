@@ -109,10 +109,44 @@ style={{ flex:1, paddingHorizontal:12, paddingVertical:10, borderWidth:1, border
 data={items}
 keyExtractor={(c) => String(c.id)}
 renderItem={({ item }) => (
-<Pressable onPress={() => navigation.navigate('CharacterDetail', { id: item.id })} style={{ paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth:1, borderBottomColor: colors.border.default }}>
-<Text style={{ fontSize:16, fontWeight:'700', color: colors.text.primary }}>{item.name}</Text>
-<Text style={{ marginTop:4, fontSize:12, color: colors.text.secondary }}>{item.character_type ?? ''} {item.testament ? `• ${item.testament}` : ''} {item.total_lessons ? `• ${item.total_lessons} lessons` : ''}</Text>
-{item.one_sentence_summary ? <Text style={{ marginTop:6, fontSize:13, color: colors.text.primary }}>{item.one_sentence_summary}</Text> : null}
+<Pressable
+onPress={() => navigation.navigate('CharacterDetail', { id: item.id })}
+style={{
+marginHorizontal: 16,
+marginBottom: 12,
+padding: 16,
+borderWidth: 1,
+borderColor: colors.border.default,
+borderRadius: 12,
+backgroundColor: colors.background.secondary
+}}
+>
+<Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>{item.name}</Text>
+{item.character_type && (
+<Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>
+Type: {item.character_type}
+</Text>
+)}
+{item.one_sentence_summary ? (
+<Text style={{ marginTop: 6, fontSize: 14, color: colors.text.primary, lineHeight: 20 }}>
+{item.one_sentence_summary}
+</Text>
+) : null}
+<View style={{ marginTop: 8, flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+{item.testament && (
+<Text style={{ fontSize: 12, color: colors.text.secondary }}>
+📖 {item.testament}
+</Text>
+)}
+{item.total_lessons && (
+<>
+{item.testament && <Text style={{ fontSize: 12, color: colors.text.secondary }}>•</Text>}
+<Text style={{ fontSize: 12, color: colors.text.secondary }}>
+{item.total_lessons} lessons
+</Text>
+</>
+)}
+</View>
 </Pressable>
 )}
 contentContainerStyle={{ paddingBottom: 24 }}
