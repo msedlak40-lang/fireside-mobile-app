@@ -166,8 +166,8 @@ export default function ChapterScreen() {
 
   // One Pager data preparation - extract only specific sections
   const onePagerData = useMemo(() => {
-    // Extract ONLY the summary section from advanced (no fallback to entire advanced)
-    const summaryText = extractSection(advancedSummaryString, 'Summary')
+    // Extract ONLY the "Original Summary" section from advanced (not the entire advanced)
+    const summaryText = extractSection(advancedSummaryString, 'Original Summary')
 
     // Extract theological themes from basic
     const theologicalThemes = extractTheologicalThemes(basic?.summary_content || null)
@@ -179,9 +179,8 @@ export default function ChapterScreen() {
       insight: verseInsightsByVerse[kv.verse_number] || '',
     }))
 
-    // Get practical applications from database field
-    const practicalApplications = advRaw?.practical_applications || null
-    console.log('Practical applications from DB:', practicalApplications ? 'Found' : 'Not found')
+    // Extract practical applications from advanced summary markdown
+    const practicalApplications = extractSection(advancedSummaryString, 'Practical Applications')
 
     return {
       summary: summaryText,
@@ -189,7 +188,7 @@ export default function ChapterScreen() {
       keyVersesWithContext,
       practicalApplications,
     }
-  }, [advancedSummaryString, basic, keyVerses, verseInsightsByVerse, extractTheologicalThemes, extractSection, advRaw])
+  }, [advancedSummaryString, basic, keyVerses, verseInsightsByVerse, extractTheologicalThemes, extractSection])
 
   // Extract data for other tabs from advanced summary sections
   const crossRefsData = useMemo(() => {
@@ -203,7 +202,7 @@ export default function ChapterScreen() {
   }, [advancedSummaryString, extractSection])
 
   const hebrewWordsData = useMemo(() => {
-    const hebrewText = extractSection(advancedSummaryString, 'Key Hebrew Words and Insights')
+    const hebrewText = extractSection(advancedSummaryString, 'Key Hebrew Words & Insights')
     return hebrewText
   }, [advancedSummaryString, extractSection])
 
