@@ -60,7 +60,7 @@ export default function ReadingPlansHomeScreen() {
                 <Text style={{ fontSize: 20, fontWeight: '800', marginTop: 4, color: '#1e40af' }}>{activePlan.plan_name}</Text>
                 <View style={{ marginTop: 8, flexDirection: 'row', gap: 12 }}>
                   <Text style={{ fontSize: 14, color: '#1e40af' }}>
-                    Day {activePlan.current_day}/{activePlan.total_days}
+                    {activePlan.days_completed}/{activePlan.total_days} days completed
                   </Text>
                   <Text style={{ fontSize: 14, color: '#1e40af' }}>•</Text>
                   <Text style={{ fontSize: 14, color: '#1e40af' }}>

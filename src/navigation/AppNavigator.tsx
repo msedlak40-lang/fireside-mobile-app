@@ -9,7 +9,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
-import { attemptBiometricUnlock, isBiometricEnabled } from '../services/biometricAuth';
 
 // Screens
 import Auth from '../screens/Auth';
@@ -352,25 +351,10 @@ export default function AppNavigator() {
         const { data } = await supabase.auth.getSession();
         const hasSession = !!data.session;
 
-        // Check if biometric auth is enabled
-        const biometricEnabled = await isBiometricEnabled();
-
-        if (hasSession && biometricEnabled) {
-          // Session exists but user has biometric enabled - prompt for biometric unlock
-          console.log('[AppNavigator] Session exists, prompting for biometric unlock...');
-          const { authenticateWithBiometric } = await import('../services/biometricAuth');
-          const email = await authenticateWithBiometric();
-
-          if (email) {
-            console.log('[AppNavigator] Biometric authentication successful');
-            setIsAuthed(true);
-          } else {
-            console.log('[AppNavigator] Biometric authentication failed or cancelled');
-            setIsAuthed(false);
-          }
-        } else if (hasSession && !biometricEnabled) {
-          // Session exists and no biometric - allow access
-          console.log('[AppNavigator] Session exists, no biometric required');
+        if (hasSession) {
+          // Session exists - allow access
+          // Note: Biometric unlock will be implemented for app resume from background
+          console.log('[AppNavigator] Session exists, allowing access');
           setIsAuthed(true);
         } else {
           // No session - show login screen

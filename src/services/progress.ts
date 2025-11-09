@@ -338,26 +338,30 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
     const character = (progressData as any).bible_characters
     if (!character) return null
 
-    // Count completed lessons
-    const { data: lessonProgressData, error: lessonError } = await supabase
-      .from('user_character_lesson_progress')
-      .select('lesson_id')
-      .eq('user_id', user_id)
-      .eq('completed', true)
-
-    if (lessonError) {
-      console.warn('[fetchActiveCharacterStudy] lesson progress error', lessonError)
-    }
-
-    // Get lesson IDs for this character
+    // Get lesson IDs for this character first
     const { data: lessonsData } = await supabase
       .from('character_lessons')
       .select('id')
       .eq('character_id', progressData.character_id)
 
     const lessonIds = (lessonsData || []).map((l: any) => l.id)
-    const completedLessonIds = (lessonProgressData || []).map((lp: any) => lp.lesson_id)
-    const completedLessons = completedLessonIds.filter((id: number) => lessonIds.includes(id)).length
+
+    // Count completed lessons for this character only
+    let completedLessons = 0
+    if (lessonIds.length > 0) {
+      const { data: lessonProgressData, error: lessonError } = await supabase
+        .from('user_character_lesson_progress')
+        .select('lesson_id')
+        .eq('user_id', user_id)
+        .eq('completed', true)
+        .in('lesson_id', lessonIds)
+
+      if (lessonError) {
+        console.warn('[fetchActiveCharacterStudy] lesson progress error', lessonError)
+      }
+
+      completedLessons = (lessonProgressData || []).length
+    }
 
     const totalLessons = character.total_lessons || lessonIds.length || 0
     const percentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
