@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
+import { attemptBiometricUnlock, isBiometricEnabled } from '../services/biometricAuth';
 
 // Screens
 import Auth from '../screens/Auth';
@@ -347,10 +348,35 @@ export default function AppNavigator() {
   useEffect(() => {
     (async () => {
       try {
+        // First check if there's an existing session
         const { data } = await supabase.auth.getSession();
-        setIsAuthed(!!data.session);
+
+        if (data.session) {
+          // Active session exists
+          setIsAuthed(true);
+        } else {
+          // No active session - check if biometric unlock is available
+          const biometricEnabled = await isBiometricEnabled();
+
+          if (biometricEnabled) {
+            console.log('[AppNavigator] Attempting biometric unlock...');
+            const unlocked = await attemptBiometricUnlock();
+
+            if (unlocked) {
+              console.log('[AppNavigator] Biometric unlock successful');
+              setIsAuthed(true);
+            } else {
+              console.log('[AppNavigator] Biometric unlock failed or cancelled');
+              setIsAuthed(false);
+            }
+          } else {
+            // No session and no biometric - show auth screen
+            setIsAuthed(false);
+          }
+        }
       } catch (err) {
-        console.warn('[Auth] getSession failed', err);
+        console.warn('[Auth] Session check failed', err);
+        setIsAuthed(false);
       } finally {
         setReady(true);
       }

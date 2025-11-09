@@ -1,13 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
+import {
+  isBiometricAvailable,
+  getBiometricType,
+  getBiometricName,
+  enableBiometricAuth,
+  isBiometricEnabled,
+  authenticateWithBiometric,
+  getStoredEmail
+} from '../services/biometricAuth';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>('Biometric');
+  const [showBiometricLogin, setShowBiometricLogin] = useState(false);
+
+  // Check biometric availability and stored credentials on mount
+  useEffect(() => {
+    (async () => {
+      const available = await isBiometricAvailable();
+      setBiometricAvailable(available);
+
+      if (available) {
+        const bioType = await getBiometricType();
+        setBiometricType(getBiometricName(bioType));
+
+        // Check if user has biometric enabled and has stored email
+        const enabled = await isBiometricEnabled();
+        const storedEmail = await getStoredEmail();
+
+        if (enabled && storedEmail) {
+          setShowBiometricLogin(true);
+          setEmail(storedEmail); // Pre-fill email for convenience
+        }
+      }
+    })();
+  }, []);
 
   const signInWithEmail = async () => {
     if (!email || !password) {
@@ -22,6 +56,37 @@ export default function Auth() {
         password,
       });
       if (error) throw error;
+
+      // After successful login, offer to enable biometric auth if available
+      if (biometricAvailable) {
+        const alreadyEnabled = await isBiometricEnabled();
+
+        if (!alreadyEnabled) {
+          // Offer to enable biometric authentication
+          Alert.alert(
+            `Enable ${biometricType}?`,
+            `Use ${biometricType} to unlock the app next time for faster and more secure access.`,
+            [
+              {
+                text: 'Not Now',
+                style: 'cancel',
+              },
+              {
+                text: 'Enable',
+                onPress: async () => {
+                  try {
+                    await enableBiometricAuth(email);
+                    console.log('[AUTH] Biometric authentication enabled');
+                  } catch (err) {
+                    console.error('[AUTH] Failed to enable biometric:', err);
+                  }
+                },
+              },
+            ]
+          );
+        }
+      }
+
       // Navigation will happen automatically via onAuthStateChange in AppNavigator
     } catch (e: any) {
       console.warn('[AUTH] signInWithPassword failed:', e?.message || e);
@@ -89,6 +154,27 @@ export default function Auth() {
     } catch (e: any) {
       console.warn('[AUTH] resetPassword failed:', e?.message || e);
       Alert.alert('Reset Failed', e?.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      setLoading(true);
+      const authenticatedEmail = await authenticateWithBiometric();
+
+      if (authenticatedEmail) {
+        // Biometric auth succeeded, session should be restored automatically
+        // The AppNavigator will detect the session change and navigate
+        console.log('[AUTH] Biometric authentication successful');
+      } else {
+        // User cancelled or failed - they can still use password
+        console.log('[AUTH] Biometric authentication cancelled or failed');
+      }
+    } catch (err) {
+      console.error('[AUTH] Biometric login error:', err);
+      Alert.alert('Authentication Failed', 'Please use your password to sign in.');
     } finally {
       setLoading(false);
     }
@@ -175,6 +261,28 @@ export default function Auth() {
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* Biometric Login Button - only show on sign in when available */}
+            {!isSignUp && showBiometricLogin && (
+              <TouchableOpacity
+                onPress={handleBiometricLogin}
+                disabled={loading}
+                style={{
+                  height: 48,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.background.secondary,
+                  borderWidth: 2,
+                  borderColor: colors.accent.secondary,
+                  marginTop: 12,
+                }}
+              >
+                <Text style={{ color: colors.accent.secondary, fontWeight: '700', fontSize: 16 }}>
+                  {loading ? 'Authenticating...' : `Unlock with ${biometricType}`}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Forgot Password - only show on sign in */}
             {!isSignUp && (
