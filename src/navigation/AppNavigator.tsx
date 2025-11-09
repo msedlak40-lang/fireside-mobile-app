@@ -348,31 +348,34 @@ export default function AppNavigator() {
   useEffect(() => {
     (async () => {
       try {
-        // First check if there's an existing session
+        // Check if there's an existing Supabase session
         const { data } = await supabase.auth.getSession();
+        const hasSession = !!data.session;
 
-        if (data.session) {
-          // Active session exists
-          setIsAuthed(true);
-        } else {
-          // No active session - check if biometric unlock is available
-          const biometricEnabled = await isBiometricEnabled();
+        // Check if biometric auth is enabled
+        const biometricEnabled = await isBiometricEnabled();
 
-          if (biometricEnabled) {
-            console.log('[AppNavigator] Attempting biometric unlock...');
-            const unlocked = await attemptBiometricUnlock();
+        if (hasSession && biometricEnabled) {
+          // Session exists but user has biometric enabled - prompt for biometric unlock
+          console.log('[AppNavigator] Session exists, prompting for biometric unlock...');
+          const { authenticateWithBiometric } = await import('../services/biometricAuth');
+          const email = await authenticateWithBiometric();
 
-            if (unlocked) {
-              console.log('[AppNavigator] Biometric unlock successful');
-              setIsAuthed(true);
-            } else {
-              console.log('[AppNavigator] Biometric unlock failed or cancelled');
-              setIsAuthed(false);
-            }
+          if (email) {
+            console.log('[AppNavigator] Biometric authentication successful');
+            setIsAuthed(true);
           } else {
-            // No session and no biometric - show auth screen
+            console.log('[AppNavigator] Biometric authentication failed or cancelled');
             setIsAuthed(false);
           }
+        } else if (hasSession && !biometricEnabled) {
+          // Session exists and no biometric - allow access
+          console.log('[AppNavigator] Session exists, no biometric required');
+          setIsAuthed(true);
+        } else {
+          // No session - show login screen
+          console.log('[AppNavigator] No session, showing login screen');
+          setIsAuthed(false);
         }
       } catch (err) {
         console.warn('[Auth] Session check failed', err);

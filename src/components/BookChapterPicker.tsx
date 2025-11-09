@@ -435,7 +435,6 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Progress</Text>
         <Text style={styles.cardText}>Read: {chaptersCount.read}/{chaptersCount.total}</Text>
-        <Text style={styles.cardText}>Basic: {summaryBasic.completed}/{summaryBasic.total} • Advanced: {summaryAdvanced.completed}/{summaryAdvanced.total}</Text>
       </View>
 
       <View style={styles.card}>

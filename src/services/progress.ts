@@ -129,7 +129,21 @@ export async function fetchUserDashboard(): Promise<UserDashboard> {
     if (!totalCharactersAvailable) totalCharactersAvailable = 29
   }
 
-  const totalRead = s?.total_chapters_read ?? 0
+  // Count unique chapters read (distinct book_name + chapter_number combinations)
+  let totalRead = 0
+  {
+    const { data: readChapters } = await supabase
+      .from('user_reading_progress')
+      .select('book_name, chapter_number')
+      .eq('user_id', userId)
+
+    // Count unique (book_name, chapter_number) pairs regardless of translation
+    const uniqueChapters = new Set(
+      (readChapters ?? []).map(r => `${r.book_name}:${r.chapter_number}`)
+    )
+    totalRead = uniqueChapters.size
+  }
+
   const percentage =
     totalChaptersAvailable > 0 ? Math.round((totalRead / totalChaptersAvailable) * 100) : 0
 

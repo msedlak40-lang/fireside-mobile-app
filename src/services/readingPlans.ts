@@ -162,11 +162,43 @@ export async function fetchActiveReadingPlan(): Promise<ActivePlanWithReading | 
       .rpc('rpc_get_active_reading_plan', { p_user_id: user.id })
 
     if (error) throw error
-    
+
     // If no active plan, return null
     if (!data || Object.keys(data).length === 0) return null
-    
-    return data as ActivePlanWithReading
+
+    const planData = data as ActivePlanWithReading
+
+    // Fix: Count actual completed days instead of using current_day - 1
+    // Get the user progress ID first
+    const { data: progressData } = await supabase
+      .from('user_reading_plan_progress')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('plan_id', planData.plan_id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (progressData) {
+      // Count actually completed days
+      const { count } = await supabase
+        .from('user_reading_plan_day_progress')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_progress_id', progressData.id)
+        .eq('completed', true)
+
+      const actualDaysCompleted = count || 0
+      const correctPercentage = planData.total_days > 0
+        ? Math.round((actualDaysCompleted / planData.total_days) * 100)
+        : 0
+
+      return {
+        ...planData,
+        days_completed: actualDaysCompleted,
+        percentage: correctPercentage
+      }
+    }
+
+    return planData
   } catch (err) {
     console.warn('[fetchActiveReadingPlan] Failed:', err)
     return null
