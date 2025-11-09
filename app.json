@@ -10,7 +10,8 @@
           "photosPermission": "Fireside needs access to your photos to upload journal entries.",
           "cameraPermission": "Fireside needs camera access to capture journal entries."
         }
-      ]
+      ],
+      "expo-local-authentication"
     ],
     "extra": {
       "supabaseUrl": "https://ryzgtpexapmwugbdspjm.supabase.co",
@@ -22,7 +23,8 @@
     "ios": {
       "bundleIdentifier": "com.msedlak40.firesidemobile",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Fireside uses Face ID to securely unlock the app and keep your data safe."
       }
     }
   }
