@@ -3,7 +3,6 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { searchScripture } from '../services/scripture';
 import { supabase } from '../lib/supabaseClient';
 
 type SearchResult = {
@@ -41,18 +40,40 @@ export default function BibleSearchScreen() {
 
     setLoading(true);
     try {
-      const data = await searchScripture(query);
+      // Use rpc_bible_search for more comprehensive results
+      const { data, error } = await supabase
+        .rpc('rpc_bible_search', { p_query: query, p_limit: 50 });
 
-      // Map results to SearchResult format
-      const mappedResults: SearchResult[] = (data || []).map((r: any) => ({
-        book_name: r.book_name || '',
-        chapter_number: r.chapter_number || 0,
-        verse_number: r.verse_number || 0,
-        verse_text: r.verse_text || r.text || '',
-        reference: `${r.book_name} ${r.chapter_number}:${r.verse_number}`,
-      }));
+      if (error) {
+        console.error('[BibleSearch] Search error:', error);
+        setResults([]);
+        setLoading(false);
+        return;
+      }
 
-      setResults(mappedResults);
+      // Fetch verse text for each result
+      const resultsWithText = await Promise.all(
+        (data || []).map(async (r: any) => {
+          const { data: verseData } = await supabase
+            .from('bible_verses')
+            .select('verse_text')
+            .eq('book_name', r.book_name)
+            .eq('chapter_number', r.chapter_number)
+            .eq('verse_number', r.verse_number)
+            .limit(1)
+            .maybeSingle();
+
+          return {
+            book_name: r.book_name || '',
+            chapter_number: r.chapter_number || 0,
+            verse_number: r.verse_number || 0,
+            verse_text: verseData?.verse_text || r.snippet || '',
+            reference: `${r.book_name} ${r.chapter_number}:${r.verse_number}`,
+          };
+        })
+      );
+
+      setResults(resultsWithText);
     } catch (err) {
       console.error('[BibleSearch] Text search failed:', err);
       setResults([]);
@@ -65,36 +86,48 @@ export default function BibleSearchScreen() {
     setLoading(true);
     setSelectedTheme(theme);
     try {
-      // TODO: Replace with actual RPC function name once provided by user
-      // Placeholder for theme-based search - will be replaced with actual RPC call
+      // Use rpc_bible_search with theme as the query
+      // This will find verses that contain the theme keywords
       const { data, error } = await supabase
-        .rpc('rpc_search_verses_by_theme', { p_theme: theme })
-        .limit(50);
+        .rpc('rpc_bible_search', { p_query: theme, p_limit: 50 });
 
       if (error) {
-        console.warn('[BibleSearch] Theme search RPC not available, using fallback');
-        // Fallback: use text search with theme name
-        await handleTextSearch(theme);
+        console.error('[BibleSearch] Theme search error:', error);
+        setResults([]);
+        setLoading(false);
         return;
       }
 
-      const mappedResults: SearchResult[] = (data || []).map((r: any) => ({
-        book_name: r.book_name || '',
-        chapter_number: r.chapter_number || 0,
-        verse_number: r.verse_number || 0,
-        verse_text: r.verse_text || r.text || '',
-        reference: `${r.book_name} ${r.chapter_number}:${r.verse_number}`,
-      }));
+      // Fetch verse text for each result
+      const resultsWithText = await Promise.all(
+        (data || []).map(async (r: any) => {
+          const { data: verseData } = await supabase
+            .from('bible_verses')
+            .select('verse_text')
+            .eq('book_name', r.book_name)
+            .eq('chapter_number', r.chapter_number)
+            .eq('verse_number', r.verse_number)
+            .limit(1)
+            .maybeSingle();
 
-      setResults(mappedResults);
+          return {
+            book_name: r.book_name || '',
+            chapter_number: r.chapter_number || 0,
+            verse_number: r.verse_number || 0,
+            verse_text: verseData?.verse_text || r.snippet || '',
+            reference: `${r.book_name} ${r.chapter_number}:${r.verse_number}`,
+          };
+        })
+      );
+
+      setResults(resultsWithText);
     } catch (err) {
       console.error('[BibleSearch] Theme search failed:', err);
-      // Fallback to text search
-      await handleTextSearch(theme);
+      setResults([]);
     } finally {
       setLoading(false);
     }
-  }, [handleTextSearch]);
+  }, []);
 
   const handleSearch = useCallback(() => {
     if (searchMode === 'text') {
