@@ -200,7 +200,7 @@ const openTodayDevotion = useCallback(() => {
           />
         }
       >
-        <Text style={{ fontSize: 24, fontWeight: '800', marginBottom: 20 }}>Your Progress</Text>
+        <Text style={{ fontSize: 26, fontWeight: '800', marginBottom: 20, color: colors.text.primary }}>Your Progress</Text>
 
         {/* Streak Card */}
         <View
@@ -209,22 +209,29 @@ const openTodayDevotion = useCallback(() => {
             padding: 20,
             backgroundColor: '#fef3c7',
             borderRadius: 16,
-            borderWidth: 3,
-            borderColor: '#fbbf24',
+            borderLeftWidth: 6,
+            borderLeftColor: '#f59e0b',
+            // iOS shadow
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            // Android shadow
+            elevation: 4,
           }}
         >
-          <Text style={{ fontSize: 14, color: '#92400e', fontWeight: '700' }}>STUDY STREAK</Text>
-          <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-            <Text style={{ fontSize: 48, fontWeight: '800', color: '#92400e' }}>
+          <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '800', letterSpacing: 1.5 }}>STUDY STREAK</Text>
+          <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+            <Text style={{ fontSize: 52, fontWeight: '900', color: '#92400e', lineHeight: 52 }}>
               {dashboard?.streak?.current || 0}
             </Text>
-            <Text style={{ fontSize: 32, marginBottom: 6 }}>🔥</Text>
+            <Text style={{ fontSize: 36, marginBottom: 4 }}>🔥</Text>
           </View>
-          <Text style={{ marginTop: 4, fontSize: 14, color: '#92400e' }}>
+          <Text style={{ marginTop: 8, fontSize: 15, color: '#92400e', fontWeight: '600' }}>
             Longest streak: {dashboard?.streak?.longest || 0} days
           </Text>
           {dashboard?.streak?.last_read_date && (
-   <Text style={{ marginTop: 2, fontSize: 12, color: '#92400e' }}>
+   <Text style={{ marginTop: 4, fontSize: 13, color: '#78350f', opacity: 0.8 }}>
      Last activity: {formatISODateYYYYMMDD(dashboard.streak.last_read_date)}
             </Text>
           )}
@@ -232,48 +239,95 @@ const openTodayDevotion = useCallback(() => {
 
         {/* Verse of the Day */}
         {verseOfTheDay && (
-          <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#dbeafe', borderRadius: 12 }}>
-            <Text style={{ fontSize: 12, color: '#1e40af', fontWeight: '700' }}>VERSE OF THE DAY</Text>
-            <Text style={{ marginTop: 8, fontSize: 16, fontStyle: 'italic', lineHeight: 24, color: '#1e3a8a' }}>
+          <View style={{
+            marginBottom: 16,
+            padding: 18,
+            backgroundColor: '#dbeafe',
+            borderRadius: 16,
+            borderLeftWidth: 6,
+            borderLeftColor: '#2563eb',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+          }}>
+            <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
+            <Text style={{ marginTop: 12, fontSize: 17, fontStyle: 'italic', lineHeight: 26, color: '#1e3a8a', fontWeight: '500' }}>
               "{verseOfTheDay.verse_text}"
             </Text>
-            <Text style={{ marginTop: 8, fontSize: 14, fontWeight: '600', color: '#1e40af' }}>
+            <Text style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
               — {verseOfTheDay.reference}
             </Text>
           </View>
         )}
 
         {/* Today's Devotion */}
-        <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#e9d5ff', borderRadius: 12 }}>
-          <Text style={{ fontSize: 12, color: '#6b21a8', fontWeight: '700' }}>TODAY’S DEVOTION</Text>
+        <View style={{
+          marginBottom: 16,
+          padding: 18,
+          backgroundColor: '#e9d5ff',
+          borderRadius: 16,
+          borderLeftWidth: 6,
+          borderLeftColor: '#9333ea',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 4,
+        }}>
+          <Text style={{ fontSize: 11, color: '#6b21a8', fontWeight: '800', letterSpacing: 1.5 }}>TODAY'S DEVOTION</Text>
           {todayDevotion ? (
             <>
-              <Text style={{ fontSize: 18, fontWeight: '700', marginTop: 4 }}>{todayDevotion.title}</Text>
+              <Text style={{ fontSize: 19, fontWeight: '800', marginTop: 8, color: '#581c87' }}>{todayDevotion.title}</Text>
               <TouchableOpacity
                 onPress={openTodayDevotion}
-                style={{ marginTop: 12, padding: 12, backgroundColor: '#7c3aed', borderRadius: 8, alignItems: 'center' }}
+                style={{
+                  marginTop: 12,
+                  padding: 14,
+                  backgroundColor: '#7c3aed',
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  shadowColor: '#7c3aed',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
               >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Open Devotion →</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Open Devotion →</Text>
               </TouchableOpacity>
             </>
           ) : (
-            <Text style={{ fontSize: 14, color: '#6b7280', marginTop: 6 }}>
+            <Text style={{ fontSize: 14, color: '#7c2d92', marginTop: 6 }}>
               No devotion scheduled for today.
             </Text>
           )}
         </View>
 
         {/* Chapter Progress */}
-        <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 12 }}>📖 Bible Reading</Text>
-          <View style={{ marginBottom: 12 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={{ fontSize: 14, color: '#6b7280' }}>Chapters Read</Text>
-              <Text style={{ fontSize: 14, fontWeight: '600' }}>
+        <View style={{
+          marginBottom: 16,
+          padding: 18,
+          backgroundColor: colors.background.secondary,
+          borderRadius: 16,
+          borderLeftWidth: 6,
+          borderLeftColor: '#3b82f6',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 3,
+        }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 12 }}>BIBLE READING</Text>
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, color: colors.text.secondary }}>Chapters Read</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text.primary }}>
                 {dashboard?.chapters?.total_read || 0} / {dashboard?.chapters?.total_available || 0}
               </Text>
             </View>
-            <View style={{ height: 8, backgroundColor: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+            <View style={{ height: 10, backgroundColor: '#e5e7eb', borderRadius: 5, overflow: 'hidden' }}>
               <View
                 style={{
                   height: '100%',
@@ -282,7 +336,7 @@ const openTodayDevotion = useCallback(() => {
                 }}
               />
             </View>
-            <Text style={{ marginTop: 4, fontSize: 12, color: '#6b7280', textAlign: 'right' }}>
+            <Text style={{ marginTop: 6, fontSize: 13, color: colors.text.secondary, textAlign: 'right', fontWeight: '600' }}>
               {dashboard?.chapters?.percentage || 0}% complete
             </Text>
           </View>
@@ -292,17 +346,29 @@ const openTodayDevotion = useCallback(() => {
         {activePlan ? (
           <TouchableOpacity
             onPress={openPlans}
-            style={{ marginBottom: 16, padding: 16, backgroundColor: '#dbeafe', borderRadius: 12 }}
+            style={{
+              marginBottom: 16,
+              padding: 18,
+              backgroundColor: '#dbeafe',
+              borderRadius: 16,
+              borderLeftWidth: 6,
+              borderLeftColor: '#2563eb',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
           >
-            <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>📅 Active Reading Plan</Text>
+            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#1e40af', marginBottom: 8 }}>ACTIVE READING PLAN</Text>
             <View style={{ marginTop: 4 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text style={{ fontSize: 14, color: '#374151' }}>Progress</Text>
-                <Text style={{ fontSize: 14, fontWeight: '600' }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1e3a8a' }}>
                   Day {activePlan.current_day} / {activePlan.total_days}
                 </Text>
               </View>
-              <View style={{ height: 8, backgroundColor: '#bfdbfe', borderRadius: 4, overflow: 'hidden' }}>
+              <View style={{ height: 10, backgroundColor: '#bfdbfe', borderRadius: 5, overflow: 'hidden' }}>
                 <View
                   style={{
                     height: '100%',
@@ -311,31 +377,50 @@ const openTodayDevotion = useCallback(() => {
                   }}
                 />
               </View>
-              <Text style={{ marginTop: 4, fontSize: 12, color: '#374151', textAlign: 'right' }}>
+              <Text style={{ marginTop: 6, fontSize: 13, color: '#374151', textAlign: 'right', fontWeight: '600' }}>
                 {Math.round(activePlan.percentage)}% complete
               </Text>
             </View>
-            <Text style={{ marginTop: 8, fontSize: 12, color: activePlan.on_track ? '#059669' : '#dc2626', fontWeight: '600' }}>
-              {activePlan.on_track ? '✓ On track' : '⚠ Behind schedule'}
-            </Text>
-            <Text style={{ marginTop: 8, fontSize: 12, color: '#2563eb', fontWeight: '600' }}>Tap to view plan →</Text>
+            <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 13, color: activePlan.on_track ? '#059669' : '#dc2626', fontWeight: '700' }}>
+                {activePlan.on_track ? '✓ On track' : '⚠ Behind schedule'}
+              </Text>
+              <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '700' }}>Tap to view →</Text>
+            </View>
           </TouchableOpacity>
         ) : (
-          <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#f3f4f6', borderRadius: 12 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>📅 Reading Plans</Text>
-            <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 12 }}>
+          <View style={{
+            marginBottom: 16,
+            padding: 18,
+            backgroundColor: colors.background.secondary,
+            borderRadius: 16,
+            borderLeftWidth: 6,
+            borderLeftColor: '#9ca3af',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            elevation: 2,
+          }}>
+            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 8 }}>READING PLANS</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 14, lineHeight: 20 }}>
               No active reading plan. Start one to track your daily Bible reading!
             </Text>
             <TouchableOpacity
               onPress={openPlans}
               style={{
-                padding: 12,
+                padding: 14,
                 backgroundColor: '#2563eb',
-                borderRadius: 8,
+                borderRadius: 10,
                 alignItems: 'center',
+                shadowColor: '#2563eb',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3,
               }}
             >
-              <Text style={{ color: '#fff', fontWeight: '600' }}>Browse Reading Plans</Text>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Browse Reading Plans</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -344,17 +429,29 @@ const openTodayDevotion = useCallback(() => {
         {activeCharacterStudy ? (
           <TouchableOpacity
             onPress={openCharacters}
-            style={{ marginBottom: 16, padding: 16, backgroundColor: '#fef3c7', borderRadius: 12 }}
+            style={{
+              marginBottom: 16,
+              padding: 18,
+              backgroundColor: '#fef3c7',
+              borderRadius: 16,
+              borderLeftWidth: 6,
+              borderLeftColor: '#f59e0b',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
           >
-            <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>✨ Active Character Study</Text>
+            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#92400e', marginBottom: 8 }}>ACTIVE CHARACTER STUDY</Text>
             <View style={{ marginTop: 4 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ fontSize: 14, color: '#374151' }}>Progress</Text>
-                <Text style={{ fontSize: 14, fontWeight: '600' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ fontSize: 14, color: '#78350f' }}>Progress</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#92400e' }}>
                   {activeCharacterStudy.completed_lessons} / {activeCharacterStudy.total_lessons} lessons
                 </Text>
               </View>
-              <View style={{ height: 8, backgroundColor: '#fde68a', borderRadius: 4, overflow: 'hidden' }}>
+              <View style={{ height: 10, backgroundColor: '#fde68a', borderRadius: 5, overflow: 'hidden' }}>
                 <View
                   style={{
                     height: '100%',
@@ -363,28 +460,45 @@ const openTodayDevotion = useCallback(() => {
                   }}
                 />
               </View>
-              <Text style={{ marginTop: 4, fontSize: 12, color: '#374151', textAlign: 'right' }}>
+              <Text style={{ marginTop: 6, fontSize: 13, color: '#78350f', textAlign: 'right', fontWeight: '600' }}>
                 {activeCharacterStudy.percentage}% complete
               </Text>
             </View>
-            <Text style={{ marginTop: 8, fontSize: 12, color: '#f59e0b', fontWeight: '600' }}>Tap to view study →</Text>
+            <Text style={{ marginTop: 12, fontSize: 13, color: '#f59e0b', fontWeight: '700', textAlign: 'right' }}>Tap to view study →</Text>
           </TouchableOpacity>
         ) : (
-          <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#f3f4f6', borderRadius: 12 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>✨ Character Studies</Text>
-            <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 12 }}>
+          <View style={{
+            marginBottom: 16,
+            padding: 18,
+            backgroundColor: colors.background.secondary,
+            borderRadius: 16,
+            borderLeftWidth: 6,
+            borderLeftColor: '#9ca3af',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            elevation: 2,
+          }}>
+            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 8 }}>CHARACTER STUDIES</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 14, lineHeight: 20 }}>
               No active character study. Start one to learn from Biblical characters!
             </Text>
             <TouchableOpacity
               onPress={openCharacters}
               style={{
-                padding: 12,
+                padding: 14,
                 backgroundColor: '#f59e0b',
-                borderRadius: 8,
+                borderRadius: 10,
                 alignItems: 'center',
+                shadowColor: '#f59e0b',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3,
               }}
             >
-              <Text style={{ color: '#fff', fontWeight: '600' }}>Browse Characters</Text>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Browse Characters</Text>
             </TouchableOpacity>
           </View>
         )}
