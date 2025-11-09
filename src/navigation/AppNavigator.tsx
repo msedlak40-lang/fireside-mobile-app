@@ -42,6 +42,9 @@ import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
 // Notes & Highlights summary (new screen)
 import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
 
+// Search
+import BibleSearchScreen from '../screens/BibleSearchScreen';
+
 // ---- Stacks ----
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -203,6 +206,20 @@ function JournalStackNavigator() {
   );
 }
 
+// Search Tab
+const SearchStack = createNativeStackNavigator();
+function SearchStackNavigator() {
+  return (
+    <SearchStack.Navigator>
+      <SearchStack.Screen
+        name="BibleSearch"
+        component={BibleSearchScreen}
+        options={{ headerTitle: 'Search' }}
+      />
+    </SearchStack.Navigator>
+  );
+}
+
 // ---- Bottom Tabs ----
 function MainTabs() {
   const insets = useSafeAreaInsets();
@@ -264,6 +281,14 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="SearchTab"
+        component={SearchStackNavigator}
+        options={{
+          title: 'Search',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🔍</Text>
+        }}
+      />
+      <Tab.Screen
         name="JournalTab"
         component={JournalStackNavigator}
         options={{
@@ -315,6 +340,11 @@ const linking = {
             screens: {
               ReadingPlansHome: 'plans',
               ReadingPlanDetail: 'plans/:planId'
+            }
+          },
+          SearchTab: {
+            screens: {
+              BibleSearch: 'search'
             }
           },
           JournalTab: {
