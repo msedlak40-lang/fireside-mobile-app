@@ -340,7 +340,7 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
 
     // Get lesson IDs for this character first
     const { data: lessonsData } = await supabase
-      .from('character_lessons')
+      .from('character_study_lessons')
       .select('id')
       .eq('character_id', progressData.character_id)
 
