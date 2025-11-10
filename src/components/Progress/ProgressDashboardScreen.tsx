@@ -194,6 +194,7 @@ const openTodayDevotion = useCallback(() => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <ScrollView
+        key={`scroll-${showInsightModal ? 'modal' : 'normal'}`}
         contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
         refreshControl={
           <RefreshControl
@@ -203,6 +204,8 @@ const openTodayDevotion = useCallback(() => {
             colors={[colors.accent.primary]}
           />
         }
+        scrollEnabled={!showInsightModal}
+        pointerEvents={showInsightModal ? 'none' : 'auto'}
       >
         <Text style={{ fontSize: 26, fontWeight: '800', marginBottom: 20, color: colors.text.primary }}>Your Progress</Text>
 
