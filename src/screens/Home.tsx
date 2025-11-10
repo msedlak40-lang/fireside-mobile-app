@@ -148,6 +148,25 @@ export default function Home() {
     nav.navigate('DevotionDetail', { devotionId });
   };
 
+  const deleteHighlight = async (highlightId: string) => {
+    try {
+      const { error } = await supabase
+        .from('daily_devotion_highlights')
+        .delete()
+        .eq('id', highlightId);
+
+      if (error) {
+        console.error('[Home] Delete highlight error:', error);
+        return;
+      }
+
+      // Update local state
+      setHighlights(highlights.filter(h => h.id !== highlightId));
+    } catch (err) {
+      console.error('[Home] Failed to delete highlight:', err);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
@@ -422,9 +441,26 @@ export default function Home() {
                             borderRadius: 8,
                             borderLeftWidth: 3,
                             borderLeftColor: '#f59e0b',
+                            position: 'relative',
                           }}
                         >
-                          <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
+                          <TouchableOpacity
+                            onPress={() => deleteHighlight(highlight.id)}
+                            style={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              width: 24,
+                              height: 24,
+                              borderRadius: 12,
+                              backgroundColor: '#dc2626',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
+                          </TouchableOpacity>
+                          <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', paddingRight: 32 }}>
                             {highlight.selected_text}
                           </Text>
                         </View>

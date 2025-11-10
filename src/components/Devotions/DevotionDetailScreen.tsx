@@ -185,11 +185,33 @@ export default function DevotionDetailScreen() {
     }
   };
 
-  // Get all saved highlights
+  // Get all saved highlights (returns full objects for deletion)
   const getSavedHighlights = () => {
-    return highlights
-      .sort((a, b) => a.start_pos - b.start_pos)
-      .map(h => h.selected_text);
+    return highlights.sort((a, b) => a.start_pos - b.start_pos);
+  };
+
+  // Delete a highlight
+  const deleteHighlight = async (startPos: number, length: number) => {
+    if (devotionId == null) return;
+
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) return;
+
+      await supabase
+        .from('daily_devotion_highlights')
+        .delete()
+        .eq('user_id', userId)
+        .eq('devotion_id', devotionId)
+        .eq('start_pos', startPos)
+        .eq('length', length);
+
+      setHighlights(highlights.filter(h => !(h.start_pos === startPos && h.length === length)));
+    } catch (err) {
+      console.error('[DevotionDetail] Failed to delete highlight:', err);
+      Alert.alert('Error', 'Failed to delete highlight.');
+    }
   };
 
   // Mark devotion as complete
@@ -571,7 +593,7 @@ export default function DevotionDetailScreen() {
             </View>
 
             <ScrollView style={{ paddingHorizontal: 20 }}>
-              {getSavedHighlights().map((text, index) => (
+              {getSavedHighlights().map((highlight, index) => (
                 <View
                   key={index}
                   style={{
@@ -581,10 +603,27 @@ export default function DevotionDetailScreen() {
                     borderRadius: 8,
                     borderLeftWidth: 3,
                     borderLeftColor: '#f59e0b',
+                    position: 'relative',
                   }}
                 >
-                  <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
-                    {text}
+                  <TouchableOpacity
+                    onPress={() => deleteHighlight(highlight.start_pos, highlight.length)}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      backgroundColor: '#dc2626',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', paddingRight: 32 }}>
+                    {highlight.selected_text}
                   </Text>
                 </View>
               ))}
