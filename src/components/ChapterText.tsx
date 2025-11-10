@@ -85,11 +85,6 @@ export default function ChapterText(props: Props) {
   const [noteText, setNoteText] = useState('')
   const [activeVerse, setActiveVerse] = useState<number | null>(null)
 
-  // READ-ONLY verse view (kept)
-  const [viewOpen, setViewOpen] = useState(false)
-  const [viewVerseNum, setViewVerseNum] = useState<number | null>(null)
-  const [viewVerseText, setViewVerseText] = useState<string>('')
-
   // INSIGHT modal (key verse / key word)
   const [insightOpen, setInsightOpen] = useState(false)
   const [insightTitle, setInsightTitle] = useState('')
@@ -158,30 +153,20 @@ export default function ChapterText(props: Props) {
     )
   }
 
-  // Simple view modal (kept)
-  function openVerseView(rawVerse: RawVerse) {
-    const v = extractVerseNumber(rawVerse)
-    const t = rawVerse?.text ?? String(rawVerse ?? '')
-    setViewVerseNum(v)
-    setViewVerseText(t)
-    setViewOpen(true)
-  }
-
-  // Tap on verse number -> open INSIGHT if available; otherwise open view modal
+  // Tap on verse number -> open INSIGHT if available
   function onPressVerseNum(rawVerse: RawVerse) {
     const v = extractVerseNumber(rawVerse)
     const direct = v ? verseInsightsByVerse[v] : undefined
     const fallback = extractVerseInsightFromVerse(rawVerse)
     const insight = direct ?? fallback
-    
+
     if (insight && v) {
       setInsightTitle(`${book ?? ''} ${chapter}:${v}`)
       setInsightBody(String(insight))
       setInsightDetailed('')
       setInsightOpen(true)
-    } else {
-      openVerseView(rawVerse)
     }
+    // Removed verse view modal - verse text already visible in chapter
   }
 
   async function insertNote(v: number, markdown: string) {
@@ -319,21 +304,6 @@ export default function ChapterText(props: Props) {
                 }}
               >
                 <Text style={styles.btnText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* VIEW VERSE MODAL (read-only) */}
-      <Modal visible={viewOpen} transparent animationType="fade" onRequestClose={() => setViewOpen(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{book ?? ''} {chapter}:{viewVerseNum ?? ''}</Text>
-            <Text style={{ color: '#111827', lineHeight: 22 }}>{viewVerseText}</Text>
-            <View style={styles.modalRow}>
-              <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={() => setViewOpen(false)}>
-                <Text style={styles.btnGhostText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>

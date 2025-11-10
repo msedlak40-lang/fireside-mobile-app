@@ -211,9 +211,13 @@ export default function DevotionDetailScreen() {
 
       {/* Body */}
       {devotion.devotional_text ? (
-        <Text style={{ marginTop: 16, fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
-          {devotion.devotional_text}
-        </Text>
+        <View style={{ marginTop: 16 }}>
+          {devotion.devotional_text.split('\n\n').map((paragraph, index) => (
+            <Text key={index} style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary, marginBottom: 12 }}>
+              {paragraph.trim()}
+            </Text>
+          ))}
+        </View>
       ) : null}
 
       {/* Hard truth */}
