@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share, Modal } from 'react-native';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share, Modal, TextInput } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
 import { colors } from '../../theme/colors';
@@ -26,6 +26,11 @@ export default function DevotionDetailScreen() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [highlights, setHighlights] = useState<Array<{ start_pos: number; length: number; selected_text: string; color: string }>>([]);
   const [showHighlights, setShowHighlights] = useState(false);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [selectedParagraph, setSelectedParagraph] = useState<{ start: number; length: number; text: string } | null>(null);
+  const [selectionStart, setSelectionStart] = useState(0);
+  const [selectionEnd, setSelectionEnd] = useState(0);
+  const textInputRef = useRef<TextInput>(null);
 
   // Helper: Calculate start position of each paragraph in the full text
   const getParagraphPositions = useCallback(() => {
@@ -132,47 +137,51 @@ export default function DevotionDetailScreen() {
     })();
   }, [devotionId, bailWithError]);
 
-  // Toggle paragraph highlight
-  const toggleHighlight = async (startPos: number, length: number, text: string) => {
-    if (devotionId == null) return;
+  // Handle long press to open text selection modal
+  const handleLongPress = (para: { start: number; length: number; text: string }) => {
+    setSelectedParagraph(para);
+    setSelectionStart(0);
+    setSelectionEnd(para.text.length);
+    setShowSelectionModal(true);
+  };
+
+  // Save the selected text portion
+  const saveSelectedText = async () => {
+    if (!selectedParagraph || devotionId == null) return;
+    if (selectionStart === selectionEnd) {
+      Alert.alert('No Selection', 'Please select some text to highlight');
+      return;
+    }
 
     try {
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth?.user?.id;
       if (!userId) return;
 
-      const isHighlighted = isParagraphHighlighted(startPos, length);
+      // Calculate the actual position in the full devotional text
+      const actualStart = selectedParagraph.start + selectionStart;
+      const actualLength = selectionEnd - selectionStart;
+      const selectedText = selectedParagraph.text.substring(selectionStart, selectionEnd);
 
-      if (isHighlighted) {
-        // Remove highlight
-        await supabase
-          .from('daily_devotion_highlights')
-          .delete()
-          .eq('user_id', userId)
-          .eq('devotion_id', devotionId)
-          .eq('start_pos', startPos)
-          .eq('length', length);
+      const newHighlight = {
+        user_id: userId,
+        devotion_id: devotionId,
+        start_pos: actualStart,
+        length: actualLength,
+        selected_text: selectedText,
+        color: 'yellow',
+      };
 
-        setHighlights(highlights.filter(h => !(h.start_pos === startPos && h.length === length)));
-      } else {
-        // Add highlight
-        const newHighlight = {
-          user_id: userId,
-          devotion_id: devotionId,
-          start_pos: startPos,
-          length: length,
-          selected_text: text,
-          color: 'yellow',
-        };
+      await supabase
+        .from('daily_devotion_highlights')
+        .insert(newHighlight);
 
-        await supabase
-          .from('daily_devotion_highlights')
-          .insert(newHighlight);
-
-        setHighlights([...highlights, newHighlight]);
-      }
+      setHighlights([...highlights, newHighlight]);
+      setShowSelectionModal(false);
+      setSelectedParagraph(null);
     } catch (err) {
-      console.error('[DevotionDetail] Failed to toggle highlight:', err);
+      console.error('[DevotionDetail] Failed to save highlight:', err);
+      Alert.alert('Error', 'Failed to save highlight. Please try again.');
     }
   };
 
@@ -309,7 +318,7 @@ export default function DevotionDetailScreen() {
         <View style={{ marginTop: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{ fontSize: 12, color: colors.text.secondary }}>
-              Tap paragraphs to save them
+              Long-press paragraphs to highlight text
             </Text>
             {highlights.length > 0 && (
               <TouchableOpacity onPress={() => setShowHighlights(true)}>
@@ -324,7 +333,7 @@ export default function DevotionDetailScreen() {
             return (
               <Pressable
                 key={index}
-                onPress={() => toggleHighlight(para.start, para.length, para.text)}
+                onLongPress={() => handleLongPress(para)}
                 style={{
                   padding: 12,
                   marginBottom: 8,
@@ -453,6 +462,89 @@ export default function DevotionDetailScreen() {
         </View>
       )}
 
+      {/* Text Selection Modal */}
+      <Modal
+        visible={showSelectionModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSelectionModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 }}>
+          <View style={{
+            backgroundColor: colors.background.primary,
+            borderRadius: 16,
+            padding: 20,
+            maxHeight: '70%',
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
+                Select Text to Highlight
+              </Text>
+              <TouchableOpacity onPress={() => setShowSelectionModal(false)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 12 }}>
+              Select the text you want to highlight:
+            </Text>
+
+            <ScrollView style={{ flex: 1, marginBottom: 16 }}>
+              <TextInput
+                ref={textInputRef}
+                multiline
+                editable={false}
+                value={selectedParagraph?.text || ''}
+                onSelectionChange={(event) => {
+                  const { start, end } = event.nativeEvent.selection;
+                  setSelectionStart(start);
+                  setSelectionEnd(end);
+                }}
+                style={{
+                  fontSize: 16,
+                  lineHeight: 24,
+                  color: colors.text.primary,
+                  padding: 12,
+                  backgroundColor: colors.background.secondary,
+                  borderRadius: 8,
+                  minHeight: 150,
+                }}
+                selectionColor={colors.accent.primary}
+                selectTextOnFocus
+              />
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => setShowSelectionModal(false)}
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  backgroundColor: colors.background.secondary,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: colors.text.primary, fontWeight: '700' }}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={saveSelectedText}
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  backgroundColor: colors.accent.primary,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: colors.text.primary, fontWeight: '700' }}>Save Highlight</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Saved Highlights Modal */}
       <Modal
         visible={showHighlights}
@@ -498,7 +590,7 @@ export default function DevotionDetailScreen() {
               ))}
               {highlights.length === 0 && (
                 <Text style={{ fontSize: 15, color: colors.text.secondary, textAlign: 'center', marginTop: 20 }}>
-                  No highlights saved yet. Tap paragraphs to save them!
+                  No highlights saved yet. Long-press paragraphs to highlight text!
                 </Text>
               )}
             </ScrollView>
