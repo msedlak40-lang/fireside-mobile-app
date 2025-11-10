@@ -56,6 +56,13 @@ export default function ProgressDashboardScreen() {
   const [selectedRelatedVerse, setSelectedRelatedVerse] = useState<string | null>(null);
   const [relatedVerseText, setRelatedVerseText] = useState<string>('');
 
+  // Close modal with a delay to let React Native clean up touch handlers
+  const closeInsightModal = () => {
+    setTimeout(() => {
+      setShowInsightModal(false);
+    }, 100);
+  };
+
   // Load cached data from AsyncStorage
   const loadFromCache = async (): Promise<CachedData | null> => {
     try {
@@ -529,13 +536,13 @@ const openTodayDevotion = useCallback(() => {
           visible={true}
           animationType="slide"
           transparent={true}
-          onRequestClose={() => setShowInsightModal(false)}
+          onRequestClose={closeInsightModal}
         >
           <Pressable
             style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
-            onPress={() => setShowInsightModal(false)}
+            onPress={closeInsightModal}
           >
-            <Pressable
+            <View
               style={{
                 backgroundColor: colors.background.primary,
                 borderTopLeftRadius: 20,
@@ -544,14 +551,13 @@ const openTodayDevotion = useCallback(() => {
                 paddingBottom: 40,
                 maxHeight: '80%',
               }}
-              onPress={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, flex: 1 }}>
                   {verseOfTheDay?.insight_title || 'Verse Insight'}
                 </Text>
-                <TouchableOpacity onPress={() => setShowInsightModal(false)} style={{ padding: 8 }}>
+                <TouchableOpacity onPress={closeInsightModal} style={{ padding: 8 }}>
                   <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
                 </TouchableOpacity>
               </View>
@@ -583,41 +589,8 @@ const openTodayDevotion = useCallback(() => {
                     Related Verses:
                   </Text>
                   {verseOfTheDay.related_verses.map((ref, index) => (
-                    <Pressable
+                    <View
                       key={index}
-                      onPress={async () => {
-                        setSelectedRelatedVerse(ref);
-                        setRelatedVerseText('Loading...');
-                        setShowRelatedVerseModal(true);
-
-                        // Parse the reference and fetch the verse
-                        try {
-                          // Parse reference like "John 3:16" or "Romans 8:28"
-                          const match = ref.match(/^(.+?)\s+(\d+):(\d+)$/);
-                          if (match) {
-                            const [, bookName, chapterNum, verseNum] = match;
-                            const { data } = await supabase
-                              .from('bible_verses')
-                              .select('verse_text')
-                              .eq('book_name', bookName.trim())
-                              .eq('chapter_number', parseInt(chapterNum))
-                              .eq('verse_number', parseInt(verseNum))
-                              .eq('translation', 'KJV')
-                              .maybeSingle();
-
-                            if (data?.verse_text) {
-                              setRelatedVerseText(data.verse_text);
-                            } else {
-                              setRelatedVerseText('Verse not found');
-                            }
-                          } else {
-                            setRelatedVerseText('Could not parse verse reference');
-                          }
-                        } catch (err) {
-                          console.error('[VOTD] Failed to fetch related verse:', err);
-                          setRelatedVerseText('Failed to load verse');
-                        }
-                      }}
                       style={{
                         marginBottom: 8,
                         padding: 12,
@@ -630,12 +603,12 @@ const openTodayDevotion = useCallback(() => {
                       <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent.primary }}>
                         📖 {ref}
                       </Text>
-                    </Pressable>
+                    </View>
                   ))}
                 </View>
               )}
               </ScrollView>
-            </Pressable>
+            </View>
           </Pressable>
         </Modal>
       )}
