@@ -114,6 +114,7 @@ export async function getStoredEmail(): Promise<string | null> {
 
 /**
  * Authenticate with biometrics and return the stored email if successful
+ * Also refreshes the Supabase session to ensure it's valid
  */
 export async function authenticateWithBiometric(): Promise<string | null> {
   try {
@@ -142,8 +143,25 @@ export async function authenticateWithBiometric(): Promise<string | null> {
     })
 
     if (result.success) {
-      // Return the stored email
+      // Biometric auth succeeded
       const email = await getStoredEmail()
+
+      // Try to refresh the Supabase session
+      try {
+        const { data, error } = await supabase.auth.refreshSession()
+        if (error) {
+          console.warn('[BiometricAuth] Session refresh failed:', error)
+          // Session expired, user needs to log in again
+          return null
+        }
+        if (data.session) {
+          console.log('[BiometricAuth] Session refreshed successfully')
+          return email
+        }
+      } catch (err) {
+        console.error('[BiometricAuth] Error refreshing session:', err)
+      }
+
       return email
     } else {
       console.log('[BiometricAuth] Authentication failed or cancelled')
