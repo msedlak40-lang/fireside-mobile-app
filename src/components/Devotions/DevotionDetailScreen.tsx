@@ -24,8 +24,40 @@ export default function DevotionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [highlightedParagraphs, setHighlightedParagraphs] = useState<Set<number>>(new Set());
+  const [highlights, setHighlights] = useState<Array<{ start_pos: number; length: number; selected_text: string; color: string }>>([]);
   const [showHighlights, setShowHighlights] = useState(false);
+
+  // Helper: Calculate start position of each paragraph in the full text
+  const getParagraphPositions = useCallback(() => {
+    if (!devotion?.devotional_text) return [];
+
+    const fullText = devotion.devotional_text.replace(/\\n\\n/g, '\n\n');
+    const paragraphs = fullText.split('\n\n').filter(p => p.trim());
+
+    const positions: Array<{ start: number; length: number; text: string }> = [];
+    let currentPos = 0;
+
+    for (const para of paragraphs) {
+      const trimmed = para.trim();
+      // Find the actual position in fullText
+      const actualStart = fullText.indexOf(trimmed, currentPos);
+      if (actualStart !== -1) {
+        positions.push({
+          start: actualStart,
+          length: trimmed.length,
+          text: trimmed,
+        });
+        currentPos = actualStart + trimmed.length;
+      }
+    }
+
+    return positions;
+  }, [devotion]);
+
+  // Check if a paragraph is highlighted based on its position
+  const isParagraphHighlighted = (paraStart: number, paraLength: number) => {
+    return highlights.some(h => h.start_pos === paraStart && h.length === paraLength);
+  };
 
  function formatISODateYYYYMMDD(iso?: string | null) {
   if (!iso) return null;
@@ -82,13 +114,13 @@ export default function DevotionDetailScreen() {
 
           // Load saved highlights for this devotion
           const { data: highlightsData } = await supabase
-            .from('devotion_highlights')
-            .select('paragraph_index')
+            .from('daily_devotion_highlights')
+            .select('start_pos, length, selected_text, color')
             .eq('user_id', userId)
             .eq('devotion_id', devotionId);
 
           if (highlightsData) {
-            setHighlightedParagraphs(new Set(highlightsData.map((h: any) => h.paragraph_index)));
+            setHighlights(highlightsData);
           }
         }
       } catch (err) {
@@ -101,7 +133,7 @@ export default function DevotionDetailScreen() {
   }, [devotionId, bailWithError]);
 
   // Toggle paragraph highlight
-  const toggleHighlight = async (paragraphIndex: number, paragraphText: string) => {
+  const toggleHighlight = async (startPos: number, length: number, text: string) => {
     if (devotionId == null) return;
 
     try {
@@ -109,32 +141,35 @@ export default function DevotionDetailScreen() {
       const userId = auth?.user?.id;
       if (!userId) return;
 
-      const isHighlighted = highlightedParagraphs.has(paragraphIndex);
+      const isHighlighted = isParagraphHighlighted(startPos, length);
 
       if (isHighlighted) {
         // Remove highlight
         await supabase
-          .from('devotion_highlights')
+          .from('daily_devotion_highlights')
           .delete()
           .eq('user_id', userId)
           .eq('devotion_id', devotionId)
-          .eq('paragraph_index', paragraphIndex);
+          .eq('start_pos', startPos)
+          .eq('length', length);
 
-        const newSet = new Set(highlightedParagraphs);
-        newSet.delete(paragraphIndex);
-        setHighlightedParagraphs(newSet);
+        setHighlights(highlights.filter(h => !(h.start_pos === startPos && h.length === length)));
       } else {
         // Add highlight
-        await supabase
-          .from('devotion_highlights')
-          .insert({
-            user_id: userId,
-            devotion_id: devotionId,
-            paragraph_index: paragraphIndex,
-            paragraph_text: paragraphText,
-          });
+        const newHighlight = {
+          user_id: userId,
+          devotion_id: devotionId,
+          start_pos: startPos,
+          length: length,
+          selected_text: text,
+          color: 'yellow',
+        };
 
-        setHighlightedParagraphs(new Set([...highlightedParagraphs, paragraphIndex]));
+        await supabase
+          .from('daily_devotion_highlights')
+          .insert(newHighlight);
+
+        setHighlights([...highlights, newHighlight]);
       }
     } catch (err) {
       console.error('[DevotionDetail] Failed to toggle highlight:', err);
@@ -143,17 +178,9 @@ export default function DevotionDetailScreen() {
 
   // Get all saved highlights
   const getSavedHighlights = () => {
-    if (!devotion) return [];
-
-    const paragraphs = devotion.devotional_text
-      ?.replace(/\\n\\n/g, '\n\n')
-      .split('\n\n')
-      .filter(p => p.trim()) || [];
-
-    return Array.from(highlightedParagraphs)
-      .sort((a, b) => a - b)
-      .map(index => paragraphs[index])
-      .filter(Boolean);
+    return highlights
+      .sort((a, b) => a.start_pos - b.start_pos)
+      .map(h => h.selected_text);
   };
 
   // Mark devotion as complete
@@ -284,39 +311,35 @@ export default function DevotionDetailScreen() {
             <Text style={{ fontSize: 12, color: colors.text.secondary }}>
               Tap paragraphs to save them
             </Text>
-            {highlightedParagraphs.size > 0 && (
+            {highlights.length > 0 && (
               <TouchableOpacity onPress={() => setShowHighlights(true)}>
                 <Text style={{ fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>
-                  View Saved ({highlightedParagraphs.size})
+                  View Saved ({highlights.length})
                 </Text>
               </TouchableOpacity>
             )}
           </View>
-          {devotion.devotional_text
-            .replace(/\\n\\n/g, '\n\n')  // Handle escaped newlines
-            .split('\n\n')
-            .filter(p => p.trim())  // Remove empty paragraphs
-            .map((paragraph, index) => {
-              const isHighlighted = highlightedParagraphs.has(index);
-              return (
-                <Pressable
-                  key={index}
-                  onPress={() => toggleHighlight(index, paragraph.trim())}
-                  style={{
-                    padding: 12,
-                    marginBottom: 8,
-                    borderRadius: 8,
-                    backgroundColor: isHighlighted ? '#fef3c7' : 'transparent',
-                    borderLeftWidth: isHighlighted ? 3 : 0,
-                    borderLeftColor: '#f59e0b',
-                  }}
-                >
-                  <Text style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
-                    {paragraph.trim()}
-                  </Text>
-                </Pressable>
-              );
-            })}
+          {getParagraphPositions().map((para, index) => {
+            const isHighlighted = isParagraphHighlighted(para.start, para.length);
+            return (
+              <Pressable
+                key={index}
+                onPress={() => toggleHighlight(para.start, para.length, para.text)}
+                style={{
+                  padding: 12,
+                  marginBottom: 8,
+                  borderRadius: 8,
+                  backgroundColor: isHighlighted ? '#fef3c7' : 'transparent',
+                  borderLeftWidth: isHighlighted ? 3 : 0,
+                  borderLeftColor: '#f59e0b',
+                }}
+              >
+                <Text style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
+                  {para.text}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       ) : null}
 
@@ -473,7 +496,7 @@ export default function DevotionDetailScreen() {
                   </Text>
                 </View>
               ))}
-              {highlightedParagraphs.size === 0 && (
+              {highlights.length === 0 && (
                 <Text style={{ fontSize: 15, color: colors.text.secondary, textAlign: 'center', marginTop: 20 }}>
                   No highlights saved yet. Tap paragraphs to save them!
                 </Text>
