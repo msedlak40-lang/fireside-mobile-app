@@ -232,10 +232,18 @@ export default function Home() {
 
         {/* Today's Devotion */}
         <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#e9d5ff', borderRadius: 12 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{ fontSize: 12, color: '#6b21a8', fontWeight: '700' }}>TODAY'S DEVOTION</Text>
-            <TouchableOpacity onPress={openHighlightsModal}>
-              <Text style={{ fontSize: 12, color: '#7c3aed', fontWeight: '700' }}>View Highlights</Text>
+            <TouchableOpacity
+              onPress={openHighlightsModal}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                backgroundColor: '#7c3aed',
+                borderRadius: 6,
+              }}
+            >
+              <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>📝 Highlights</Text>
             </TouchableOpacity>
           </View>
           {todayDevotion ? (
