@@ -44,8 +44,7 @@ export default function BibleSearchScreen() {
 
     setLoading(true);
     try {
-      // Use rpc_bible_search for more comprehensive results
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .rpc('rpc_bible_search', { p_query: query, p_limit: 50 });
 
       if (error) {
@@ -55,7 +54,6 @@ export default function BibleSearchScreen() {
         return;
       }
 
-      // Fetch verse text for each result
       const resultsWithText = await Promise.all(
         (data || []).map(async (r: any) => {
           const { data: verseData } = await supabase
@@ -89,10 +87,7 @@ export default function BibleSearchScreen() {
 
   const handleThemeSearch = useCallback(async (theme: string) => {
     setLoading(true);
-    setSelectedTheme(theme);
     try {
-      // Use rpc_bible_search with theme as the query
-      // This will find verses that contain the theme keywords
       const { data, error } = await supabase
         .rpc('rpc_bible_search', { p_query: theme, p_limit: 50 });
 
@@ -103,7 +98,6 @@ export default function BibleSearchScreen() {
         return;
       }
 
-      // Fetch verse text for each result
       const resultsWithText = await Promise.all(
         (data || []).map(async (r: any) => {
           const { data: verseData } = await supabase
@@ -141,48 +135,99 @@ export default function BibleSearchScreen() {
     } else if (searchMode === 'theme') {
       if (themeInput) {
         handleThemeSearch(themeInput);
+        setSelectedTheme(null);
       } else if (selectedTheme) {
         handleThemeSearch(selectedTheme);
       }
     }
   }, [searchMode, searchQuery, themeInput, selectedTheme, handleTextSearch, handleThemeSearch]);
 
-  const handleResultPress = useCallback((result: SearchResult) => {
-    // Navigate to the verse screen
-    // First, we need to get the book_id from the book_name
-    // For now, navigate to Bible tab and let user navigate from there
-    // You may want to add a direct verse navigation later
-    navigation.navigate('BibleTab', {
-      screen: 'BibleHome',
-    });
-  }, [navigation]);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <View style={{ flex: 1 }}>
+        {/* Translation Selector */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text.secondary, marginBottom: 8 }}>
+            Translation:
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+            {TRANSLATIONS.map((trans) => (
+              <Pressable
+                key={trans}
+                onPress={() => setTranslation(trans)}
+                style={{
+                  marginRight: 8,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  backgroundColor: translation === trans ? colors.accent.primary : colors.background.secondary,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: translation === trans ? colors.accent.primary : colors.border.default,
+                }}
+              >
+                <Text style={{
+                  fontWeight: '600',
+                  fontSize: 13,
+                  color: translation === trans ? colors.text.primary : colors.text.secondary,
+                }}>
+                  {trans}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Search Mode Toggle */}
-        <View style={{ flexDirection: 'row', padding: 16, gap: 8 }}>
+        <View style={{ flexDirection: 'row', padding: 16, paddingTop: 8, gap: 6 }}>
           <Pressable
             onPress={() => {
-              setSearchMode('text');
+              setSearchMode('lookup');
               setResults([]);
               setSelectedTheme(null);
+              setThemeInput('');
             }}
             style={{
               flex: 1,
-              padding: 12,
-              backgroundColor: searchMode === 'text' ? colors.accent.primary : colors.background.secondary,
+              padding: 10,
+              backgroundColor: searchMode === 'lookup' ? colors.accent.primary : colors.background.secondary,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: searchMode === 'text' ? colors.accent.primary : colors.border.default,
+              borderColor: searchMode === 'lookup' ? colors.accent.primary : colors.border.default,
             }}
           >
             <Text style={{
               textAlign: 'center',
               fontWeight: '700',
-              color: searchMode === 'text' ? colors.text.primary : colors.text.secondary,
+              fontSize: 12,
+              color: searchMode === 'lookup' ? colors.text.primary : colors.text.secondary,
             }}>
-              📖 Text Search
+              📖 Verse/Chapter
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              setSearchMode('smart');
+              setResults([]);
+              setSelectedTheme(null);
+              setThemeInput('');
+            }}
+            style={{
+              flex: 1,
+              padding: 10,
+              backgroundColor: searchMode === 'smart' ? colors.accent.primary : colors.background.secondary,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: searchMode === 'smart' ? colors.accent.primary : colors.border.default,
+            }}
+          >
+            <Text style={{
+              textAlign: 'center',
+              fontWeight: '700',
+              fontSize: 12,
+              color: searchMode === 'smart' ? colors.text.primary : colors.text.secondary,
+            }}>
+              ✨ Smart Search
             </Text>
           </Pressable>
 
@@ -194,7 +239,7 @@ export default function BibleSearchScreen() {
             }}
             style={{
               flex: 1,
-              padding: 12,
+              padding: 10,
               backgroundColor: searchMode === 'theme' ? colors.accent.primary : colors.background.secondary,
               borderRadius: 10,
               borderWidth: 1,
@@ -204,19 +249,20 @@ export default function BibleSearchScreen() {
             <Text style={{
               textAlign: 'center',
               fontWeight: '700',
+              fontSize: 12,
               color: searchMode === 'theme' ? colors.text.primary : colors.text.secondary,
             }}>
-              🏷️ By Theme
+              🏷️ Theme
             </Text>
           </Pressable>
         </View>
 
-        {/* Search Input (Text Mode) */}
-        {searchMode === 'text' && (
+        {/* Search Input (Lookup/Smart Mode) */}
+        {(searchMode === 'lookup' || searchMode === 'smart') && (
           <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
-                placeholder="Search for verses..."
+                placeholder={searchMode === 'lookup' ? "John 3:16, Genesis 1, etc." : "Search keywords..."}
                 placeholderTextColor={colors.text.tertiary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -254,14 +300,60 @@ export default function BibleSearchScreen() {
         {/* Theme Selection (Theme Mode) */}
         {searchMode === 'theme' && (
           <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+            {/* Theme Input */}
+            <View style={{ marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  placeholder="Type a theme..."
+                  placeholderTextColor={colors.text.tertiary}
+                  value={themeInput}
+                  onChangeText={(text) => {
+                    setThemeInput(text);
+                    setSelectedTheme(null);
+                  }}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  style={{
+                    flex: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 12,
+                    borderWidth: 1,
+                    borderColor: colors.border.default,
+                    borderRadius: 10,
+                    backgroundColor: colors.background.secondary,
+                    color: colors.text.primary,
+                    fontSize: 16,
+                  }}
+                />
+                <Pressable
+                  onPress={handleSearch}
+                  disabled={(!themeInput.trim() && !selectedTheme) || loading}
+                  style={{
+                    paddingHorizontal: 20,
+                    paddingVertical: 12,
+                    backgroundColor: (themeInput.trim() || selectedTheme) && !loading ? colors.accent.primary : colors.text.tertiary,
+                    borderRadius: 10,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>🔍</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Popular Themes */}
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.secondary, marginBottom: 12 }}>
-              Select a theme to explore:
+              Or select a popular theme:
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {POPULAR_THEMES.map((theme) => (
                 <Pressable
                   key={theme.id}
-                  onPress={() => handleThemeSearch(theme.id)}
+                  onPress={() => {
+                    setSelectedTheme(theme.id);
+                    setThemeInput('');
+                    handleThemeSearch(theme.id);
+                  }}
                   style={{
                     paddingHorizontal: 16,
                     paddingVertical: 10,
@@ -295,12 +387,11 @@ export default function BibleSearchScreen() {
         {!loading && results.length > 0 && (
           <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 0 }}>
             <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text.secondary, marginBottom: 12 }}>
-              {results.length} {results.length === 1 ? 'result' : 'results'} found
+              {results.length} {results.length === 1 ? 'result' : 'results'} found ({translation})
             </Text>
             {results.map((result, index) => (
               <Pressable
                 key={`${result.reference}-${index}`}
-                onPress={() => handleResultPress(result)}
                 style={{
                   marginBottom: 12,
                   padding: 16,
@@ -322,29 +413,29 @@ export default function BibleSearchScreen() {
         )}
 
         {/* Empty State */}
-        {!loading && results.length === 0 && (searchQuery.trim() || selectedTheme) && (
+        {!loading && results.length === 0 && (searchQuery.trim() || themeInput.trim() || selectedTheme) && (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <Text style={{ fontSize: 48, marginBottom: 16 }}>📖</Text>
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: 8 }}>
               No results found
             </Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center' }}>
-              Try searching for different keywords or selecting another theme
+              Try different keywords or select another theme
             </Text>
           </View>
         )}
 
         {/* Initial State */}
-        {!loading && results.length === 0 && !searchQuery.trim() && !selectedTheme && (
+        {!loading && results.length === 0 && !searchQuery.trim() && !themeInput.trim() && !selectedTheme && (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <Text style={{ fontSize: 64, marginBottom: 16 }}>🔍</Text>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary, marginBottom: 8 }}>
               Search the Bible
             </Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-              {searchMode === 'text'
-                ? 'Enter keywords to search for verses across all books'
-                : 'Select a theme to discover relevant verses'}
+              {searchMode === 'lookup' && 'Enter a reference like "John 3:16" or search by keywords'}
+              {searchMode === 'smart' && 'Enter keywords to search for verses across all books'}
+              {searchMode === 'theme' && 'Type a theme or select from popular themes below'}
             </Text>
           </View>
         )}

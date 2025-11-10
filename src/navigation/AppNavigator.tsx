@@ -1,6 +1,7 @@
 // src/navigation/AppNavigator.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View, Text, Platform } from 'react-native';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as ExpoLinking from 'expo-linking';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -268,7 +269,7 @@ function MainTabs() {
         name="CharactersTab"
         component={CharactersStackNavigator}
         options={{
-          title: 'Characters',
+          title: 'People',
           tabBarIcon: () => <Text style={{ fontSize: 20 }}>👤</Text>
         }}
       />
@@ -366,6 +367,14 @@ const linking = {
 export default function AppNavigator() {
   const [ready, setReady] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
+
+  // Keep screen awake while app is open
+  useEffect(() => {
+    activateKeepAwakeAsync();
+    return () => {
+      deactivateKeepAwake();
+    };
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
