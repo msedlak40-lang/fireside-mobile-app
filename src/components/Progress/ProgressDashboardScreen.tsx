@@ -1,6 +1,6 @@
 // src/components/Progress/ProgressDashboardScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
@@ -51,6 +51,9 @@ export default function ProgressDashboardScreen() {
   const [verseOfTheDay, setVerseOfTheDay] = useState<VerseOfTheDay | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showInsightModal, setShowInsightModal] = useState(false);
+  const [showRelatedVerseModal, setShowRelatedVerseModal] = useState(false);
+  const [selectedRelatedVerse, setSelectedRelatedVerse] = useState<string | null>(null);
 
   // Load cached data from AsyncStorage
   const loadFromCache = async (): Promise<CachedData | null> => {
@@ -239,19 +242,21 @@ const openTodayDevotion = useCallback(() => {
 
         {/* Verse of the Day */}
         {verseOfTheDay && (
-          <View style={{
-            marginBottom: 16,
-            padding: 18,
-            backgroundColor: '#dbeafe',
-            borderRadius: 16,
-            borderLeftWidth: 6,
-            borderLeftColor: '#2563eb',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
-          }}>
+          <Pressable
+            onPress={() => verseOfTheDay.insight_title && setShowInsightModal(true)}
+            style={{
+              marginBottom: 16,
+              padding: 18,
+              backgroundColor: '#dbeafe',
+              borderRadius: 16,
+              borderLeftWidth: 6,
+              borderLeftColor: '#2563eb',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+            }}>
             <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
             <Text style={{ marginTop: 12, fontSize: 17, fontStyle: 'italic', lineHeight: 26, color: '#1e3a8a', fontWeight: '500' }}>
               "{verseOfTheDay.verse_text}"
@@ -259,7 +264,12 @@ const openTodayDevotion = useCallback(() => {
             <Text style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
               — {verseOfTheDay.reference}
             </Text>
-          </View>
+            {verseOfTheDay.insight_title && (
+              <Text style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
+                💡 Tap to view insight
+              </Text>
+            )}
+          </Pressable>
         )}
 
         {/* Today's Devotion */}
@@ -503,6 +513,123 @@ const openTodayDevotion = useCallback(() => {
           </View>
         )}
       </ScrollView>
+
+      {/* Insight Modal */}
+      <Modal
+        visible={showInsightModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowInsightModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{
+            backgroundColor: colors.background.primary,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingTop: 20,
+            paddingBottom: 40,
+            maxHeight: '80%',
+          }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, flex: 1 }}>
+                {verseOfTheDay?.insight_title || 'Verse Insight'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowInsightModal(false)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ paddingHorizontal: 20 }}>
+              {/* Verse Reference */}
+              <View style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 8 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
+                  {verseOfTheDay?.reference}
+                </Text>
+                <Text style={{ marginTop: 8, fontSize: 15, fontStyle: 'italic', color: '#1e3a8a' }}>
+                  "{verseOfTheDay?.verse_text}"
+                </Text>
+              </View>
+
+              {/* Insight Detail */}
+              {verseOfTheDay?.insight_detail && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
+                    {verseOfTheDay.insight_detail}
+                  </Text>
+                </View>
+              )}
+
+              {/* Related Verses */}
+              {verseOfTheDay?.related_verses && verseOfTheDay.related_verses.length > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary, marginBottom: 12 }}>
+                    Related Verses:
+                  </Text>
+                  {verseOfTheDay.related_verses.map((ref, index) => (
+                    <Pressable
+                      key={index}
+                      onPress={async () => {
+                        setSelectedRelatedVerse(ref);
+                        setShowRelatedVerseModal(true);
+                      }}
+                      style={{
+                        marginBottom: 8,
+                        padding: 12,
+                        backgroundColor: colors.background.secondary,
+                        borderRadius: 8,
+                        borderLeftWidth: 3,
+                        borderLeftColor: colors.accent.primary,
+                      }}
+                    >
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent.primary }}>
+                        📖 {ref}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Related Verse Modal */}
+      <Modal
+        visible={showRelatedVerseModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowRelatedVerseModal(false)}
+      >
+        <Pressable
+          onPress={() => setShowRelatedVerseModal(false)}
+          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', padding: 20 }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: colors.background.primary,
+              borderRadius: 16,
+              padding: 20,
+              width: '100%',
+              maxWidth: 400,
+              maxHeight: '70%',
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
+                {selectedRelatedVerse}
+              </Text>
+              <TouchableOpacity onPress={() => setShowRelatedVerseModal(false)}>
+                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary }}>
+              Tap a related verse above to view it here. (Verse lookup coming soon!)
+            </Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

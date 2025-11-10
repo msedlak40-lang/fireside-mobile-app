@@ -8,6 +8,9 @@ export type VerseOfTheDay = {
   verse_text: string;
   translation: string;
   reference: string;
+  insight_title?: string;
+  insight_detail?: string;
+  related_verses?: string[];
   theme?: string;
   source?: 'curated' | 'personalized' | 'random';
 };
@@ -301,48 +304,76 @@ async function fetchVerseText(
 }
 
 /**
- * Hybrid approach to verse of the day:
- * - 20% chance: personalized based on user's active studies
- * - 80% chance: curated verse from themed rotation
- * - Fallback: random verse if both fail
+ * Fetch verse of the day from bible_verse_insights table
+ * Uses day of year to deterministically select a verse
  */
 export async function fetchVerseOfTheDay(preferredTranslation: string = 'KJV'): Promise<VerseOfTheDay | null> {
   try {
-    // 20% chance to try personalization
-    const shouldPersonalize = Math.random() < 0.2;
+    // Get total count of verse insights
+    const { count, error: countError } = await supabase
+      .from('bible_verse_insights')
+      .select('*', { count: 'exact', head: true });
 
-    if (shouldPersonalize) {
-      const personalizedVerse = await getPersonalizedVerse(preferredTranslation);
-      if (personalizedVerse) {
-        return personalizedVerse;
-      }
+    if (countError || !count) {
+      console.warn('[fetchVerseOfTheDay] Could not get insight count:', countError);
+      return null;
     }
 
-    // Use curated verse for today
-    const curatedVerse = getCuratedVerseForToday();
-    const verseText = await fetchVerseText(
-      curatedVerse.book_name,
-      curatedVerse.chapter,
-      curatedVerse.verse,
-      preferredTranslation
-    );
+    // Use day of year to deterministically select a verse
+    const dayOfYear = getDayOfYear();
+    const year = new Date().getFullYear();
+    const seed = (year * 1000 + dayOfYear) % count;
 
-    if (verseText) {
-      return {
-        book_name: curatedVerse.book_name,
-        chapter_number: curatedVerse.chapter,
-        verse_number: curatedVerse.verse,
-        verse_text: verseText,
-        translation: preferredTranslation,
-        reference: `${curatedVerse.book_name} ${curatedVerse.chapter}:${curatedVerse.verse}`,
-        theme: curatedVerse.theme,
-        source: 'curated',
-      };
+    // Fetch the verse insight at this offset
+    const { data: insightData, error: insightError } = await supabase
+      .from('bible_verse_insights')
+      .select('*')
+      .order('id', { ascending: true })
+      .range(seed, seed)
+      .limit(1)
+      .maybeSingle();
+
+    if (insightError || !insightData) {
+      console.warn('[fetchVerseOfTheDay] Error fetching insight:', insightError);
+      return null;
     }
 
-    // Fallback to old random method if curated verse not found
-    console.warn('[fetchVerseOfTheDay] Curated verse not found, using fallback');
-    return fetchRandomVerse(preferredTranslation);
+    // Get the book name from book_id
+    const { data: bookData } = await supabase
+      .from('bible_books_metadata')
+      .select('book_name')
+      .eq('id', insightData.book_id)
+      .maybeSingle();
+
+    const bookName = bookData?.book_name || '';
+
+    // Fetch the verse text
+    const { data: verseData } = await supabase
+      .from('bible_verses')
+      .select('verse_text')
+      .eq('book_name', bookName)
+      .eq('chapter_number', insightData.chapter_number)
+      .eq('verse_number', insightData.verse_number)
+      .eq('translation', preferredTranslation)
+      .maybeSingle();
+
+    if (!verseData) {
+      console.warn('[fetchVerseOfTheDay] No verse text found');
+      return null;
+    }
+
+    return {
+      book_name: bookName,
+      chapter_number: insightData.chapter_number,
+      verse_number: insightData.verse_number,
+      verse_text: verseData.verse_text,
+      translation: preferredTranslation,
+      reference: `${bookName} ${insightData.chapter_number}:${insightData.verse_number}`,
+      insight_title: insightData.insight_title || undefined,
+      insight_detail: insightData.insight_detail || undefined,
+      related_verses: insightData.related_verses || undefined,
+      source: 'curated',
+    };
   } catch (err) {
     console.error('[fetchVerseOfTheDay] Unexpected error:', err);
     return null;

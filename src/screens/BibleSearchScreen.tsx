@@ -24,13 +24,17 @@ const POPULAR_THEMES = [
   { id: 'prayer', label: 'Prayer', emoji: '🙏' },
 ];
 
+const TRANSLATIONS = ['KJV', 'ESV', 'NIV', 'NKJV', 'WEB'];
+
 export default function BibleSearchScreen() {
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [themeInput, setThemeInput] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchMode, setSearchMode] = useState<'text' | 'theme'>('text');
+  const [searchMode, setSearchMode] = useState<'lookup' | 'smart' | 'theme'>('lookup');
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
+  const [translation, setTranslation] = useState('KJV');
 
   const handleTextSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -60,6 +64,7 @@ export default function BibleSearchScreen() {
             .eq('book_name', r.book_name)
             .eq('chapter_number', r.chapter_number)
             .eq('verse_number', r.verse_number)
+            .eq('translation', translation)
             .limit(1)
             .maybeSingle();
 
@@ -80,7 +85,7 @@ export default function BibleSearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [translation]);
 
   const handleThemeSearch = useCallback(async (theme: string) => {
     setLoading(true);
@@ -107,6 +112,7 @@ export default function BibleSearchScreen() {
             .eq('book_name', r.book_name)
             .eq('chapter_number', r.chapter_number)
             .eq('verse_number', r.verse_number)
+            .eq('translation', translation)
             .limit(1)
             .maybeSingle();
 
@@ -127,15 +133,19 @@ export default function BibleSearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [translation]);
 
   const handleSearch = useCallback(() => {
-    if (searchMode === 'text') {
+    if (searchMode === 'lookup' || searchMode === 'smart') {
       handleTextSearch(searchQuery);
-    } else if (selectedTheme) {
-      handleThemeSearch(selectedTheme);
+    } else if (searchMode === 'theme') {
+      if (themeInput) {
+        handleThemeSearch(themeInput);
+      } else if (selectedTheme) {
+        handleThemeSearch(selectedTheme);
+      }
     }
-  }, [searchMode, searchQuery, selectedTheme, handleTextSearch, handleThemeSearch]);
+  }, [searchMode, searchQuery, themeInput, selectedTheme, handleTextSearch, handleThemeSearch]);
 
   const handleResultPress = useCallback((result: SearchResult) => {
     // Navigate to the verse screen
