@@ -345,13 +345,15 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
       .eq('character_id', progressData.character_id)
 
     const lessonIds = (lessonsData || []).map((l: any) => l.id)
+    console.log('[fetchActiveCharacterStudy] Character ID:', progressData.character_id)
+    console.log('[fetchActiveCharacterStudy] Lesson IDs for this character:', lessonIds)
 
     // Count completed lessons for this character only
     let completedLessons = 0
     if (lessonIds.length > 0) {
       const { data: lessonProgressData, error: lessonError } = await supabase
         .from('user_character_lesson_progress')
-        .select('lesson_id')
+        .select('lesson_id, completed')
         .eq('user_id', user_id)
         .eq('completed', true)
         .in('lesson_id', lessonIds)
@@ -360,7 +362,9 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
         console.warn('[fetchActiveCharacterStudy] lesson progress error', lessonError)
       }
 
+      console.log('[fetchActiveCharacterStudy] Completed lesson progress data:', lessonProgressData)
       completedLessons = (lessonProgressData || []).length
+      console.log('[fetchActiveCharacterStudy] Completed lessons count:', completedLessons)
     }
 
     const totalLessons = character.total_lessons || lessonIds.length || 0
