@@ -11,6 +11,16 @@ import type { UserDashboard, ActiveCharacterStudy } from '../../services/progres
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
 
+interface HighlightWithDevotion {
+  id: string;
+  devotion_id: number;
+  selected_text: string;
+  color: string;
+  created_at: string;
+  devotion_title: string;
+  devotion_date: string;
+}
+
 const CACHE_KEY = 'fireside.dashboard';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
@@ -55,6 +65,9 @@ export default function ProgressDashboardScreen() {
   const [showRelatedVerseModal, setShowRelatedVerseModal] = useState(false);
   const [selectedRelatedVerse, setSelectedRelatedVerse] = useState<string | null>(null);
   const [relatedVerseText, setRelatedVerseText] = useState<string>('');
+  const [showHighlightsModal, setShowHighlightsModal] = useState(false);
+  const [highlights, setHighlights] = useState<HighlightWithDevotion[]>([]);
+  const [highlightsLoading, setHighlightsLoading] = useState(false);
 
   // Close modal with a delay to let React Native clean up touch handlers
   const closeInsightModal = () => {
@@ -190,6 +203,107 @@ const openTodayDevotion = useCallback(() => {
   }
 }, [navigation, todayDevotion]);
 
+  const loadHighlights = async () => {
+    try {
+      setHighlightsLoading(true);
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) {
+        setHighlightsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('daily_devotion_highlights')
+        .select(`
+          id,
+          devotion_id,
+          selected_text,
+          color,
+          created_at,
+          daily_devotions!inner (
+            title,
+            devotion_date
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[ProgressDashboard] Load highlights error:', error);
+        setHighlightsLoading(false);
+        return;
+      }
+
+      const transformed = (data || []).map((item: any) => ({
+        id: item.id,
+        devotion_id: item.devotion_id,
+        selected_text: item.selected_text,
+        color: item.color,
+        created_at: item.created_at,
+        devotion_title: item.daily_devotions?.title || 'Unknown Devotion',
+        devotion_date: item.daily_devotions?.devotion_date || '',
+      }));
+
+      setHighlights(transformed);
+    } catch (err) {
+      console.error('[ProgressDashboard] Failed to load highlights:', err);
+    } finally {
+      setHighlightsLoading(false);
+    }
+  };
+
+  const openHighlightsModal = () => {
+    setShowHighlightsModal(true);
+    loadHighlights();
+  };
+
+  const openDevotion = (devotionId: number) => {
+    setShowHighlightsModal(false);
+    navigation.navigate('DevotionDetail', { id: devotionId });
+  };
+
+  const deleteHighlight = async (highlightId: string) => {
+    try {
+      const { error } = await supabase
+        .from('daily_devotion_highlights')
+        .delete()
+        .eq('id', highlightId);
+
+      if (error) {
+        console.error('[ProgressDashboard] Delete highlight error:', error);
+        return;
+      }
+
+      setHighlights(highlights.filter(h => h.id !== highlightId));
+    } catch (err) {
+      console.error('[ProgressDashboard] Failed to delete highlight:', err);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mm = Math.max(1, Math.min(12, parseInt(m, 10))) - 1;
+    return `${monthNames[mm]} ${parseInt(d, 10)}, ${y}`;
+  };
+
+  // Group highlights by devotion
+  const groupedHighlights = highlights.reduce((acc, highlight) => {
+    const key = `${highlight.devotion_id}`;
+    if (!acc[key]) {
+      acc[key] = {
+        devotion_id: highlight.devotion_id,
+        devotion_title: highlight.devotion_title,
+        devotion_date: highlight.devotion_date,
+        highlights: [],
+      };
+    }
+    acc[key].highlights.push(highlight);
+    return acc;
+  }, {} as Record<string, { devotion_id: number; devotion_title: string; devotion_date: string; highlights: HighlightWithDevotion[] }>);
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
@@ -302,7 +416,20 @@ const openTodayDevotion = useCallback(() => {
           shadowRadius: 8,
           elevation: 4,
         }}>
-          <Text style={{ fontSize: 11, color: '#6b21a8', fontWeight: '800', letterSpacing: 1.5 }}>TODAY'S DEVOTION</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 11, color: '#6b21a8', fontWeight: '800', letterSpacing: 1.5 }}>TODAY'S DEVOTION</Text>
+            <TouchableOpacity
+              onPress={openHighlightsModal}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                backgroundColor: '#7c3aed',
+                borderRadius: 6,
+              }}
+            >
+              <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>📝 Highlights</Text>
+            </TouchableOpacity>
+          </View>
           {todayDevotion ? (
             <>
               <Text style={{ fontSize: 19, fontWeight: '800', marginTop: 8, color: '#581c87' }}>{todayDevotion.title}</Text>
@@ -650,6 +777,113 @@ const openTodayDevotion = useCallback(() => {
             </ScrollView>
           </Pressable>
         </Pressable>
+      </Modal>
+
+      {/* Highlights Modal */}
+      <Modal
+        visible={showHighlightsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowHighlightsModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{
+            backgroundColor: colors.background.primary,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingTop: 20,
+            paddingBottom: 40,
+            maxHeight: '80%',
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
+                Devotion Highlights
+              </Text>
+              <TouchableOpacity onPress={() => setShowHighlightsModal(false)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            {highlightsLoading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator color={colors.accent.primary} />
+              </View>
+            ) : (
+              <ScrollView style={{ paddingHorizontal: 20 }}>
+                <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 20 }}>
+                  {highlights.length} highlight{highlights.length !== 1 ? 's' : ''} saved
+                </Text>
+
+                {highlights.length === 0 ? (
+                  <View style={{ marginTop: 20, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 48, marginBottom: 16 }}>📝</Text>
+                    <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center' }}>
+                      No highlights yet. Long-press paragraphs in devotions to save them!
+                    </Text>
+                  </View>
+                ) : (
+                  Object.values(groupedHighlights).map((group) => (
+                    <View key={group.devotion_id} style={{ marginBottom: 24 }}>
+                      <TouchableOpacity
+                        onPress={() => openDevotion(group.devotion_id)}
+                        style={{
+                          padding: 12,
+                          backgroundColor: colors.background.secondary,
+                          borderRadius: 8,
+                          marginBottom: 12,
+                          borderLeftWidth: 3,
+                          borderLeftColor: colors.accent.primary,
+                        }}
+                      >
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>
+                          {group.devotion_title}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: colors.text.secondary, marginTop: 4 }}>
+                          {formatDate(group.devotion_date)} • {group.highlights.length} highlight{group.highlights.length !== 1 ? 's' : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {group.highlights.map((highlight) => (
+                        <View
+                          key={highlight.id}
+                          style={{
+                            padding: 12,
+                            marginBottom: 12,
+                            backgroundColor: '#fffbeb',
+                            borderRadius: 8,
+                            borderLeftWidth: 3,
+                            borderLeftColor: '#f59e0b',
+                            position: 'relative',
+                          }}
+                        >
+                          <TouchableOpacity
+                            onPress={() => deleteHighlight(highlight.id)}
+                            style={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              width: 24,
+                              height: 24,
+                              borderRadius: 12,
+                              backgroundColor: '#dc2626',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
+                          </TouchableOpacity>
+                          <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', paddingRight: 32 }}>
+                            {highlight.selected_text}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
