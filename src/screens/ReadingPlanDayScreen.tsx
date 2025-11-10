@@ -30,6 +30,17 @@ type VerseRow = {
   translation: string | null;
 };
 
+// Normalize book names to handle variations like Psalm/Psalms
+function normalizeBookName(bookName: string): string {
+  const normalized = bookName.trim();
+  // Handle Psalm/Psalms variation
+  if (normalized.toLowerCase() === 'psalm') {
+    return 'Psalms';
+  }
+  // Add other common variations here if needed
+  return normalized;
+}
+
 function parseReferences(ref?: string): Array<{ book: string; chapter: number; v1?: number; v2?: number }> {
   if (!ref) return [];
   const cleaned = ref.replace(/\u2013|\u2014/g, '-');
@@ -38,7 +49,7 @@ function parseReferences(ref?: string): Array<{ book: string; chapter: number; v
   for (const c of chunks) {
     const m = c.match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/);
     if (!m) continue;
-    const book = m[1].trim();
+    const book = normalizeBookName(m[1].trim());
     const chapter = Number(m[2]);
     const v1 = m[3] ? Number(m[3]) : undefined;
     const v2 = m[4] ? Number(m[4]) : undefined;

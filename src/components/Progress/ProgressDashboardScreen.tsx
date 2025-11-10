@@ -1,6 +1,6 @@
 // src/components/Progress/ProgressDashboardScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
@@ -527,32 +527,30 @@ const openTodayDevotion = useCallback(() => {
         transparent={true}
         onRequestClose={() => setShowInsightModal(false)}
       >
-        <Pressable
-          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onPress={() => setShowInsightModal(false)}
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: colors.background.primary,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              paddingTop: 20,
-              paddingBottom: 40,
-              maxHeight: '80%',
-            }}
-          >
-            {/* Header */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, flex: 1 }}>
-                {verseOfTheDay?.insight_title || 'Verse Insight'}
-              </Text>
-              <TouchableOpacity onPress={() => setShowInsightModal(false)} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
-              </TouchableOpacity>
-            </View>
+        <TouchableWithoutFeedback onPress={() => setShowInsightModal(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View
+                style={{
+                  backgroundColor: colors.background.primary,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  paddingTop: 20,
+                  paddingBottom: 40,
+                  maxHeight: '80%',
+                }}
+              >
+                {/* Header */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, flex: 1 }}>
+                    {verseOfTheDay?.insight_title || 'Verse Insight'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowInsightModal(false)} style={{ padding: 8 }}>
+                    <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <ScrollView style={{ paddingHorizontal: 20 }}>
+                <ScrollView style={{ paddingHorizontal: 20 }}>
               {/* Verse Reference */}
               <View style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 8 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
@@ -630,9 +628,11 @@ const openTodayDevotion = useCallback(() => {
                   ))}
                 </View>
               )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Related Verse Modal */}

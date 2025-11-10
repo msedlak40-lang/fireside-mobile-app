@@ -135,16 +135,42 @@ export default function ChapterText(props: Props) {
     const v = extractVerseNumber(rawVerse)
     if (!v) { Alert.alert('Unknown verse', 'Could not determine verse number.'); return }
 
+    const isHighlighted = highlightMap.has(v)
+
+    // Show different options based on whether verse is already highlighted
+    const options = isHighlighted
+      ? ['Add Note', 'Remove Highlight', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
+      : ['Add Note', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
+
+    const cancelIndex = options.length - 1
+
     ActionSheetIOS.showActionSheetWithOptions(
       {
         title: `Verse ${v}`,
-        options: ['Add Note', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel'],
-        cancelButtonIndex: 5,
+        options,
+        cancelButtonIndex: cancelIndex,
+        destructiveButtonIndex: isHighlighted ? 1 : undefined,
         userInterfaceStyle: 'dark',
       },
       async (idx) => {
-        if (idx === 0) { setActiveVerse(v); setNoteOpen(true) }
-        else if (idx >= 1 && idx <= 4) {
+        if (idx === 0) {
+          setActiveVerse(v);
+          setNoteOpen(true)
+        }
+        else if (isHighlighted && idx === 1) {
+          // Remove highlight
+          await removeHighlight(v)
+          await loadHighlights()
+        }
+        else if (isHighlighted && idx >= 2 && idx <= 5) {
+          // Change highlight color
+          const colors = ['yellow', 'green', 'pink', 'blue'] as const
+          await removeHighlight(v) // Remove old highlight first
+          await insertHighlight(v, colors[idx - 2])
+          await loadHighlights()
+        }
+        else if (!isHighlighted && idx >= 1 && idx <= 4) {
+          // Add new highlight
           const colors = ['yellow', 'green', 'pink', 'blue'] as const
           await insertHighlight(v, colors[idx - 1])
           await loadHighlights()
@@ -223,6 +249,30 @@ export default function ChapterText(props: Props) {
     } catch (err: any) {
       console.warn('[ChapterText] insert highlight error:', err)
       Alert.alert('Could not save', err?.message ?? 'Check permissions/policies.')
+    }
+  }
+
+  async function removeHighlight(v: number) {
+    try {
+      if (!book) throw new Error('Missing book name')
+      const { data: auth } = await supabase.auth.getUser()
+      const userId = auth?.user?.id
+      if (!userId) throw new Error('Not signed in')
+
+      const { error } = await supabase
+        .from('user_chapter_entries')
+        .delete()
+        .eq('user_id', userId)
+        .eq('book_name', book)
+        .eq('chapter_number', chapter)
+        .eq('context_type', 'verse')
+        .eq('context_key', `v:${v}`)
+        .eq('entry_type', 'highlight')
+
+      if (error) throw error
+    } catch (err: any) {
+      console.warn('[ChapterText] remove highlight error:', err)
+      Alert.alert('Could not remove', err?.message ?? 'Check permissions/policies.')
     }
   }
 

@@ -26,6 +26,17 @@ const POPULAR_THEMES = [
 
 const TRANSLATIONS = ['KJV', 'WEB'];
 
+// Normalize book names to handle variations like Psalm/Psalms
+function normalizeBookName(bookName: string): string {
+  const normalized = bookName.trim();
+  // Handle Psalm/Psalms variation
+  if (normalized.toLowerCase() === 'psalm') {
+    return 'Psalms';
+  }
+  // Add other common variations here if needed
+  return normalized;
+}
+
 export default function BibleSearchScreen() {
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,12 +59,13 @@ export default function BibleSearchScreen() {
       const verseMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+):(\d+)$/);
       if (verseMatch) {
         const [, bookName, chapterNum, verseNum] = verseMatch;
+        const normalizedBook = normalizeBookName(bookName);
 
         // Direct lookup for specific verse
         const { data: verseData, error } = await supabase
           .from('bible_verses')
           .select('book_name, chapter_number, verse_number, verse_text')
-          .ilike('book_name', `${bookName.trim()}%`)
+          .ilike('book_name', `${normalizedBook}%`)
           .eq('chapter_number', parseInt(chapterNum))
           .eq('verse_number', parseInt(verseNum))
           .eq('translation', translation)
@@ -84,12 +96,13 @@ export default function BibleSearchScreen() {
       const chapterMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+)$/);
       if (chapterMatch) {
         const [, bookName, chapterNum] = chapterMatch;
+        const normalizedBook = normalizeBookName(bookName);
 
         // Get all verses in the chapter
         const { data: chapterData, error } = await supabase
           .from('bible_verses')
           .select('book_name, chapter_number, verse_number, verse_text')
-          .ilike('book_name', `${bookName.trim()}%`)
+          .ilike('book_name', `${normalizedBook}%`)
           .eq('chapter_number', parseInt(chapterNum))
           .eq('translation', translation)
           .order('verse_number', { ascending: true })
