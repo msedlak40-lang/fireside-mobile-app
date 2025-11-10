@@ -1,6 +1,5 @@
-// src/components/Devotions/DevotionDetailScreen.tsx
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share, Modal } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
 import { colors } from '../../theme/colors';
@@ -25,6 +24,8 @@ export default function DevotionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [highlightedParagraphs, setHighlightedParagraphs] = useState<Set<number>>(new Set());
+  const [showHighlights, setShowHighlights] = useState(false);
 
  function formatISODateYYYYMMDD(iso?: string | null) {
   if (!iso) return null;
@@ -78,6 +79,17 @@ export default function DevotionDetailScreen() {
           if (progressData?.completed_at) {
             setIsCompleted(true);
           }
+
+          // Load saved highlights for this devotion
+          const { data: highlightsData } = await supabase
+            .from('devotion_highlights')
+            .select('paragraph_index')
+            .eq('user_id', userId)
+            .eq('devotion_id', devotionId);
+
+          if (highlightsData) {
+            setHighlightedParagraphs(new Set(highlightsData.map((h: any) => h.paragraph_index)));
+          }
         }
       } catch (err) {
         console.error('[DevotionDetail] Load failed', err);
@@ -87,6 +99,62 @@ export default function DevotionDetailScreen() {
       }
     })();
   }, [devotionId, bailWithError]);
+
+  // Toggle paragraph highlight
+  const toggleHighlight = async (paragraphIndex: number, paragraphText: string) => {
+    if (devotionId == null) return;
+
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) return;
+
+      const isHighlighted = highlightedParagraphs.has(paragraphIndex);
+
+      if (isHighlighted) {
+        // Remove highlight
+        await supabase
+          .from('devotion_highlights')
+          .delete()
+          .eq('user_id', userId)
+          .eq('devotion_id', devotionId)
+          .eq('paragraph_index', paragraphIndex);
+
+        const newSet = new Set(highlightedParagraphs);
+        newSet.delete(paragraphIndex);
+        setHighlightedParagraphs(newSet);
+      } else {
+        // Add highlight
+        await supabase
+          .from('devotion_highlights')
+          .insert({
+            user_id: userId,
+            devotion_id: devotionId,
+            paragraph_index: paragraphIndex,
+            paragraph_text: paragraphText,
+          });
+
+        setHighlightedParagraphs(new Set([...highlightedParagraphs, paragraphIndex]));
+      }
+    } catch (err) {
+      console.error('[DevotionDetail] Failed to toggle highlight:', err);
+    }
+  };
+
+  // Get all saved highlights
+  const getSavedHighlights = () => {
+    if (!devotion) return [];
+
+    const paragraphs = devotion.devotional_text
+      ?.replace(/\\n\\n/g, '\n\n')
+      .split('\n\n')
+      .filter(p => p.trim()) || [];
+
+    return Array.from(highlightedParagraphs)
+      .sort((a, b) => a - b)
+      .map(index => paragraphs[index])
+      .filter(Boolean);
+  };
 
   // Mark devotion as complete
   const markDevotionComplete = async () => {
@@ -212,15 +280,43 @@ export default function DevotionDetailScreen() {
       {/* Body */}
       {devotion.devotional_text ? (
         <View style={{ marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.text.secondary }}>
+              Tap paragraphs to save them
+            </Text>
+            {highlightedParagraphs.size > 0 && (
+              <TouchableOpacity onPress={() => setShowHighlights(true)}>
+                <Text style={{ fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>
+                  View Saved ({highlightedParagraphs.size})
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {devotion.devotional_text
             .replace(/\\n\\n/g, '\n\n')  // Handle escaped newlines
             .split('\n\n')
             .filter(p => p.trim())  // Remove empty paragraphs
-            .map((paragraph, index) => (
-              <Text key={index} style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary, marginBottom: 12 }}>
-                {paragraph.trim()}
-              </Text>
-            ))}
+            .map((paragraph, index) => {
+              const isHighlighted = highlightedParagraphs.has(index);
+              return (
+                <Pressable
+                  key={index}
+                  onPress={() => toggleHighlight(index, paragraph.trim())}
+                  style={{
+                    padding: 12,
+                    marginBottom: 8,
+                    borderRadius: 8,
+                    backgroundColor: isHighlighted ? '#fef3c7' : 'transparent',
+                    borderLeftWidth: isHighlighted ? 3 : 0,
+                    borderLeftColor: '#f59e0b',
+                  }}
+                >
+                  <Text style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
+                    {paragraph.trim()}
+                  </Text>
+                </Pressable>
+              );
+            })}
         </View>
       ) : null}
 
@@ -333,6 +429,59 @@ export default function DevotionDetailScreen() {
           </Text>
         </View>
       )}
+
+      {/* Saved Highlights Modal */}
+      <Modal
+        visible={showHighlights}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowHighlights(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{
+            backgroundColor: colors.background.primary,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingTop: 20,
+            paddingBottom: 40,
+            maxHeight: '70%',
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
+                Saved Highlights
+              </Text>
+              <TouchableOpacity onPress={() => setShowHighlights(false)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ paddingHorizontal: 20 }}>
+              {getSavedHighlights().map((text, index) => (
+                <View
+                  key={index}
+                  style={{
+                    padding: 12,
+                    marginBottom: 12,
+                    backgroundColor: '#fef3c7',
+                    borderRadius: 8,
+                    borderLeftWidth: 3,
+                    borderLeftColor: '#f59e0b',
+                  }}
+                >
+                  <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary }}>
+                    {text}
+                  </Text>
+                </View>
+              ))}
+              {highlightedParagraphs.size === 0 && (
+                <Text style={{ fontSize: 15, color: colors.text.secondary, textAlign: 'center', marginTop: 20 }}>
+                  No highlights saved yet. Tap paragraphs to save them!
+                </Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
