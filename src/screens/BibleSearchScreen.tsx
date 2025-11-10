@@ -44,48 +44,102 @@ export default function BibleSearchScreen() {
 
     setLoading(true);
     try {
-      const { data, error} = await supabase
-        .rpc('rpc_bible_search', { p_query: query, p_limit: 50 });
+      // Try to parse as a verse reference first (e.g., "John 3:16" or "Genesis 1:1")
+      const verseMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+):(\d+)$/);
+      if (verseMatch) {
+        const [, bookName, chapterNum, verseNum] = verseMatch;
+
+        // Direct lookup for specific verse
+        const { data: verseData, error } = await supabase
+          .from('bible_verses')
+          .select('book_name, chapter_number, verse_number, verse_text')
+          .ilike('book_name', `${bookName.trim()}%`)
+          .eq('chapter_number', parseInt(chapterNum))
+          .eq('verse_number', parseInt(verseNum))
+          .eq('translation', translation)
+          .limit(5);
+
+        if (error) {
+          console.error('[BibleSearch] Verse lookup error:', error);
+          setResults([]);
+          setLoading(false);
+          return;
+        }
+
+        if (verseData && verseData.length > 0) {
+          const resultsWithRefs = verseData.map((v: any) => ({
+            book_name: v.book_name,
+            chapter_number: v.chapter_number,
+            verse_number: v.verse_number,
+            verse_text: v.verse_text,
+            reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
+          }));
+          setResults(resultsWithRefs);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Try to parse as chapter reference (e.g., "John 3" or "Genesis 1")
+      const chapterMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+)$/);
+      if (chapterMatch) {
+        const [, bookName, chapterNum] = chapterMatch;
+
+        // Get all verses in the chapter
+        const { data: chapterData, error } = await supabase
+          .from('bible_verses')
+          .select('book_name, chapter_number, verse_number, verse_text')
+          .ilike('book_name', `${bookName.trim()}%`)
+          .eq('chapter_number', parseInt(chapterNum))
+          .eq('translation', translation)
+          .order('verse_number', { ascending: true })
+          .limit(50);
+
+        if (error) {
+          console.error('[BibleSearch] Chapter lookup error:', error);
+          setResults([]);
+          setLoading(false);
+          return;
+        }
+
+        if (chapterData && chapterData.length > 0) {
+          const resultsWithRefs = chapterData.map((v: any) => ({
+            book_name: v.book_name,
+            chapter_number: v.chapter_number,
+            verse_number: v.verse_number,
+            verse_text: v.verse_text,
+            reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
+          }));
+          setResults(resultsWithRefs);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Otherwise, do a text search
+      const { data, error } = await supabase
+        .from('bible_verses')
+        .select('book_name, chapter_number, verse_number, verse_text')
+        .textSearch('verse_text', query)
+        .eq('translation', translation)
+        .limit(50);
 
       if (error) {
-        console.error('[BibleSearch] Search error:', error);
+        console.error('[BibleSearch] Text search error:', error);
         setResults([]);
         setLoading(false);
         return;
       }
 
-      const resultsWithText = await Promise.all(
-        (data || []).map(async (r: any) => {
-          const { data: verseData } = await supabase
-            .from('bible_verses')
-            .select('verse_text')
-            .eq('book_name', r.book_name)
-            .eq('chapter_number', r.chapter_number)
-            .eq('verse_number', r.verse_number)
-            .eq('translation', translation)
-            .limit(1)
-            .maybeSingle();
+      const resultsWithRefs = (data || []).map((v: any) => ({
+        book_name: v.book_name,
+        chapter_number: v.chapter_number,
+        verse_number: v.verse_number,
+        verse_text: v.verse_text,
+        reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
+      }));
 
-          // Build reference based on whether we have a verse number
-          let reference = r.book_name || '';
-          if (r.chapter_number) {
-            reference += ` ${r.chapter_number}`;
-            if (r.verse_number) {
-              reference += `:${r.verse_number}`;
-            }
-          }
-
-          return {
-            book_name: r.book_name || '',
-            chapter_number: r.chapter_number || 0,
-            verse_number: r.verse_number || 0,
-            verse_text: verseData?.verse_text || r.snippet || '',
-            reference,
-          };
-        })
-      );
-
-      setResults(resultsWithText);
+      setResults(resultsWithRefs);
     } catch (err) {
       console.error('[BibleSearch] Text search failed:', err);
       setResults([]);
@@ -97,8 +151,13 @@ export default function BibleSearchScreen() {
   const handleThemeSearch = useCallback(async (theme: string) => {
     setLoading(true);
     try {
+      // Search for verses containing the theme keyword
       const { data, error } = await supabase
-        .rpc('rpc_bible_search', { p_query: theme, p_limit: 50 });
+        .from('bible_verses')
+        .select('book_name, chapter_number, verse_number, verse_text')
+        .ilike('verse_text', `%${theme}%`)
+        .eq('translation', translation)
+        .limit(50);
 
       if (error) {
         console.error('[BibleSearch] Theme search error:', error);
@@ -107,38 +166,15 @@ export default function BibleSearchScreen() {
         return;
       }
 
-      const resultsWithText = await Promise.all(
-        (data || []).map(async (r: any) => {
-          const { data: verseData } = await supabase
-            .from('bible_verses')
-            .select('verse_text')
-            .eq('book_name', r.book_name)
-            .eq('chapter_number', r.chapter_number)
-            .eq('verse_number', r.verse_number)
-            .eq('translation', translation)
-            .limit(1)
-            .maybeSingle();
+      const resultsWithRefs = (data || []).map((v: any) => ({
+        book_name: v.book_name,
+        chapter_number: v.chapter_number,
+        verse_number: v.verse_number,
+        verse_text: v.verse_text,
+        reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
+      }));
 
-          // Build reference based on whether we have a verse number
-          let reference = r.book_name || '';
-          if (r.chapter_number) {
-            reference += ` ${r.chapter_number}`;
-            if (r.verse_number) {
-              reference += `:${r.verse_number}`;
-            }
-          }
-
-          return {
-            book_name: r.book_name || '',
-            chapter_number: r.chapter_number || 0,
-            verse_number: r.verse_number || 0,
-            verse_text: verseData?.verse_text || r.snippet || '',
-            reference,
-          };
-        })
-      );
-
-      setResults(resultsWithText);
+      setResults(resultsWithRefs);
     } catch (err) {
       console.error('[BibleSearch] Theme search failed:', err);
       setResults([]);

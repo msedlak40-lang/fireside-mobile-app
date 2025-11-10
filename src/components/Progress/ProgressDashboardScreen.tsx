@@ -527,15 +527,21 @@ const openTodayDevotion = useCallback(() => {
         transparent={true}
         onRequestClose={() => setShowInsightModal(false)}
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={{
-            backgroundColor: colors.background.primary,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            paddingTop: 20,
-            paddingBottom: 40,
-            maxHeight: '80%',
-          }}>
+        <Pressable
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onPress={() => setShowInsightModal(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: colors.background.primary,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingTop: 20,
+              paddingBottom: 40,
+              maxHeight: '80%',
+            }}
+          >
             {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
               <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, flex: 1 }}>
@@ -625,8 +631,8 @@ const openTodayDevotion = useCallback(() => {
                 </View>
               )}
             </ScrollView>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Related Verse Modal */}
