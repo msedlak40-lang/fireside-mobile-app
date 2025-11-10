@@ -212,11 +212,15 @@ export default function DevotionDetailScreen() {
       {/* Body */}
       {devotion.devotional_text ? (
         <View style={{ marginTop: 16 }}>
-          {devotion.devotional_text.split('\n\n').map((paragraph, index) => (
-            <Text key={index} style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary, marginBottom: 12 }}>
-              {paragraph.trim()}
-            </Text>
-          ))}
+          {devotion.devotional_text
+            .replace(/\\n\\n/g, '\n\n')  // Handle escaped newlines
+            .split('\n\n')
+            .filter(p => p.trim())  // Remove empty paragraphs
+            .map((paragraph, index) => (
+              <Text key={index} style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary, marginBottom: 12 }}>
+                {paragraph.trim()}
+              </Text>
+            ))}
         </View>
       ) : null}
 

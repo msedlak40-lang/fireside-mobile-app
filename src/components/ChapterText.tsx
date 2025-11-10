@@ -255,7 +255,6 @@ export default function ChapterText(props: Props) {
 
             <TouchableOpacity
               style={{ flex: 1 }}
-              onPress={() => openVerseView(raw)}
               onLongPress={() => openVerseActions(raw)}
               activeOpacity={0.7}
             >

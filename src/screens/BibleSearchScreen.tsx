@@ -24,7 +24,7 @@ const POPULAR_THEMES = [
   { id: 'prayer', label: 'Prayer', emoji: '🙏' },
 ];
 
-const TRANSLATIONS = ['KJV', 'ESV', 'NIV', 'NKJV', 'WEB'];
+const TRANSLATIONS = ['KJV', 'WEB'];
 
 export default function BibleSearchScreen() {
   const navigation = useNavigation<any>();
@@ -32,7 +32,7 @@ export default function BibleSearchScreen() {
   const [themeInput, setThemeInput] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchMode, setSearchMode] = useState<'lookup' | 'smart' | 'theme'>('lookup');
+  const [searchMode, setSearchMode] = useState<'lookup' | 'theme'>('lookup');
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [translation, setTranslation] = useState('KJV');
 
@@ -130,7 +130,7 @@ export default function BibleSearchScreen() {
   }, [translation]);
 
   const handleSearch = useCallback(() => {
-    if (searchMode === 'lookup' || searchMode === 'smart') {
+    if (searchMode === 'lookup') {
       handleTextSearch(searchQuery);
     } else if (searchMode === 'theme') {
       if (themeInput) {
@@ -178,7 +178,7 @@ export default function BibleSearchScreen() {
         </View>
 
         {/* Search Mode Toggle */}
-        <View style={{ flexDirection: 'row', padding: 16, paddingTop: 8, gap: 6 }}>
+        <View style={{ flexDirection: 'row', padding: 16, paddingTop: 8, gap: 8 }}>
           <Pressable
             onPress={() => {
               setSearchMode('lookup');
@@ -188,7 +188,7 @@ export default function BibleSearchScreen() {
             }}
             style={{
               flex: 1,
-              padding: 10,
+              padding: 12,
               backgroundColor: searchMode === 'lookup' ? colors.accent.primary : colors.background.secondary,
               borderRadius: 10,
               borderWidth: 1,
@@ -198,36 +198,10 @@ export default function BibleSearchScreen() {
             <Text style={{
               textAlign: 'center',
               fontWeight: '700',
-              fontSize: 12,
+              fontSize: 13,
               color: searchMode === 'lookup' ? colors.text.primary : colors.text.secondary,
             }}>
-              📖 Verse/Chapter
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              setSearchMode('smart');
-              setResults([]);
-              setSelectedTheme(null);
-              setThemeInput('');
-            }}
-            style={{
-              flex: 1,
-              padding: 10,
-              backgroundColor: searchMode === 'smart' ? colors.accent.primary : colors.background.secondary,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: searchMode === 'smart' ? colors.accent.primary : colors.border.default,
-            }}
-          >
-            <Text style={{
-              textAlign: 'center',
-              fontWeight: '700',
-              fontSize: 12,
-              color: searchMode === 'smart' ? colors.text.primary : colors.text.secondary,
-            }}>
-              ✨ Smart Search
+              📖 Verse/Chapter Lookup
             </Text>
           </Pressable>
 
@@ -239,7 +213,7 @@ export default function BibleSearchScreen() {
             }}
             style={{
               flex: 1,
-              padding: 10,
+              padding: 12,
               backgroundColor: searchMode === 'theme' ? colors.accent.primary : colors.background.secondary,
               borderRadius: 10,
               borderWidth: 1,
@@ -249,16 +223,16 @@ export default function BibleSearchScreen() {
             <Text style={{
               textAlign: 'center',
               fontWeight: '700',
-              fontSize: 12,
+              fontSize: 13,
               color: searchMode === 'theme' ? colors.text.primary : colors.text.secondary,
             }}>
-              🏷️ Theme
+              🏷️ Theme Search
             </Text>
           </Pressable>
         </View>
 
-        {/* Search Input (Lookup/Smart Mode) */}
-        {(searchMode === 'lookup' || searchMode === 'smart') && (
+        {/* Search Input (Lookup Mode) */}
+        {searchMode === 'lookup' && (
           <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
@@ -390,7 +364,7 @@ export default function BibleSearchScreen() {
               {results.length} {results.length === 1 ? 'result' : 'results'} found ({translation})
             </Text>
             {results.map((result, index) => (
-              <Pressable
+              <View
                 key={`${result.reference}-${index}`}
                 style={{
                   marginBottom: 12,
@@ -401,13 +375,13 @@ export default function BibleSearchScreen() {
                   borderColor: colors.border.default,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent.primary, marginBottom: 6 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent.primary, marginBottom: 8 }}>
                   {result.reference}
                 </Text>
-                <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary }}>
+                <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary, flexWrap: 'wrap' }}>
                   {result.verse_text}
                 </Text>
-              </Pressable>
+              </View>
             ))}
           </ScrollView>
         )}
@@ -434,7 +408,6 @@ export default function BibleSearchScreen() {
             </Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
               {searchMode === 'lookup' && 'Enter a reference like "John 3:16" or search by keywords'}
-              {searchMode === 'smart' && 'Enter keywords to search for verses across all books'}
               {searchMode === 'theme' && 'Type a theme or select from popular themes below'}
             </Text>
           </View>

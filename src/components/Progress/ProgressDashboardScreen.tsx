@@ -243,7 +243,12 @@ const openTodayDevotion = useCallback(() => {
         {/* Verse of the Day */}
         {verseOfTheDay && (
           <Pressable
-            onPress={() => verseOfTheDay.insight_title && setShowInsightModal(true)}
+            onPress={() => {
+              if (verseOfTheDay.insight_title || verseOfTheDay.insight_detail) {
+                setShowInsightModal(true);
+              }
+            }}
+            disabled={!verseOfTheDay.insight_title && !verseOfTheDay.insight_detail}
             style={{
               marginBottom: 16,
               padding: 18,
@@ -264,7 +269,7 @@ const openTodayDevotion = useCallback(() => {
             <Text style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
               — {verseOfTheDay.reference}
             </Text>
-            {verseOfTheDay.insight_title && (
+            {(verseOfTheDay.insight_title || verseOfTheDay.insight_detail) && (
               <Text style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
                 💡 Tap to view insight
               </Text>
