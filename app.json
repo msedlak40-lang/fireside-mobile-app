@@ -23,7 +23,7 @@
     "version": "1.0.0",
     "ios": {
       "bundleIdentifier": "com.msedlak40.firesidemobile",
-      "buildNumber": "4",
+      "buildNumber": "5",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Fireside uses Face ID to securely unlock the app and keep your data safe."
