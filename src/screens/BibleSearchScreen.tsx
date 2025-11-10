@@ -66,12 +66,21 @@ export default function BibleSearchScreen() {
             .limit(1)
             .maybeSingle();
 
+          // Build reference based on whether we have a verse number
+          let reference = r.book_name || '';
+          if (r.chapter_number) {
+            reference += ` ${r.chapter_number}`;
+            if (r.verse_number) {
+              reference += `:${r.verse_number}`;
+            }
+          }
+
           return {
             book_name: r.book_name || '',
             chapter_number: r.chapter_number || 0,
             verse_number: r.verse_number || 0,
             verse_text: verseData?.verse_text || r.snippet || '',
-            reference: `${r.book_name} ${r.chapter_number}:${r.verse_number}`,
+            reference,
           };
         })
       );
@@ -110,12 +119,21 @@ export default function BibleSearchScreen() {
             .limit(1)
             .maybeSingle();
 
+          // Build reference based on whether we have a verse number
+          let reference = r.book_name || '';
+          if (r.chapter_number) {
+            reference += ` ${r.chapter_number}`;
+            if (r.verse_number) {
+              reference += `:${r.verse_number}`;
+            }
+          }
+
           return {
             book_name: r.book_name || '',
             chapter_number: r.chapter_number || 0,
             verse_number: r.verse_number || 0,
             verse_text: verseData?.verse_text || r.snippet || '',
-            reference: `${r.book_name} ${r.chapter_number}:${r.verse_number}`,
+            reference,
           };
         })
       );

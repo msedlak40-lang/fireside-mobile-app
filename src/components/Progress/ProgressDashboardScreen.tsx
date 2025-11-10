@@ -54,6 +54,7 @@ export default function ProgressDashboardScreen() {
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [showRelatedVerseModal, setShowRelatedVerseModal] = useState(false);
   const [selectedRelatedVerse, setSelectedRelatedVerse] = useState<string | null>(null);
+  const [relatedVerseText, setRelatedVerseText] = useState<string>('');
 
   // Load cached data from AsyncStorage
   const loadFromCache = async (): Promise<CachedData | null> => {
@@ -576,7 +577,36 @@ const openTodayDevotion = useCallback(() => {
                       key={index}
                       onPress={async () => {
                         setSelectedRelatedVerse(ref);
+                        setRelatedVerseText('Loading...');
                         setShowRelatedVerseModal(true);
+
+                        // Parse the reference and fetch the verse
+                        try {
+                          // Parse reference like "John 3:16" or "Romans 8:28"
+                          const match = ref.match(/^(.+?)\s+(\d+):(\d+)$/);
+                          if (match) {
+                            const [, bookName, chapterNum, verseNum] = match;
+                            const { data } = await supabase
+                              .from('bible_verses')
+                              .select('verse_text')
+                              .eq('book_name', bookName.trim())
+                              .eq('chapter_number', parseInt(chapterNum))
+                              .eq('verse_number', parseInt(verseNum))
+                              .eq('translation', 'KJV')
+                              .maybeSingle();
+
+                            if (data?.verse_text) {
+                              setRelatedVerseText(data.verse_text);
+                            } else {
+                              setRelatedVerseText('Verse not found');
+                            }
+                          } else {
+                            setRelatedVerseText('Could not parse verse reference');
+                          }
+                        } catch (err) {
+                          console.error('[VOTD] Failed to fetch related verse:', err);
+                          setRelatedVerseText('Failed to load verse');
+                        }
                       }}
                       style={{
                         marginBottom: 8,
@@ -622,16 +652,18 @@ const openTodayDevotion = useCallback(() => {
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, flex: 1 }}>
                 {selectedRelatedVerse}
               </Text>
               <TouchableOpacity onPress={() => setShowRelatedVerseModal(false)}>
                 <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
               </TouchableOpacity>
             </View>
-            <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary }}>
-              Tap a related verse above to view it here. (Verse lookup coming soon!)
-            </Text>
+            <ScrollView>
+              <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary, fontStyle: relatedVerseText === 'Loading...' ? 'italic' : 'normal' }}>
+                {relatedVerseText || 'Select a verse to view'}
+              </Text>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>

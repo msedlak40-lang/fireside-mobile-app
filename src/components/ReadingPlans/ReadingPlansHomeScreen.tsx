@@ -34,18 +34,32 @@ export default function ReadingPlansHomeScreen() {
     }
   };
 
-  // Load plans list once on mount
+  // Load both plans and active plan on initial mount
   React.useEffect(() => {
-    loadPlans();
+    const initialLoadData = async () => {
+      setLoading(true);
+      try {
+        const [plansData, activeData] = await Promise.all([
+          fetchReadingPlans(),
+          fetchActiveReadingPlan()
+        ]);
+        setPlans(plansData);
+        setActivePlan(activeData);
+      } catch (err) {
+        console.error('[ReadingPlansHome] Initial load failed', err);
+      } finally {
+        setLoading(false);
+        setInitialLoad(false);
+      }
+    };
+    initialLoadData();
   }, []);
 
   // On screen focus, only reload active plan (not the full list)
   useFocusEffect(useCallback(() => {
-    if (initialLoad) {
-      setInitialLoad(false);
-      return;
+    if (!initialLoad) {
+      loadActivePlan();
     }
-    loadActivePlan();
   }, [initialLoad]));
 
   if (loading) {

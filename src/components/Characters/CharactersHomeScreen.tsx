@@ -40,18 +40,39 @@ console.error('[CharactersHome] Load active study failed', err);
 }
 };
 
-// Load characters when search/filter changes
+// Load both characters and active study on initial mount
 React.useEffect(() => {
+const initialLoad = async () => {
+setLoading(true);
+try {
+const [charactersData, activeData] = await Promise.all([
+listCharacters({ q: q || null, testament }),
+fetchActiveCharacterStudy()
+]);
+setItems(charactersData);
+setActiveStudy(activeData);
+} catch (err) {
+console.error('[CharactersHome] Initial load failed', err);
+} finally {
+setLoading(false);
+setInitialLoad(false);
+}
+};
+initialLoad();
+}, []);
+
+// Reload characters when search/filter changes (after initial load)
+React.useEffect(() => {
+if (!initialLoad) {
 loadCharacters();
+}
 }, [q, testament]);
 
 // On screen focus, only reload active study (not the full list)
 useFocusEffect(useCallback(() => {
-if (initialLoad) {
-setInitialLoad(false);
-return;
-}
+if (!initialLoad) {
 loadActiveStudy();
+}
 }, [initialLoad]));
 
 
