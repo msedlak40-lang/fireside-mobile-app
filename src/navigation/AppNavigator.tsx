@@ -42,6 +42,7 @@ import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
 
 // Notes & Highlights summary (new screen)
 import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
+import AllDevotionHighlights from '../screens/AllDevotionHighlights';
 
 // Search
 import BibleSearchScreen from '../screens/BibleSearchScreen';
@@ -172,6 +173,11 @@ function ProgressStackNavigator() {
         name="NotesHighlightsSummary"
         component={NotesHighlightsSummary}
         options={{ headerTitle: 'Notes & Highlights' }}
+      />
+      <ProgressStack.Screen
+        name="AllDevotionHighlights"
+        component={AllDevotionHighlights}
+        options={{ headerTitle: 'Devotion Highlights' }}
       />
       {/* Add DevotionDetail here too, so Home can open it directly */}
       <ProgressStack.Screen
@@ -313,6 +319,7 @@ const linking = {
             screens: {
               ProgressDashboard: 'home',
               NotesHighlightsSummary: 'home/notes',
+              AllDevotionHighlights: 'home/devotion-highlights',
               DevotionDetail: 'home/devotion/:id'
             }
           },

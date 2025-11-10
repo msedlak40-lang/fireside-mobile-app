@@ -112,9 +112,14 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Today’s Devotion */}
+        {/* Today's Devotion */}
         <View style={{ marginBottom: 16, padding: 16, backgroundColor: '#e9d5ff', borderRadius: 12 }}>
-          <Text style={{ fontSize: 12, color: '#6b21a8', fontWeight: '700' }}>TODAY’S DEVOTION</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 12, color: '#6b21a8', fontWeight: '700' }}>TODAY'S DEVOTION</Text>
+            <TouchableOpacity onPress={() => nav.navigate('AllDevotionHighlights')}>
+              <Text style={{ fontSize: 12, color: '#7c3aed', fontWeight: '700' }}>View Highlights</Text>
+            </TouchableOpacity>
+          </View>
           {todayDevotion ? (
             <>
               <Text style={{ fontSize: 18, fontWeight: '700', marginTop: 4 }}>{todayDevotion.title}</Text>

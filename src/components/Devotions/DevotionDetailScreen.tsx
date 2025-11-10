@@ -329,12 +329,12 @@ export default function DevotionDetailScreen() {
                   padding: 12,
                   marginBottom: 8,
                   borderRadius: 8,
-                  backgroundColor: isHighlighted ? '#fef3c7' : 'transparent',
+                  backgroundColor: isHighlighted ? '#fffbeb' : 'transparent',
                   borderLeftWidth: isHighlighted ? 3 : 0,
                   borderLeftColor: '#f59e0b',
                 }}
               >
-                <Text style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
+                <Text style={{ fontSize: 16, lineHeight: 24, color: isHighlighted ? '#78350f' : colors.text.primary }}>
                   {para.text}
                 </Text>
               </Pressable>
@@ -485,13 +485,13 @@ export default function DevotionDetailScreen() {
                   style={{
                     padding: 12,
                     marginBottom: 12,
-                    backgroundColor: '#fef3c7',
+                    backgroundColor: '#fffbeb',
                     borderRadius: 8,
                     borderLeftWidth: 3,
                     borderLeftColor: '#f59e0b',
                   }}
                 >
-                  <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary }}>
+                  <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
                     {text}
                   </Text>
                 </View>
