@@ -10,25 +10,43 @@ export default function ReadingPlansHomeScreen() {
   const [plans, setPlans] = useState<ReadingPlan[]>([]);
   const [activePlan, setActivePlan] = useState<ActivePlanWithReading | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const navigation = useNavigation<any>();
 
-  const load = async () => {
+  const loadPlans = async () => {
     setLoading(true);
     try {
-      const [plansData, activeData] = await Promise.all([
-        fetchReadingPlans(),
-        fetchActiveReadingPlan()
-      ]);
+      const plansData = await fetchReadingPlans();
       setPlans(plansData);
-      setActivePlan(activeData);
     } catch (err) {
-      console.error('[ReadingPlansHome] Load failed', err);
+      console.error('[ReadingPlansHome] Load plans failed', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useFocusEffect(useCallback(() => { load(); }, []));
+  const loadActivePlan = async () => {
+    try {
+      const activeData = await fetchActiveReadingPlan();
+      setActivePlan(activeData);
+    } catch (err) {
+      console.error('[ReadingPlansHome] Load active plan failed', err);
+    }
+  };
+
+  // Load plans list once on mount
+  React.useEffect(() => {
+    loadPlans();
+  }, []);
+
+  // On screen focus, only reload active plan (not the full list)
+  useFocusEffect(useCallback(() => {
+    if (initialLoad) {
+      setInitialLoad(false);
+      return;
+    }
+    loadActivePlan();
+  }, [initialLoad]));
 
   if (loading) {
     return (

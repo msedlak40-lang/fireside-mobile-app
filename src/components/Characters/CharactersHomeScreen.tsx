@@ -15,26 +15,44 @@ const [activeStudy, setActiveStudy] = useState<ActiveCharacterStudy | null>(null
 const [q, setQ] = useState('');
 const [testament, setTestament] = useState<'OT'|'NT'|null>(null);
 const [loading, setLoading] = useState(true);
+const [initialLoad, setInitialLoad] = useState(true);
 const navigation = useNavigation<any>();
 
 
-const load = async () => {
+const loadCharacters = async () => {
 setLoading(true);
 try {
-const [charactersData, activeData] = await Promise.all([
-listCharacters({ q: q || null, testament }),
-fetchActiveCharacterStudy()
-]);
+const charactersData = await listCharacters({ q: q || null, testament });
 setItems(charactersData);
-setActiveStudy(activeData);
 } catch (err) {
-console.error('[CharactersHome] Load failed', err);
+console.error('[CharactersHome] Load characters failed', err);
+} finally {
+setLoading(false);
 }
-finally { setLoading(false); }
 };
 
+const loadActiveStudy = async () => {
+try {
+const activeData = await fetchActiveCharacterStudy();
+setActiveStudy(activeData);
+} catch (err) {
+console.error('[CharactersHome] Load active study failed', err);
+}
+};
 
-useFocusEffect(useCallback(() => { load(); }, [q, testament]));
+// Load characters when search/filter changes
+React.useEffect(() => {
+loadCharacters();
+}, [q, testament]);
+
+// On screen focus, only reload active study (not the full list)
+useFocusEffect(useCallback(() => {
+if (initialLoad) {
+setInitialLoad(false);
+return;
+}
+loadActiveStudy();
+}, [initialLoad]));
 
 
 if (loading) return <View style={{ flex:1, alignItems:'center', justifyContent:'center', backgroundColor: colors.background.primary }}><ActivityIndicator color={colors.accent.primary} /></View>;
