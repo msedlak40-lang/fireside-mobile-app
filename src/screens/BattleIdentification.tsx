@@ -47,8 +47,8 @@ export default function BattleIdentification() {
         return;
       }
 
-      // Now create the battle
-      const battle = await createBattle(userId, battleText.trim(), selectedTag);
+      // Now create the battle WITH the verse
+      const battle = await createBattle(userId, battleText.trim(), selectedTag, verse);
 
       if (!battle) {
         Alert.alert('Error', 'Failed to create battle. Please try again.');

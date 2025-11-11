@@ -108,7 +108,14 @@ export async function getActiveBattle(userId: string): Promise<UserBattle | null
 export async function createBattle(
   userId: string,
   battleText: string,
-  battleTag: BattleTag
+  battleTag: BattleTag,
+  verse?: {
+    book_name: string;
+    chapter_number: number;
+    verse_number: number;
+    verse_reference: string;
+    verse_text: string;
+  }
 ): Promise<UserBattle | null> {
   try {
     const { week, year } = getCurrentWeekAndYear();
@@ -132,6 +139,11 @@ export async function createBattle(
         battle_tag: battleTag,
         armor_piece_id: armorPiece?.id || null,
         is_active: true,
+        verse_book: verse?.book_name || null,
+        verse_chapter: verse?.chapter_number || null,
+        verse_number: verse?.verse_number || null,
+        verse_reference: verse?.verse_reference || null,
+        verse_text: verse?.verse_text || null,
       })
       .select()
       .single();

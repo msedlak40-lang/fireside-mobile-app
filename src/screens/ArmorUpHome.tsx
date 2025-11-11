@@ -75,9 +75,21 @@ export default function ArmorUpHome() {
 
   const viewBattleVerse = () => {
     if (activeBattle) {
+      // Pass the saved verse from the battle record
+      const verse = activeBattle.verse_text ? {
+        book_name: activeBattle.verse_book,
+        chapter_number: activeBattle.verse_chapter,
+        verse_number: activeBattle.verse_number,
+        verse_reference: activeBattle.verse_reference,
+        verse_text: activeBattle.verse_text,
+        armor_name: 'Armor of God',
+        context_summary: '',
+      } : null;
+
       navigation.navigate('BattleVerse', {
         battleId: activeBattle.id,
         battleTag: activeBattle.battle_tag,
+        verse,
       });
     }
   };
