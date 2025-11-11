@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS battle_verse_tags (
   armor_piece_id INTEGER REFERENCES armor_pieces(id),
   context_summary TEXT,
   is_featured BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(book_name, chapter_number, verse_number, battle_tag)
 );
 
 -- 3. User Saved Battle Verses (User's personal collection)
@@ -177,7 +178,7 @@ VALUES
   ('Matthew', 26, 41, 'temptation', 'Jesus told his disciples to watch and pray to avoid temptation.', true),
   ('Galatians', 6, 1, 'temptation', 'Paul instructed believers to restore others gently, watching themselves.', true),
   ('2 Timothy', 2, 22, 'temptation', 'Paul told Timothy to flee youthful lusts and pursue righteousness.', true),
-  ('Psalm', 119, 11, 'temptation', 'The psalmist hid God's word in his heart to avoid sin.', true),
+  ('Psalm', 119, 11, 'temptation', 'The psalmist hid God''s word in his heart to avoid sin.', true),
   ('Romans', 13, 14, 'temptation', 'Paul instructed believers to clothe themselves with Christ, not gratifying flesh.', true)
 ON CONFLICT DO NOTHING;
 
@@ -200,28 +201,28 @@ ON CONFLICT DO NOTHING;
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
 VALUES
   ('Deuteronomy', 31, 8, 'loneliness', 'Moses assured Israel that God goes before them and will never leave.', true),
-  ('Hebrews', 13, 5, 'loneliness', 'The writer quoted God's promise to never leave or forsake us.', true),
+  ('Hebrews', 13, 5, 'loneliness', 'The writer quoted God''s promise to never leave or forsake us.', true),
   ('Psalm', 68, 6, 'loneliness', 'David proclaimed that God sets the lonely in families.', true),
   ('Isaiah', 41, 10, 'loneliness', 'God promised to be with Israel and strengthen them.', true),
   ('Matthew', 28, 20, 'loneliness', 'Jesus promised to be with his disciples always, to the end of the age.', true),
   ('Psalm', 23, 4, 'loneliness', 'David found comfort knowing God was with him in the darkest valley.', true),
   ('John', 16, 32, 'loneliness', 'Jesus told his disciples he is never alone because the Father is with him.', true),
-  ('Psalm', 139, 7, 'loneliness', 'David realized there is nowhere he can go from God's presence.', true),
-  ('Romans', 8, 38, 'loneliness', 'Paul declared that nothing can separate us from God's love.', true),
+  ('Psalm', 139, 7, 'loneliness', 'David realized there is nowhere he can go from God''s presence.', true),
+  ('Romans', 8, 38, 'loneliness', 'Paul declared that nothing can separate us from God''s love.', true),
   ('1 Peter', 5, 7, 'loneliness', 'Peter encouraged believers to cast all anxiety on God because He cares.', true)
 ON CONFLICT DO NOTHING;
 
 -- Identity verses
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
 VALUES
-  ('Ephesians', 2, 10, 'identity', 'Paul declared that we are God's workmanship, created for good works.', true),
+  ('Ephesians', 2, 10, 'identity', 'Paul declared that we are God''s workmanship, created for good works.', true),
   ('1 Peter', 2, 9, 'identity', 'Peter called believers a chosen people, a royal priesthood.', true),
   ('2 Corinthians', 5, 17, 'identity', 'Paul taught that anyone in Christ is a new creation.', true),
-  ('Romans', 8, 16, 'identity', 'Paul affirmed that the Spirit testifies we are God's children.', true),
+  ('Romans', 8, 16, 'identity', 'Paul affirmed that the Spirit testifies we are God''s children.', true),
   ('Galatians', 2, 20, 'identity', 'Paul explained that he lives by faith in the Son of God who loved him.', true),
-  ('John', 1, 12, 'identity', 'John declared that those who believe receive the right to be God's children.', true),
+  ('John', 1, 12, 'identity', 'John declared that those who believe receive the right to be God''s children.', true),
   ('Colossians', 3, 3, 'identity', 'Paul taught that our life is hidden with Christ in God.', true),
-  ('1 John', 3, 1, 'identity', 'John marveled at how great the Father's love is that we are called God's children.', true),
+  ('1 John', 3, 1, 'identity', 'John marveled at how great the Father''s love is that we are called God''s children.', true),
   ('Psalm', 139, 14, 'identity', 'David praised God because he was fearfully and wonderfully made.', true),
   ('Isaiah', 43, 1, 'identity', 'God declared that He has called Israel by name; they are His.', true)
 ON CONFLICT DO NOTHING;
@@ -232,11 +233,11 @@ VALUES
   ('Jeremiah', 29, 11, 'purpose', 'God promised Israel a future and hope during their exile.', true),
   ('Romans', 8, 28, 'purpose', 'Paul assured believers that God works all things for good.', true),
   ('Proverbs', 16, 9, 'purpose', 'Solomon taught that God establishes our steps even when we plan.', true),
-  ('Proverbs', 19, 21, 'purpose', 'Solomon declared that God's purpose prevails over all plans.', true),
+  ('Proverbs', 19, 21, 'purpose', 'Solomon declared that God''s purpose prevails over all plans.', true),
   ('Ephesians', 2, 10, 'purpose', 'Paul explained we are created in Christ for good works God prepared.', true),
   ('Philippians', 1, 6, 'purpose', 'Paul was confident that God completes the good work He began.', true),
   ('Colossians', 3, 23, 'purpose', 'Paul instructed believers to work for the Lord, not for people.', true),
-  ('1 Corinthians', 10, 31, 'purpose', 'Paul taught that whatever we do should be for God's glory.', true),
+  ('1 Corinthians', 10, 31, 'purpose', 'Paul taught that whatever we do should be for God''s glory.', true),
   ('Psalm', 138, 8, 'purpose', 'David trusted that God would fulfill His purpose for him.', true),
   ('Acts', 20, 24, 'purpose', 'Paul considered his life worth nothing except completing the task God gave him.', true)
 ON CONFLICT DO NOTHING;
