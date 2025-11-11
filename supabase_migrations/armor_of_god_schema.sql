@@ -111,7 +111,9 @@ BEGIN
     COALESCE(bvt.context_summary, '') AS context_summary
   FROM battle_verse_tags bvt
   JOIN bible_verses bv ON
-    bvt.book_name = bv.book_name
+    (bvt.book_name = bv.book_name OR
+     (bvt.book_name = 'Psalms' AND bv.book_name = 'Psalm') OR
+     (bvt.book_name = 'Psalm' AND bv.book_name = 'Psalms'))
     AND bvt.chapter_number = bv.chapter_number
     AND bvt.verse_number = bv.verse_number
     AND bv.translation = p_translation
