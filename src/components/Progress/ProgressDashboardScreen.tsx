@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/verseOfTheDay';
-import { saveBattleVerse, getUserBattleVerses, deleteBattleVerse } from '../../services/armor';
+import { saveBattleVerse, getUserBattleVerses, deleteBattleVerse, getCurrentArmorPiece, getActiveBattle } from '../../services/armor';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
@@ -74,6 +74,8 @@ export default function ProgressDashboardScreen() {
   const [showBattleVersesModal, setShowBattleVersesModal] = useState(false);
   const [battleVerses, setBattleVerses] = useState<any[]>([]);
   const [battleVersesLoading, setBattleVersesLoading] = useState(false);
+  const [currentArmor, setCurrentArmor] = useState<any | null>(null);
+  const [activeBattle, setActiveBattle] = useState<any | null>(null);
 
   // Close modal with a delay to let React Native clean up touch handlers
   const closeInsightModal = () => {
@@ -115,11 +117,12 @@ export default function ProgressDashboardScreen() {
   // Fetch fresh data from API
   const fetchFreshData = async () => {
     try {
-      const [dashData, planData, characterStudyData, verseData] = await Promise.all([
+      const [dashData, planData, characterStudyData, verseData, armorData] = await Promise.all([
         fetchUserDashboard(),
         fetchActiveReadingPlan(),
         fetchActiveCharacterStudy(),
         fetchVerseOfTheDay('KJV'),
+        getCurrentArmorPiece(),
       ]);
 
       // today's devotion
@@ -129,6 +132,11 @@ export default function ProgressDashboardScreen() {
         .select('id,title,devotion_date')
         .eq('devotion_date', today)
         .maybeSingle();
+
+      // Get active battle
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      const battleData = userId ? await getActiveBattle(userId) : null;
 
       const freshData = {
         dashboard: dashData,
@@ -143,6 +151,8 @@ export default function ProgressDashboardScreen() {
       setActiveCharacterStudy(freshData.activeCharacterStudy);
       setTodayDevotion(freshData.todayDevotion);
       setVerseOfTheDay(freshData.verseOfTheDay);
+      setCurrentArmor(armorData);
+      setActiveBattle(battleData);
 
       // Save to cache
       await saveToCache(freshData);
@@ -493,6 +503,68 @@ const openTodayDevotion = useCallback(() => {
             </Text>
           )}
         </View>
+
+        {/* Armor of God Card */}
+        {currentArmor && (
+          <TouchableOpacity
+            onPress={() => {
+              // TODO: Navigate to Armor screens
+              Alert.alert('Coming Soon', 'Armor Up feature is being built!');
+            }}
+            style={{
+              marginBottom: 16,
+              padding: 20,
+              backgroundColor: '#fef3c7',
+              borderRadius: 16,
+              borderLeftWidth: 6,
+              borderLeftColor: '#f59e0b',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          >
+            <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '800', letterSpacing: 1.5, marginBottom: 12 }}>
+              ⚔️ ARMOR OF GOD
+            </Text>
+            <Text style={{ fontSize: 20, fontWeight: '800', marginBottom: 8, color: '#92400e' }}>
+              {currentArmor.armor_name}
+            </Text>
+            <Text style={{ fontSize: 14, color: '#78350f', marginBottom: 12, lineHeight: 20 }}>
+              {currentArmor.description}
+            </Text>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 8,
+            }}>
+              <Text style={{ fontSize: 13, color: '#92400e', fontWeight: '600' }}>
+                {currentArmor.scripture_reference}
+              </Text>
+              {activeBattle ? (
+                <View style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  backgroundColor: '#10b981',
+                  borderRadius: 8,
+                }}>
+                  <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>✓ Active</Text>
+                </View>
+              ) : (
+                <View style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  backgroundColor: '#f59e0b',
+                  borderRadius: 8,
+                }}>
+                  <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>Start Battle →</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* Verse of the Day */}
         {verseOfTheDay && (
