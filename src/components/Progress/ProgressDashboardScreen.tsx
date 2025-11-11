@@ -1,12 +1,13 @@
 // src/components/Progress/ProgressDashboardScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/verseOfTheDay';
+import { saveBattleVerse, getUserBattleVerses } from '../../services/armor';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
@@ -68,6 +69,8 @@ export default function ProgressDashboardScreen() {
   const [showHighlightsModal, setShowHighlightsModal] = useState(false);
   const [highlights, setHighlights] = useState<HighlightWithDevotion[]>([]);
   const [highlightsLoading, setHighlightsLoading] = useState(false);
+  const [isSavingBattleVerse, setIsSavingBattleVerse] = useState(false);
+  const [votdSaved, setVotdSaved] = useState(false);
 
   // Close modal with a delay to let React Native clean up touch handlers
   const closeInsightModal = () => {
@@ -182,6 +185,13 @@ export default function ProgressDashboardScreen() {
     load();
   }, []);
 
+  // Check if VoTD is already saved when it loads
+  useEffect(() => {
+    if (verseOfTheDay) {
+      checkIfVotdSaved();
+    }
+  }, [verseOfTheDay]);
+
   const openPlans = useCallback(() => {
     // ✅ just switch to the Plans tab — avoids nested hook issues
     navigation.navigate('PlansTab', { screen: 'ReadingPlansHome' });
@@ -281,6 +291,80 @@ const openTodayDevotion = useCallback(() => {
     }
   };
 
+  const checkIfVotdSaved = async () => {
+    try {
+      if (!verseOfTheDay) return;
+
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) return;
+
+      const savedVerses = await getUserBattleVerses(userId);
+
+      // Parse verse reference to extract book, chapter, verse
+      const match = verseOfTheDay.reference.match(/^(.+?)\s+(\d+):(\d+)$/);
+      if (!match) return;
+
+      const [, bookName, chapter, verse] = match;
+      const isAlreadySaved = savedVerses.some(
+        v => v.book_name === bookName &&
+             v.chapter_number === parseInt(chapter) &&
+             v.verse_number === parseInt(verse)
+      );
+
+      setVotdSaved(isAlreadySaved);
+    } catch (err) {
+      console.error('[ProgressDashboard] Check VoTD saved failed:', err);
+    }
+  };
+
+  const saveBattleVerseHandler = async () => {
+    try {
+      if (!verseOfTheDay || isSavingBattleVerse) return;
+
+      setIsSavingBattleVerse(true);
+
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) {
+        Alert.alert('Error', 'You must be signed in to save battle verses');
+        setIsSavingBattleVerse(false);
+        return;
+      }
+
+      // Parse verse reference
+      const match = verseOfTheDay.reference.match(/^(.+?)\s+(\d+):(\d+)$/);
+      if (!match) {
+        Alert.alert('Error', 'Invalid verse reference format');
+        setIsSavingBattleVerse(false);
+        return;
+      }
+
+      const [, bookName, chapter, verse] = match;
+
+      const result = await saveBattleVerse(
+        userId,
+        bookName,
+        parseInt(chapter),
+        parseInt(verse),
+        verseOfTheDay.reference,
+        verseOfTheDay.verse_text
+      );
+
+      if (result) {
+        Alert.alert('Saved!', 'Verse added to your Battle Verses collection');
+        setVotdSaved(true);
+      } else {
+        Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
+      }
+    } catch (err) {
+      console.error('[ProgressDashboard] Save battle verse failed:', err);
+      Alert.alert('Error', 'Failed to save verse. Please try again.');
+    } finally {
+      setIsSavingBattleVerse(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
@@ -367,13 +451,7 @@ const openTodayDevotion = useCallback(() => {
 
         {/* Verse of the Day */}
         {verseOfTheDay && (
-          <Pressable
-            onPress={() => {
-              if (verseOfTheDay.insight_title || verseOfTheDay.insight_detail) {
-                setShowInsightModal(true);
-              }
-            }}
-            disabled={!verseOfTheDay.insight_title && !verseOfTheDay.insight_detail}
+          <View
             style={{
               marginBottom: 16,
               padding: 18,
@@ -387,19 +465,44 @@ const openTodayDevotion = useCallback(() => {
               shadowRadius: 8,
               elevation: 4,
             }}>
-            <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
-            <Text style={{ marginTop: 12, fontSize: 17, fontStyle: 'italic', lineHeight: 26, color: '#1e3a8a', fontWeight: '500' }}>
-              "{verseOfTheDay.verse_text}"
-            </Text>
-            <Text style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
-              — {verseOfTheDay.reference}
-            </Text>
-            {(verseOfTheDay.insight_title || verseOfTheDay.insight_detail) && (
-              <Text style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
-                💡 Tap to view insight
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
+              <TouchableOpacity
+                onPress={saveBattleVerseHandler}
+                disabled={isSavingBattleVerse || votdSaved}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  backgroundColor: votdSaved ? '#9ca3af' : '#2563eb',
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>
+                  {votdSaved ? '✓ Saved' : '⚔️ Battle'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Pressable
+              onPress={() => {
+                if (verseOfTheDay.insight_title || verseOfTheDay.insight_detail) {
+                  setShowInsightModal(true);
+                }
+              }}
+              disabled={!verseOfTheDay.insight_title && !verseOfTheDay.insight_detail}
+            >
+              <Text style={{ marginTop: 12, fontSize: 17, fontStyle: 'italic', lineHeight: 26, color: '#1e3a8a', fontWeight: '500' }}>
+                "{verseOfTheDay.verse_text}"
               </Text>
-            )}
-          </Pressable>
+              <Text style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
+                — {verseOfTheDay.reference}
+              </Text>
+              {(verseOfTheDay.insight_title || verseOfTheDay.insight_detail) && (
+                <Text style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
+                  💡 Tap to view insight
+                </Text>
+              )}
+            </Pressable>
+          </View>
         )}
 
         {/* Today's Devotion */}
