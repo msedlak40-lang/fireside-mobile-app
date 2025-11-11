@@ -34,6 +34,21 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Fireside uses Face ID to securely unlock the app and keep your data safe."
       }
+    },
+    "android": {
+      "package": "com.msedlak40.firesidemobile",
+      "versionCode": 6,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/Fellowship_App_Logo.png",
+        "backgroundColor": "#1a1a1a"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     }
   }
 }
