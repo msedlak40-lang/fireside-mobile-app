@@ -22,9 +22,22 @@ CREATE TABLE IF NOT EXISTS battle_verse_tags (
   armor_piece_id INTEGER REFERENCES armor_pieces(id),
   context_summary TEXT,
   is_featured BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(book_name, chapter_number, verse_number, battle_tag)
+  created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Add unique constraint if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'battle_verse_tags_unique'
+    AND conrelid = 'battle_verse_tags'::regclass
+  ) THEN
+    ALTER TABLE battle_verse_tags
+    ADD CONSTRAINT battle_verse_tags_unique
+    UNIQUE (book_name, chapter_number, verse_number, battle_tag);
+  END IF;
+END $$;
 
 -- 3. User Saved Battle Verses (User's personal collection)
 CREATE TABLE IF NOT EXISTS user_battle_verses (
