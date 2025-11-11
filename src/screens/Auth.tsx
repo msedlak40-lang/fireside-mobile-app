@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
 
@@ -102,6 +102,15 @@ export default function Auth() {
         style={{ flex: 1, padding: 24, justifyContent: 'center' }}
       >
         <View style={{ gap: 16 }}>
+          {/* Logo */}
+          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            <Image
+              source={require('../../assets/Fellowship_App_Logo.png')}
+              style={{ width: 150, height: 150 }}
+              resizeMode="contain"
+            />
+          </View>
+
           <View style={{ gap: 8, marginBottom: 8 }}>
             <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text.primary }}>
               {isSignUp ? 'Create Account' : 'Welcome Back'}
