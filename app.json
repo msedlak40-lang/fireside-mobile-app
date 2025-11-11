@@ -3,6 +3,12 @@
     "scheme": "fireside",
     "name": "Fireside",
     "slug": "fireside-mobile",
+    "icon": "./assets/Fellowship_App_Logo.png",
+    "splash": {
+      "image": "./assets/Fellowship_App_Logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a1a"
+    },
  "plugins": [
       [
         "expo-image-picker",
