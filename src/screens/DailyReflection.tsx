@@ -160,6 +160,8 @@ export default function DailyReflection() {
               onChangeText={setReflectionText}
               maxLength={1000}
               autoFocus
+              autoCorrect={true}
+              spellCheck={true}
             />
             <Text style={{ fontSize: 12, color: colors.text.secondary, marginTop: 6, textAlign: 'right' }}>
               {reflectionText.length}/1000

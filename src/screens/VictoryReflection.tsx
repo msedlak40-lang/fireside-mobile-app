@@ -149,6 +149,8 @@ export default function VictoryReflection() {
               onChangeText={setVictoryText}
               maxLength={1000}
               autoFocus
+              autoCorrect={true}
+              spellCheck={true}
             />
             <Text style={{ fontSize: 12, color: colors.text.secondary, marginTop: 6, textAlign: 'right' }}>
               {victoryText.length}/1000

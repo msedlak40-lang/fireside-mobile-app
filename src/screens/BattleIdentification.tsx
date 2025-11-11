@@ -127,6 +127,8 @@ export default function BattleIdentification() {
               value={battleText}
               onChangeText={setBattleText}
               maxLength={500}
+              autoCorrect={true}
+              spellCheck={true}
             />
             <Text style={{ fontSize: 12, color: colors.text.secondary, marginTop: 6, textAlign: 'right' }}>
               {battleText.length}/500
