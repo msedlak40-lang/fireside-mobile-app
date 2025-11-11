@@ -508,8 +508,7 @@ const openTodayDevotion = useCallback(() => {
         {currentArmor && (
           <TouchableOpacity
             onPress={() => {
-              // TODO: Navigate to Armor screens
-              Alert.alert('Coming Soon', 'Armor Up feature is being built!');
+              navigation.navigate('ArmorUpHome');
             }}
             style={{
               marginBottom: 16,

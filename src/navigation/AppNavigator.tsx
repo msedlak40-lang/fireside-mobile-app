@@ -46,6 +46,13 @@ import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
 // Search
 import BibleSearchScreen from '../screens/BibleSearchScreen';
 
+// Armor of God
+import ArmorUpHome from '../screens/ArmorUpHome';
+import BattleIdentification from '../screens/BattleIdentification';
+import BattleVerse from '../screens/BattleVerse';
+import DailyReflection from '../screens/DailyReflection';
+import VictoryReflection from '../screens/VictoryReflection';
+
 // ---- Stacks ----
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -178,6 +185,32 @@ function ProgressStackNavigator() {
         name="DevotionDetail"
         component={DevotionDetailScreen}
         options={{ headerTitle: 'Devotion' }}
+      />
+      {/* Armor of God screens */}
+      <ProgressStack.Screen
+        name="ArmorUpHome"
+        component={ArmorUpHome}
+        options={{ headerTitle: 'Armor of God' }}
+      />
+      <ProgressStack.Screen
+        name="BattleIdentification"
+        component={BattleIdentification}
+        options={{ headerTitle: 'Identify Battle' }}
+      />
+      <ProgressStack.Screen
+        name="BattleVerse"
+        component={BattleVerse}
+        options={{ headerTitle: 'Battle Verse' }}
+      />
+      <ProgressStack.Screen
+        name="DailyReflection"
+        component={DailyReflection}
+        options={{ headerTitle: 'Daily Reflection' }}
+      />
+      <ProgressStack.Screen
+        name="VictoryReflection"
+        component={VictoryReflection}
+        options={{ headerTitle: 'Victory Reflection' }}
       />
     </ProgressStack.Navigator>
   );
