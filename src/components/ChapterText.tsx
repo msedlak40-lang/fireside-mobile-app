@@ -7,6 +7,7 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import InsightModal from './InsightModal'
 import { colors } from '../theme/colors'
+import { saveBattleVerse } from '../services/armor'
 
 type RawVerse = any
 type Keyword = { word: string; insight?: string; detailed_explanation?: string }
@@ -126,6 +127,39 @@ export default function ChapterText(props: Props) {
     loadHighlights()
   }, [loadHighlights])
 
+  async function saveToBattleVerses(rawVerse: RawVerse) {
+    try {
+      if (!book) throw new Error('Missing book name')
+      const v = extractVerseNumber(rawVerse)
+      if (!v) throw new Error('Could not determine verse number')
+
+      const { data: auth } = await supabase.auth.getUser()
+      const userId = auth?.user?.id
+      if (!userId) throw new Error('Not signed in')
+
+      const verseRef = `${book} ${chapter}:${v}`
+      const verseText = rawVerse?.text ?? String(rawVerse ?? '')
+
+      const result = await saveBattleVerse(
+        userId,
+        book,
+        chapter,
+        v,
+        verseRef,
+        verseText
+      )
+
+      if (result) {
+        Alert.alert('Saved!', `${verseRef} added to your Battle Verses`)
+      } else {
+        Alert.alert('Already Saved', 'This verse is already in your Battle Verses')
+      }
+    } catch (err: any) {
+      console.warn('[ChapterText] save battle verse error:', err)
+      Alert.alert('Could not save', err?.message ?? 'Please try again.')
+    }
+  }
+
   function openVerseActions(rawVerse: RawVerse) {
     if (!book) {
       console.warn('[ChapterText] Missing bookName/book_name; cannot annotate.')
@@ -139,10 +173,11 @@ export default function ChapterText(props: Props) {
 
     // Show different options based on whether verse is already highlighted
     const options = isHighlighted
-      ? ['Add Note', 'Remove Highlight', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
-      : ['Add Note', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
+      ? ['Add Note', 'Remove Highlight', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Save to Battle Verses', 'Cancel']
+      : ['Add Note', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Save to Battle Verses', 'Cancel']
 
     const cancelIndex = options.length - 1
+    const battleVerseIndex = options.length - 2
 
     ActionSheetIOS.showActionSheetWithOptions(
       {
@@ -174,6 +209,10 @@ export default function ChapterText(props: Props) {
           const colors = ['yellow', 'green', 'pink', 'blue'] as const
           await insertHighlight(v, colors[idx - 1])
           await loadHighlights()
+        }
+        else if (idx === battleVerseIndex) {
+          // Save to Battle Verses
+          await saveToBattleVerses(rawVerse)
         }
       }
     )

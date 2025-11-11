@@ -1,9 +1,10 @@
 // src/screens/BibleSearchScreen.tsx
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, SafeAreaView, Keyboard } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, SafeAreaView, Keyboard, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabaseClient';
+import { saveBattleVerse } from '../services/armor';
 
 type SearchResult = {
   book_name: string;
@@ -335,6 +336,35 @@ export default function BibleSearchScreen() {
     }
   }, [searchMode, searchQuery, themeInput, selectedTheme, handleTextSearch, handleThemeSearch]);
 
+  const handleSaveBattleVerse = async (result: SearchResult) => {
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) {
+        Alert.alert('Error', 'You must be signed in to save battle verses');
+        return;
+      }
+
+      const saved = await saveBattleVerse(
+        userId,
+        result.book_name,
+        result.chapter_number,
+        result.verse_number,
+        result.reference,
+        result.verse_text
+      );
+
+      if (saved) {
+        Alert.alert('Saved!', `${result.reference} added to your Battle Verses`);
+      } else {
+        Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
+      }
+    } catch (err) {
+      console.error('[BibleSearch] Save battle verse failed:', err);
+      Alert.alert('Error', 'Failed to save verse. Please try again.');
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <View style={{ flex: 1 }}>
@@ -568,9 +598,22 @@ export default function BibleSearchScreen() {
                   borderColor: colors.border.default,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent.primary, marginBottom: 8 }}>
-                  {result.reference}
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent.primary, flex: 1 }}>
+                    {result.reference}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleSaveBattleVerse(result)}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      backgroundColor: colors.accent.secondary,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: colors.text.primary, fontWeight: '700' }}>⚔️ Save</Text>
+                  </TouchableOpacity>
+                </View>
                 <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary, flexWrap: 'wrap' }}>
                   {result.verse_text}
                 </Text>

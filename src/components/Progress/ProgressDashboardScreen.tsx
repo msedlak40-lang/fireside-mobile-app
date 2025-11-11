@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/verseOfTheDay';
-import { saveBattleVerse, getUserBattleVerses } from '../../services/armor';
+import { saveBattleVerse, getUserBattleVerses, deleteBattleVerse } from '../../services/armor';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
@@ -71,6 +71,9 @@ export default function ProgressDashboardScreen() {
   const [highlightsLoading, setHighlightsLoading] = useState(false);
   const [isSavingBattleVerse, setIsSavingBattleVerse] = useState(false);
   const [votdSaved, setVotdSaved] = useState(false);
+  const [showBattleVersesModal, setShowBattleVersesModal] = useState(false);
+  const [battleVerses, setBattleVerses] = useState<any[]>([]);
+  const [battleVersesLoading, setBattleVersesLoading] = useState(false);
 
   // Close modal with a delay to let React Native clean up touch handlers
   const closeInsightModal = () => {
@@ -318,6 +321,44 @@ const openTodayDevotion = useCallback(() => {
     }
   };
 
+  const loadBattleVerses = async () => {
+    try {
+      setBattleVersesLoading(true);
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) {
+        setBattleVersesLoading(false);
+        return;
+      }
+
+      const verses = await getUserBattleVerses(userId);
+      setBattleVerses(verses);
+    } catch (err) {
+      console.error('[ProgressDashboard] Failed to load battle verses:', err);
+    } finally {
+      setBattleVersesLoading(false);
+    }
+  };
+
+  const openBattleVersesModal = () => {
+    setShowBattleVersesModal(true);
+    loadBattleVerses();
+  };
+
+  const deleteBattleVerseHandler = async (verseId: string) => {
+    try {
+      const success = await deleteBattleVerse(verseId);
+      if (success) {
+        setBattleVerses(battleVerses.filter(v => v.id !== verseId));
+      } else {
+        Alert.alert('Error', 'Failed to delete verse');
+      }
+    } catch (err) {
+      console.error('[ProgressDashboard] Failed to delete battle verse:', err);
+      Alert.alert('Error', 'Failed to delete verse. Please try again.');
+    }
+  };
+
   const saveBattleVerseHandler = async () => {
     try {
       if (!verseOfTheDay || isSavingBattleVerse) return;
@@ -354,6 +395,10 @@ const openTodayDevotion = useCallback(() => {
       if (result) {
         Alert.alert('Saved!', 'Verse added to your Battle Verses collection');
         setVotdSaved(true);
+        // Refresh battle verses if modal is open
+        if (showBattleVersesModal) {
+          loadBattleVerses();
+        }
       } else {
         Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
       }
@@ -468,18 +513,15 @@ const openTodayDevotion = useCallback(() => {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
               <TouchableOpacity
-                onPress={saveBattleVerseHandler}
-                disabled={isSavingBattleVerse || votdSaved}
+                onPress={openBattleVersesModal}
                 style={{
                   paddingHorizontal: 10,
                   paddingVertical: 6,
-                  backgroundColor: votdSaved ? '#9ca3af' : '#2563eb',
+                  backgroundColor: '#2563eb',
                   borderRadius: 6,
                 }}
               >
-                <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>
-                  {votdSaved ? '✓ Saved' : '⚔️ Battle'}
-                </Text>
+                <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>⚔️ Battle Verses</Text>
               </TouchableOpacity>
             </View>
             <Pressable
@@ -980,6 +1022,145 @@ const openTodayDevotion = useCallback(() => {
                           </Text>
                         </View>
                       ))}
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Battle Verses Modal */}
+      <Modal
+        visible={showBattleVersesModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowBattleVersesModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{
+            backgroundColor: colors.background.primary,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingTop: 20,
+            paddingBottom: 40,
+            maxHeight: '80%',
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
+                Battle Verses
+              </Text>
+              <TouchableOpacity onPress={() => setShowBattleVersesModal(false)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            {battleVersesLoading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator color={colors.accent.primary} />
+              </View>
+            ) : (
+              <ScrollView style={{ paddingHorizontal: 20 }}>
+                {/* Add VOTD Button */}
+                {verseOfTheDay && !votdSaved && (
+                  <TouchableOpacity
+                    onPress={saveBattleVerseHandler}
+                    disabled={isSavingBattleVerse}
+                    style={{
+                      marginBottom: 20,
+                      padding: 16,
+                      backgroundColor: '#dbeafe',
+                      borderRadius: 12,
+                      borderLeftWidth: 4,
+                      borderLeftColor: '#2563eb',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, color: '#1e40af', fontWeight: '700', marginBottom: 6 }}>
+                          TODAY'S VERSE
+                        </Text>
+                        <Text style={{ fontSize: 15, color: '#1e3a8a', fontWeight: '600' }}>
+                          {verseOfTheDay.reference}
+                        </Text>
+                      </View>
+                      <View style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 8,
+                      }}>
+                        <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>
+                          {isSavingBattleVerse ? '...' : '+ Add'}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                )}
+
+                <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 20 }}>
+                  {battleVerses.length} verse{battleVerses.length !== 1 ? 's' : ''} saved
+                </Text>
+
+                {battleVerses.length === 0 ? (
+                  <View style={{ marginTop: 20, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 48, marginBottom: 16 }}>⚔️</Text>
+                    <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', paddingHorizontal: 20 }}>
+                      No battle verses yet. Save verses to build your arsenal for spiritual warfare!
+                    </Text>
+                  </View>
+                ) : (
+                  battleVerses.map((verse) => (
+                    <View
+                      key={verse.id}
+                      style={{
+                        marginBottom: 16,
+                        padding: 14,
+                        backgroundColor: '#fef3c7',
+                        borderRadius: 12,
+                        borderLeftWidth: 4,
+                        borderLeftColor: '#f59e0b',
+                        position: 'relative',
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => deleteBattleVerseHandler(verse.id)}
+                        style={{
+                          position: 'absolute',
+                          top: 10,
+                          right: 10,
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: '#dc2626',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
+                      </TouchableOpacity>
+
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 32 }}>
+                        {verse.verse_reference}
+                      </Text>
+                      <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
+                        "{verse.verse_text}"
+                      </Text>
+                      {verse.battle_tag && (
+                        <View style={{
+                          marginTop: 8,
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          backgroundColor: '#fde68a',
+                          borderRadius: 6,
+                          alignSelf: 'flex-start',
+                        }}>
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400e' }}>
+                            {verse.battle_tag}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   ))
                 )}
