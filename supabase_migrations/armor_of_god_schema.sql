@@ -163,7 +163,7 @@ VALUES
   ('Philippians', 4, 6, 'fear', 'Paul instructed believers to present their anxieties to God in prayer.', true),
   ('1 John', 4, 18, 'fear', 'John explained that perfect love casts out all fear.', true),
   ('Psalm', 34, 4, 'fear', 'David testified that God delivered him from all his fears.', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Anger verses
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
@@ -178,7 +178,7 @@ VALUES
   ('Proverbs', 14, 29, 'anger', 'Solomon taught that patience shows understanding, while quick temper shows folly.', true),
   ('Matthew', 5, 22, 'anger', 'Jesus taught that anger toward others makes us subject to judgment.', true),
   ('Romans', 12, 19, 'anger', 'Paul instructed believers to leave vengeance to God.', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Temptation verses
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
@@ -193,7 +193,7 @@ VALUES
   ('2 Timothy', 2, 22, 'temptation', 'Paul told Timothy to flee youthful lusts and pursue righteousness.', true),
   ('Psalm', 119, 11, 'temptation', 'The psalmist hid God''s word in his heart to avoid sin.', true),
   ('Romans', 13, 14, 'temptation', 'Paul instructed believers to clothe themselves with Christ, not gratifying flesh.', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Doubt verses
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
@@ -208,7 +208,7 @@ VALUES
   ('John', 20, 27, 'doubt', 'Jesus invited Thomas to believe without seeing.', true),
   ('Psalm', 37, 5, 'doubt', 'David encouraged committing our way to the Lord and trusting Him.', true),
   ('Isaiah', 55, 8, 'doubt', 'God reminded Israel that His ways are higher than ours.', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Loneliness verses
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
@@ -223,7 +223,7 @@ VALUES
   ('Psalm', 139, 7, 'loneliness', 'David realized there is nowhere he can go from God''s presence.', true),
   ('Romans', 8, 38, 'loneliness', 'Paul declared that nothing can separate us from God''s love.', true),
   ('1 Peter', 5, 7, 'loneliness', 'Peter encouraged believers to cast all anxiety on God because He cares.', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Identity verses
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
@@ -238,7 +238,7 @@ VALUES
   ('1 John', 3, 1, 'identity', 'John marveled at how great the Father''s love is that we are called God''s children.', true),
   ('Psalm', 139, 14, 'identity', 'David praised God because he was fearfully and wonderfully made.', true),
   ('Isaiah', 43, 1, 'identity', 'God declared that He has called Israel by name; they are His.', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Purpose verses
 INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_tag, context_summary, is_featured)
@@ -253,7 +253,7 @@ VALUES
   ('1 Corinthians', 10, 31, 'purpose', 'Paul taught that whatever we do should be for God''s glory.', true),
   ('Psalm', 138, 8, 'purpose', 'David trusted that God would fulfill His purpose for him.', true),
   ('Acts', 20, 24, 'purpose', 'Paul considered his life worth nothing except completing the task God gave him.', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Enable RLS (Row Level Security)
 ALTER TABLE user_battle_verses ENABLE ROW LEVEL SECURITY;
