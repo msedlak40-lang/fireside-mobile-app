@@ -1,6 +1,6 @@
 // src/screens/BibleSearchScreen.tsx
-import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, SafeAreaView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, SafeAreaView, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabaseClient';
@@ -26,15 +26,68 @@ const POPULAR_THEMES = [
 
 const TRANSLATIONS = ['KJV', 'WEB'];
 
-// Normalize book names to handle variations like Psalm/Psalms
-function normalizeBookName(bookName: string): string {
-  const normalized = bookName.trim();
-  // Handle Psalm/Psalms variation
+// Calculate Levenshtein distance for fuzzy matching
+function levenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+  const aLower = a.toLowerCase();
+  const bLower = b.toLowerCase();
+
+  for (let i = 0; i <= bLower.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= aLower.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= bLower.length; i++) {
+    for (let j = 1; j <= aLower.length; j++) {
+      if (bLower.charAt(i - 1) === aLower.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[bLower.length][aLower.length];
+}
+
+// Find closest matching book name
+function findClosestBookName(input: string, bookNames: string[]): string {
+  const normalized = input.trim();
+
+  // First try exact match (case-insensitive)
+  const exactMatch = bookNames.find(book => book.toLowerCase() === normalized.toLowerCase());
+  if (exactMatch) return exactMatch;
+
+  // Handle common variations
   if (normalized.toLowerCase() === 'psalm') {
     return 'Psalms';
   }
-  // Add other common variations here if needed
-  return normalized;
+
+  // Try prefix match
+  const prefixMatch = bookNames.find(book => book.toLowerCase().startsWith(normalized.toLowerCase()));
+  if (prefixMatch) return prefixMatch;
+
+  // If no exact or prefix match, find closest using Levenshtein distance
+  let closestBook = normalized;
+  let minDistance = Infinity;
+
+  for (const bookName of bookNames) {
+    const distance = levenshteinDistance(normalized, bookName);
+    // Only consider it a match if distance is small relative to the length
+    if (distance < minDistance && distance <= Math.max(3, normalized.length * 0.4)) {
+      minDistance = distance;
+      closestBook = bookName;
+    }
+  }
+
+  return closestBook;
 }
 
 export default function BibleSearchScreen() {
@@ -46,6 +99,33 @@ export default function BibleSearchScreen() {
   const [searchMode, setSearchMode] = useState<'lookup' | 'theme'>('lookup');
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [translation, setTranslation] = useState('KJV');
+  const [bookNames, setBookNames] = useState<string[]>([]);
+
+  // Fetch all book names on mount
+  useEffect(() => {
+    const fetchBookNames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('bible_verses')
+          .select('book_name')
+          .eq('translation', 'KJV')
+          .limit(1200); // Enough to get all books
+
+        if (error) {
+          console.error('[BibleSearch] Failed to fetch book names:', error);
+          return;
+        }
+
+        // Get unique book names
+        const unique = Array.from(new Set(data?.map(v => v.book_name) || []));
+        setBookNames(unique);
+      } catch (err) {
+        console.error('[BibleSearch] Error fetching book names:', err);
+      }
+    };
+
+    fetchBookNames();
+  }, []);
 
   const handleTextSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -55,11 +135,54 @@ export default function BibleSearchScreen() {
 
     setLoading(true);
     try {
-      // Try to parse as a verse reference first (e.g., "John 3:16" or "Genesis 1:1")
+      // Try to parse as a verse range first (e.g., "John 3:16-18" or "Ephesians 6:10-18")
+      const rangeMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+):(\d+)-(\d+)$/);
+      if (rangeMatch) {
+        const [, bookName, chapterNum, startVerse, endVerse] = rangeMatch;
+        const normalizedBook = bookNames.length > 0
+          ? findClosestBookName(bookName, bookNames)
+          : bookName.trim();
+
+        // Get all verses in the range
+        const { data: rangeData, error } = await supabase
+          .from('bible_verses')
+          .select('book_name, chapter_number, verse_number, verse_text')
+          .ilike('book_name', `${normalizedBook}%`)
+          .eq('chapter_number', parseInt(chapterNum))
+          .gte('verse_number', parseInt(startVerse))
+          .lte('verse_number', parseInt(endVerse))
+          .eq('translation', translation)
+          .order('verse_number', { ascending: true })
+          .limit(50);
+
+        if (error) {
+          console.error('[BibleSearch] Range lookup error:', error);
+          setResults([]);
+          setLoading(false);
+          return;
+        }
+
+        if (rangeData && rangeData.length > 0) {
+          const resultsWithRefs = rangeData.map((v: any) => ({
+            book_name: v.book_name,
+            chapter_number: v.chapter_number,
+            verse_number: v.verse_number,
+            verse_text: v.verse_text,
+            reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
+          }));
+          setResults(resultsWithRefs);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Try to parse as a single verse reference (e.g., "John 3:16" or "Genesis 1:1")
       const verseMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+):(\d+)$/);
       if (verseMatch) {
         const [, bookName, chapterNum, verseNum] = verseMatch;
-        const normalizedBook = normalizeBookName(bookName);
+        const normalizedBook = bookNames.length > 0
+          ? findClosestBookName(bookName, bookNames)
+          : bookName.trim();
 
         // Direct lookup for specific verse
         const { data: verseData, error } = await supabase
@@ -96,7 +219,9 @@ export default function BibleSearchScreen() {
       const chapterMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+)$/);
       if (chapterMatch) {
         const [, bookName, chapterNum] = chapterMatch;
-        const normalizedBook = normalizeBookName(bookName);
+        const normalizedBook = bookNames.length > 0
+          ? findClosestBookName(bookName, bookNames)
+          : bookName.trim();
 
         // Get all verses in the chapter
         const { data: chapterData, error } = await supabase
@@ -159,7 +284,7 @@ export default function BibleSearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [translation]);
+  }, [translation, bookNames]);
 
   const handleThemeSearch = useCallback(async (theme: string) => {
     setLoading(true);
@@ -197,6 +322,7 @@ export default function BibleSearchScreen() {
   }, [translation]);
 
   const handleSearch = useCallback(() => {
+    Keyboard.dismiss(); // Dismiss keyboard when search button is pressed
     if (searchMode === 'lookup') {
       handleTextSearch(searchQuery);
     } else if (searchMode === 'theme') {
