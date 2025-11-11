@@ -147,14 +147,14 @@ INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_t
 VALUES
   ('Isaiah', 41, 10, 'fear', 'God spoke this promise to Israel during their exile, assuring them of His presence.', true),
   ('2 Timothy', 1, 7, 'fear', 'Paul reminded Timothy that God gives us power, love, and self-discipline, not fear.', true),
-  ('Psalm', 56, 3, 'fear', 'David wrote this while fleeing from Saul, choosing to trust God in danger.', true),
+  ('Psalms', 56, 3, 'fear', 'David wrote this while fleeing from Saul, choosing to trust God in danger.', true),
   ('Deuteronomy', 31, 6, 'fear', 'Moses encouraged the Israelites before entering the Promised Land.', true),
   ('Joshua', 1, 9, 'fear', 'God commanded Joshua to be strong and courageous as he led Israel.', true),
-  ('Psalm', 27, 1, 'fear', 'David declared God as his light and salvation, removing all fear.', true),
+  ('Psalms', 27, 1, 'fear', 'David declared God as his light and salvation, removing all fear.', true),
   ('Proverbs', 29, 25, 'fear', 'Solomon taught that fear of man is a trap, but trust in God brings safety.', true),
   ('Philippians', 4, 6, 'fear', 'Paul instructed believers to present their anxieties to God in prayer.', true),
   ('1 John', 4, 18, 'fear', 'John explained that perfect love casts out all fear.', true),
-  ('Psalm', 34, 4, 'fear', 'David testified that God delivered him from all his fears.', true)
+  ('Psalms', 34, 4, 'fear', 'David testified that God delivered him from all his fears.', true)
 ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
 -- Anger verses
@@ -165,7 +165,7 @@ VALUES
   ('James', 1, 19, 'anger', 'James encouraged quick listening, slow speaking, and slow anger.', true),
   ('Proverbs', 16, 32, 'anger', 'Solomon praised self-control as greater than conquering a city.', true),
   ('Colossians', 3, 8, 'anger', 'Paul told believers to rid themselves of anger and malice.', true),
-  ('Psalm', 37, 8, 'anger', 'David warned against anger that leads to evil.', true),
+  ('Psalms', 37, 8, 'anger', 'David warned against anger that leads to evil.', true),
   ('Proverbs', 29, 11, 'anger', 'Solomon contrasted fools who vent anger with the wise who restrain it.', true),
   ('Proverbs', 14, 29, 'anger', 'Solomon taught that patience shows understanding, while quick temper shows folly.', true),
   ('Matthew', 5, 22, 'anger', 'Jesus taught that anger toward others makes us subject to judgment.', true),
@@ -183,7 +183,7 @@ VALUES
   ('Matthew', 26, 41, 'temptation', 'Jesus told his disciples to watch and pray to avoid temptation.', true),
   ('Galatians', 6, 1, 'temptation', 'Paul instructed believers to restore others gently, watching themselves.', true),
   ('2 Timothy', 2, 22, 'temptation', 'Paul told Timothy to flee youthful lusts and pursue righteousness.', true),
-  ('Psalm', 119, 11, 'temptation', 'The psalmist hid God''s word in his heart to avoid sin.', true),
+  ('Psalms', 119, 11, 'temptation', 'The psalmist hid God''s word in his heart to avoid sin.', true),
   ('Romans', 13, 14, 'temptation', 'Paul instructed believers to clothe themselves with Christ, not gratifying flesh.', true)
 ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
@@ -198,7 +198,7 @@ VALUES
   ('Mark', 11, 23, 'doubt', 'Jesus taught that faith without doubt can move mountains.', true),
   ('2 Corinthians', 5, 7, 'doubt', 'Paul reminded believers that we walk by faith, not by sight.', true),
   ('John', 20, 27, 'doubt', 'Jesus invited Thomas to believe without seeing.', true),
-  ('Psalm', 37, 5, 'doubt', 'David encouraged committing our way to the Lord and trusting Him.', true),
+  ('Psalms', 37, 5, 'doubt', 'David encouraged committing our way to the Lord and trusting Him.', true),
   ('Isaiah', 55, 8, 'doubt', 'God reminded Israel that His ways are higher than ours.', true)
 ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
@@ -207,12 +207,12 @@ INSERT INTO battle_verse_tags (book_name, chapter_number, verse_number, battle_t
 VALUES
   ('Deuteronomy', 31, 8, 'loneliness', 'Moses assured Israel that God goes before them and will never leave.', true),
   ('Hebrews', 13, 5, 'loneliness', 'The writer quoted God''s promise to never leave or forsake us.', true),
-  ('Psalm', 68, 6, 'loneliness', 'David proclaimed that God sets the lonely in families.', true),
+  ('Psalms', 68, 6, 'loneliness', 'David proclaimed that God sets the lonely in families.', true),
   ('Isaiah', 41, 10, 'loneliness', 'God promised to be with Israel and strengthen them.', true),
   ('Matthew', 28, 20, 'loneliness', 'Jesus promised to be with his disciples always, to the end of the age.', true),
-  ('Psalm', 23, 4, 'loneliness', 'David found comfort knowing God was with him in the darkest valley.', true),
+  ('Psalms', 23, 4, 'loneliness', 'David found comfort knowing God was with him in the darkest valley.', true),
   ('John', 16, 32, 'loneliness', 'Jesus told his disciples he is never alone because the Father is with him.', true),
-  ('Psalm', 139, 7, 'loneliness', 'David realized there is nowhere he can go from God''s presence.', true),
+  ('Psalms', 139, 7, 'loneliness', 'David realized there is nowhere he can go from God''s presence.', true),
   ('Romans', 8, 38, 'loneliness', 'Paul declared that nothing can separate us from God''s love.', true),
   ('1 Peter', 5, 7, 'loneliness', 'Peter encouraged believers to cast all anxiety on God because He cares.', true)
 ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
@@ -228,7 +228,7 @@ VALUES
   ('John', 1, 12, 'identity', 'John declared that those who believe receive the right to be God''s children.', true),
   ('Colossians', 3, 3, 'identity', 'Paul taught that our life is hidden with Christ in God.', true),
   ('1 John', 3, 1, 'identity', 'John marveled at how great the Father''s love is that we are called God''s children.', true),
-  ('Psalm', 139, 14, 'identity', 'David praised God because he was fearfully and wonderfully made.', true),
+  ('Psalms', 139, 14, 'identity', 'David praised God because he was fearfully and wonderfully made.', true),
   ('Isaiah', 43, 1, 'identity', 'God declared that He has called Israel by name; they are His.', true)
 ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
@@ -243,7 +243,7 @@ VALUES
   ('Philippians', 1, 6, 'purpose', 'Paul was confident that God completes the good work He began.', true),
   ('Colossians', 3, 23, 'purpose', 'Paul instructed believers to work for the Lord, not for people.', true),
   ('1 Corinthians', 10, 31, 'purpose', 'Paul taught that whatever we do should be for God''s glory.', true),
-  ('Psalm', 138, 8, 'purpose', 'David trusted that God would fulfill His purpose for him.', true),
+  ('Psalms', 138, 8, 'purpose', 'David trusted that God would fulfill His purpose for him.', true),
   ('Acts', 20, 24, 'purpose', 'Paul considered his life worth nothing except completing the task God gave him.', true)
 ON CONFLICT (book_name, chapter_number, verse_number, battle_tag) DO NOTHING;
 
