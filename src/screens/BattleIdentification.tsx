@@ -38,21 +38,21 @@ export default function BattleIdentification() {
         return;
       }
 
-      // Create the battle
+      // Get battle verse FIRST (before creating battle)
+      const verse = await getBattleVerse(selectedTag, userId);
+
+      if (!verse) {
+        Alert.alert('No Verse Found', 'No battle verse found for this tag yet. Please try a different tag or contact support.');
+        setLoading(false);
+        return;
+      }
+
+      // Now create the battle
       const battle = await createBattle(userId, battleText.trim(), selectedTag);
 
       if (!battle) {
         Alert.alert('Error', 'Failed to create battle. Please try again.');
         setLoading(false);
-        return;
-      }
-
-      // Get battle verse
-      const verse = await getBattleVerse(selectedTag, userId);
-
-      if (!verse) {
-        Alert.alert('Success', 'Battle created! No verse found for this tag yet.');
-        navigation.navigate('ArmorUpHome');
         return;
       }
 
