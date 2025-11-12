@@ -1,7 +1,7 @@
 // src/components/Journal/JournalHomeScreen.tsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Pressable, Image, TouchableOpacity } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { fetchJournalEntries } from '../../services/journals';
 import type { JournalEntry } from '../../services/journals';
 
@@ -9,6 +9,8 @@ export default function JournalHomeScreen() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const hasLoadedRef = useRef(false);
 
   const load = async () => {
     setLoading(true);
@@ -22,7 +24,24 @@ export default function JournalHomeScreen() {
     }
   };
 
-  useFocusEffect(useCallback(() => { load(); }, []));
+  useFocusEffect(
+    useCallback(() => {
+      // Only reload if:
+      // 1. This is the first time loading (initial mount)
+      // 2. We're explicitly told to refresh via route params
+      const shouldRefresh = route.params?.refresh;
+
+      if (!hasLoadedRef.current || shouldRefresh) {
+        load();
+        hasLoadedRef.current = true;
+
+        // Clear the refresh param so we don't reload again unnecessarily
+        if (shouldRefresh) {
+          navigation.setParams({ refresh: undefined });
+        }
+      }
+    }, [route.params?.refresh])
+  );
 
   if (loading) {
     return (

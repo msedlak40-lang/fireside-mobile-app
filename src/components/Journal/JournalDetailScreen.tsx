@@ -6,7 +6,8 @@ import { fetchJournalEntry, deleteJournalEntry } from '../../services/journals';
 import type { JournalEntry } from '../../services/journals';
 
 export default function JournalDetailScreen() {
-  const { id } = useRoute<any>().params as { id: string };
+  const route = useRoute<any>();
+  const { id, shouldRefreshList } = route.params as { id: string; shouldRefreshList?: boolean };
   const navigation = useNavigation<any>();
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +16,18 @@ export default function JournalDetailScreen() {
   useEffect(() => {
     load();
   }, [id]);
+
+  useEffect(() => {
+    // Set up navigation interceptor to pass refresh param when going back
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      if (shouldRefreshList) {
+        // Navigate to home with refresh param
+        navigation.navigate('JournalHome', { refresh: true });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, shouldRefreshList]);
 
   const load = async () => {
     try {
@@ -41,7 +54,7 @@ export default function JournalDetailScreen() {
               setDeleting(true);
               await deleteJournalEntry(id);
               Alert.alert('Deleted', 'Journal entry has been deleted.', [
-                { text: 'OK', onPress: () => navigation.goBack() }
+                { text: 'OK', onPress: () => navigation.navigate('JournalHome', { refresh: true }) }
               ]);
             } catch (err: any) {
               console.error('[JournalDetail] Delete failed', err);

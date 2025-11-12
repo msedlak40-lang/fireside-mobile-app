@@ -52,11 +52,11 @@ export default function JournalCreateScreen() {
         [
           {
             text: 'View Entry',
-            onPress: () => navigation.replace('JournalDetail', { id: entry.id })
+            onPress: () => navigation.replace('JournalDetail', { id: entry.id, shouldRefreshList: true })
           },
           {
             text: 'Done',
-            onPress: () => navigation.goBack()
+            onPress: () => navigation.navigate('JournalHome', { refresh: true })
           }
         ]
       );
