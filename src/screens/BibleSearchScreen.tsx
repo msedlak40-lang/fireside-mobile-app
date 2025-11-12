@@ -66,13 +66,36 @@ function findClosestBookName(input: string, bookNames: string[]): string {
   const exactMatch = bookNames.find(book => book.toLowerCase() === normalized.toLowerCase());
   if (exactMatch) return exactMatch;
 
+  // Handle numbered books explicitly (e.g., "2 John", "1 Chronicles")
+  const numberedBookMatch = normalized.match(/^(\d+)\s*([A-Za-z]+)$/);
+  if (numberedBookMatch) {
+    const [, bookNumber, bookName] = numberedBookMatch;
+    // Look for exact match with number and name
+    const exactNumberedMatch = bookNames.find(book => {
+      const bookLower = book.toLowerCase();
+      const searchPattern = `${bookNumber} ${bookName.toLowerCase()}`;
+      return bookLower === searchPattern || bookLower === `${bookNumber}${bookName.toLowerCase()}`;
+    });
+    if (exactNumberedMatch) return exactNumberedMatch;
+  }
+
   // Handle common variations
   if (normalized.toLowerCase() === 'psalm') {
     return 'Psalms';
   }
 
-  // Try prefix match
-  const prefixMatch = bookNames.find(book => book.toLowerCase().startsWith(normalized.toLowerCase()));
+  // Try prefix match (but be careful with numbered books)
+  const prefixMatch = bookNames.find(book => {
+    const bookLower = book.toLowerCase();
+    const normalizedLower = normalized.toLowerCase();
+
+    // For numbered books, ensure the full prefix matches (not just the number)
+    if (/^\d/.test(normalizedLower)) {
+      return bookLower.startsWith(normalizedLower);
+    }
+
+    return bookLower.startsWith(normalizedLower);
+  });
   if (prefixMatch) return prefixMatch;
 
   // If no exact or prefix match, find closest using Levenshtein distance
@@ -465,6 +488,8 @@ export default function BibleSearchScreen() {
                 onChangeText={setSearchQuery}
                 onSubmitEditing={handleSearch}
                 returnKeyType="search"
+                autoCorrect={true}
+                spellCheck={true}
                 style={{
                   flex: 1,
                   paddingHorizontal: 12,
@@ -510,6 +535,8 @@ export default function BibleSearchScreen() {
                   }}
                   onSubmitEditing={handleSearch}
                   returnKeyType="search"
+                  autoCorrect={true}
+                  spellCheck={true}
                   style={{
                     flex: 1,
                     paddingHorizontal: 12,

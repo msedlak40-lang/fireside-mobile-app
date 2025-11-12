@@ -1,6 +1,6 @@
 // src/components/Journal/JournalCreateScreen.tsx (NO PHOTO VERSION)
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { fetchJournalPrompt, createJournalEntry } from '../../services/journals';
 import type { JournalPrompt } from '../../services/journals';
@@ -79,8 +79,13 @@ export default function JournalCreateScreen() {
   const commonTags = ['prayer', 'gratitude', 'struggle', 'breakthrough', 'question', 'insight'];
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-      <Text style={{ fontSize: 22, fontWeight: '800', marginBottom: 8 }}>New Journal Entry</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={100}
+    >
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', marginBottom: 8 }}>New Journal Entry</Text>
       <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 20 }}>
         Capture your thoughts and reflections
       </Text>
@@ -106,13 +111,17 @@ export default function JournalCreateScreen() {
         value={title}
         onChangeText={setTitle}
         placeholder="Give your entry a title..."
+        placeholderTextColor="#9ca3af"
+        autoCorrect={true}
+        spellCheck={true}
         style={{
           marginBottom: 16,
           padding: 12,
           borderWidth: 1,
           borderColor: '#e5e7eb',
           borderRadius: 10,
-          fontSize: 16
+          fontSize: 16,
+          color: '#000'
         }}
       />
 
@@ -142,9 +151,12 @@ export default function JournalCreateScreen() {
         value={notes}
         onChangeText={setNotes}
         placeholder="Type your thoughts here..."
+        placeholderTextColor="#9ca3af"
         multiline
         numberOfLines={8}
         textAlignVertical="top"
+        autoCorrect={true}
+        spellCheck={true}
         style={{
           marginBottom: 16,
           padding: 12,
@@ -152,7 +164,8 @@ export default function JournalCreateScreen() {
           borderColor: '#e5e7eb',
           borderRadius: 10,
           fontSize: 15,
-          minHeight: 150
+          minHeight: 150,
+          color: '#000'
         }}
       />
 
@@ -197,6 +210,7 @@ export default function JournalCreateScreen() {
           {saving ? 'Saving...' : '💾 Save Entry'}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
