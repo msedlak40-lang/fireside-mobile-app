@@ -61,37 +61,51 @@ function levenshteinDistance(a: string, b: string): number {
 // Find closest matching book name
 function findClosestBookName(input: string, bookNames: string[]): string {
   const normalized = input.trim();
+  const normalizedLower = normalized.toLowerCase();
 
   // First try exact match (case-insensitive)
-  const exactMatch = bookNames.find(book => book.toLowerCase() === normalized.toLowerCase());
+  const exactMatch = bookNames.find(book => book.toLowerCase() === normalizedLower);
   if (exactMatch) return exactMatch;
 
-  // Handle numbered books explicitly (e.g., "2 John", "1 Chronicles")
-  const numberedBookMatch = normalized.match(/^(\d+)\s*([A-Za-z]+)$/);
+  // Handle numbered books explicitly (e.g., "2 John", "1 Chronicles", "2chronicles")
+  const numberedBookMatch = normalized.match(/^(\d+)\s*(.+)$/);
   if (numberedBookMatch) {
     const [, bookNumber, bookName] = numberedBookMatch;
-    // Look for exact match with number and name
+    const bookNameLower = bookName.trim().toLowerCase();
+
+    // Try multiple variations of numbered book formats
     const exactNumberedMatch = bookNames.find(book => {
       const bookLower = book.toLowerCase();
-      const searchPattern = `${bookNumber} ${bookName.toLowerCase()}`;
-      return bookLower === searchPattern || bookLower === `${bookNumber}${bookName.toLowerCase()}`;
+
+      // Try different spacing/format combinations
+      return (
+        bookLower === `${bookNumber} ${bookNameLower}` ||  // "2 chronicles"
+        bookLower === `${bookNumber}${bookNameLower}` ||    // "2chronicles"
+        bookLower.startsWith(`${bookNumber} ${bookNameLower}`) ||  // "2 chronicles" at start
+        bookLower === normalizedLower  // exact as-is
+      );
     });
     if (exactNumberedMatch) return exactNumberedMatch;
   }
 
   // Handle common variations
-  if (normalized.toLowerCase() === 'psalm') {
+  if (normalizedLower === 'psalm') {
     return 'Psalms';
   }
 
-  // Try prefix match (but be careful with numbered books)
+  // Try prefix match - but for numbered books, must match the full number prefix
   const prefixMatch = bookNames.find(book => {
     const bookLower = book.toLowerCase();
-    const normalizedLower = normalized.toLowerCase();
 
-    // For numbered books, ensure the full prefix matches (not just the number)
-    if (/^\d/.test(normalizedLower)) {
-      return bookLower.startsWith(normalizedLower);
+    // For numbered books, extract the number from both input and book
+    const inputNumberMatch = normalizedLower.match(/^(\d+)/);
+    const bookNumberMatch = bookLower.match(/^(\d+)/);
+
+    // If both have numbers, they must match for prefix to work
+    if (inputNumberMatch && bookNumberMatch) {
+      if (inputNumberMatch[1] !== bookNumberMatch[1]) {
+        return false;  // Different numbers, not a match
+      }
     }
 
     return bookLower.startsWith(normalizedLower);

@@ -85,7 +85,7 @@ export default function JournalCreateScreen() {
       keyboardVerticalOffset={100}
     >
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-        <Text style={{ fontSize: 22, fontWeight: '800', marginBottom: 8 }}>New Journal Entry</Text>
+        <Text style={{ fontSize: 22, fontWeight: '800', marginBottom: 8, color: '#000' }}>New Journal Entry</Text>
       <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 20 }}>
         Capture your thoughts and reflections
       </Text>
@@ -106,7 +106,7 @@ export default function JournalCreateScreen() {
       ) : null}
 
       {/* Title Input */}
-      <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6 }}>Title (Optional)</Text>
+      <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6, color: '#000' }}>Title (Optional)</Text>
       <TextInput
         value={title}
         onChangeText={setTitle}
@@ -143,7 +143,7 @@ export default function JournalCreateScreen() {
       </View>
 
       {/* Notes Input */}
-      <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6 }}>Notes</Text>
+      <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6, color: '#000' }}>Notes</Text>
       <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
         Write your thoughts and reflections
       </Text>
@@ -170,7 +170,7 @@ export default function JournalCreateScreen() {
       />
 
       {/* Tags */}
-      <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 8 }}>Tags</Text>
+      <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 8, color: '#000' }}>Tags</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
         {commonTags.map((tag) => {
           const isSelected = tags.includes(tag);
