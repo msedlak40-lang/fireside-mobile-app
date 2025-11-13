@@ -259,34 +259,11 @@ export async function generateOnePagerPDF(data: {
   `;
 
   try {
-    // Generate PDF to temp file
-    const { uri } = await Print.printToFileAsync({
-      html,
-      base64: false
-    });
+    // Generate PDF
+    const { uri } = await Print.printToFileAsync({ html });
 
-    // Create safe filename
-    const filename = `${bookName}_${chapter}_One_Pager.pdf`.replace(/[^a-zA-Z0-9_\-\.]/g, '');
-    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-
-    // Delete existing file if it exists
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      if (fileInfo.exists) {
-        await FileSystem.deleteAsync(fileUri);
-      }
-    } catch (deleteError) {
-      console.log('[PDF] No existing file to delete');
-    }
-
-    // Copy temp file to new location with desired filename
-    await FileSystem.copyAsync({
-      from: uri,
-      to: fileUri
-    });
-
-    // Share the renamed file
-    await shareAsync(fileUri, {
+    // Share directly with a suggested filename
+    await shareAsync(uri, {
       UTI: '.pdf',
       mimeType: 'application/pdf',
     });
@@ -382,34 +359,11 @@ export async function generateDevotionPDF(data: {
   `;
 
   try {
-    // Generate PDF to temp file
-    const { uri } = await Print.printToFileAsync({
-      html,
-      base64: false
-    });
+    // Generate PDF
+    const { uri } = await Print.printToFileAsync({ html });
 
-    // Create safe filename - replace spaces with underscores
-    const filename = `${title.replace(/\s+/g, '_')}.pdf`.replace(/[^a-zA-Z0-9_\-\.]/g, '');
-    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-
-    // Delete existing file if it exists
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      if (fileInfo.exists) {
-        await FileSystem.deleteAsync(fileUri);
-      }
-    } catch (deleteError) {
-      console.log('[PDF] No existing file to delete');
-    }
-
-    // Copy temp file to new location with desired filename
-    await FileSystem.copyAsync({
-      from: uri,
-      to: fileUri
-    });
-
-    // Share the renamed file
-    await shareAsync(fileUri, {
+    // Share directly
+    await shareAsync(uri, {
       UTI: '.pdf',
       mimeType: 'application/pdf',
     });
