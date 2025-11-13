@@ -116,7 +116,18 @@ function findClosestBookName(input: string, bookNames: string[]): string {
   let closestBook = normalized;
   let minDistance = Infinity;
 
+  // Extract number from input if it's a numbered book
+  const inputNumberMatch = normalizedLower.match(/^(\d+)/);
+
   for (const bookName of bookNames) {
+    // For numbered books, skip books with different numbers in fuzzy matching
+    if (inputNumberMatch) {
+      const bookNumberMatch = bookName.toLowerCase().match(/^(\d+)/);
+      if (bookNumberMatch && bookNumberMatch[1] !== inputNumberMatch[1]) {
+        continue; // Different number, skip this book
+      }
+    }
+
     const distance = levenshteinDistance(normalized, bookName);
     // Only consider it a match if distance is small relative to the length
     if (distance < minDistance && distance <= Math.max(3, normalized.length * 0.4)) {

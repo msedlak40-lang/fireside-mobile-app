@@ -265,9 +265,19 @@ export async function generateOnePagerPDF(data: {
       base64: false
     });
 
-    // Create filename and copy to cache directory with proper name
-    const filename = `${bookName} ${chapter} - One Pager.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    // Create safe filename
+    const filename = `${bookName}_${chapter}_One_Pager.pdf`.replace(/[^a-zA-Z0-9_\-\.]/g, '');
     const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+    // Delete existing file if it exists
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (fileInfo.exists) {
+        await FileSystem.deleteAsync(fileUri);
+      }
+    } catch (deleteError) {
+      console.log('[PDF] No existing file to delete');
+    }
 
     // Copy temp file to new location with desired filename
     await FileSystem.copyAsync({
@@ -378,9 +388,19 @@ export async function generateDevotionPDF(data: {
       base64: false
     });
 
-    // Create filename and copy to cache directory with proper name
-    const filename = `${title}.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    // Create safe filename - replace spaces with underscores
+    const filename = `${title.replace(/\s+/g, '_')}.pdf`.replace(/[^a-zA-Z0-9_\-\.]/g, '');
     const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+    // Delete existing file if it exists
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (fileInfo.exists) {
+        await FileSystem.deleteAsync(fileUri);
+      }
+    } catch (deleteError) {
+      console.log('[PDF] No existing file to delete');
+    }
 
     // Copy temp file to new location with desired filename
     await FileSystem.copyAsync({
