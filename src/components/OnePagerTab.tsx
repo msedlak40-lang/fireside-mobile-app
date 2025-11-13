@@ -23,6 +23,65 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
+// Helper to reformat theological themes with inline bold headers
+// Converts: "**Header1** text here. **Header2** more text."
+// Into: "**Header1**: text here.\n\n**Header2**: more text."
+function reformatTheologicalThemes(text: string): string {
+  // Check if text has inline bold headers (bold text not followed by colon)
+  const inlineHeaderPattern = /\*\*([^*]+?)\*\*\s+(?!:)([a-z])/;
+
+  // If no inline headers found, return original text
+  if (!inlineHeaderPattern.test(text)) {
+    return text;
+  }
+
+  // Split by bold patterns to extract headers and content
+  const parts: string[] = [];
+  let currentIndex = 0;
+  const headerRegex = /\*\*([^*]+?)\*\*/g;
+  let match;
+
+  const matches: Array<{ header: string; start: number; end: number }> = [];
+
+  // Find all bold headers
+  while ((match = headerRegex.exec(text)) !== null) {
+    matches.push({
+      header: match[1],
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+
+  // Build reformatted sections
+  if (matches.length > 0) {
+    for (let i = 0; i < matches.length; i++) {
+      const current = matches[i];
+      const next = matches[i + 1];
+
+      // Get content from end of current header to start of next header (or end of text)
+      const contentStart = current.end;
+      const contentEnd = next ? next.start : text.length;
+      let content = text.substring(contentStart, contentEnd).trim();
+
+      // Remove leading connecting words like "forms", "is", "emerges" etc.
+      // if the content starts with a lowercase word
+      content = content.replace(/^(forms?|is|are|emerges?|appears?|demonstrates?)\s+/i, '');
+
+      // Capitalize first letter if needed
+      if (content.length > 0 && content[0] === content[0].toLowerCase()) {
+        content = content.charAt(0).toUpperCase() + content.slice(1);
+      }
+
+      // Format as "**Header**: content"
+      parts.push(`**${current.header}**: ${content}`);
+    }
+
+    return parts.join('\n\n');
+  }
+
+  return text;
+}
+
 export default function OnePagerTab({
   summary,
   theologicalThemes,
@@ -31,6 +90,11 @@ export default function OnePagerTab({
   bookName,
   chapter,
 }: Props) {
+  // Reformat theological themes to break out inline headers
+  const formattedTheologicalThemes = theologicalThemes
+    ? reformatTheologicalThemes(theologicalThemes)
+    : null;
+
   // Normalize practical applications to markdown string
   let practicalAppsMarkdown: string | null = null;
   if (typeof practicalApplications === 'string') {
@@ -45,8 +109,8 @@ export default function OnePagerTab({
       message += `SUMMARY\n${stripMarkdown(summary)}\n\n`;
     }
 
-    if (theologicalThemes) {
-      message += `THEOLOGICAL THEMES\n${stripMarkdown(theologicalThemes)}\n\n`;
+    if (formattedTheologicalThemes) {
+      message += `THEOLOGICAL THEMES\n${stripMarkdown(formattedTheologicalThemes)}\n\n`;
     }
 
     if (keyVersesText) {
@@ -92,11 +156,11 @@ export default function OnePagerTab({
       )}
 
       {/* Theological Themes */}
-      {theologicalThemes && (
+      {formattedTheologicalThemes && (
         <ExpandableSection
           title="Theological Themes"
           initiallyExpanded={false}
-          markdown={theologicalThemes}
+          markdown={formattedTheologicalThemes}
           studyTier={null}
           sectionKey="onepager-theological-themes"
           enableAnnotations={true}
@@ -133,7 +197,7 @@ export default function OnePagerTab({
         />
       )}
 
-      {!summary && !theologicalThemes && !keyVersesText && !practicalAppsMarkdown && (
+      {!summary && !formattedTheologicalThemes && !keyVersesText && !practicalAppsMarkdown && (
         <Text style={styles.muted}>No summary content available for this chapter.</Text>
       )}
     </View>
