@@ -258,10 +258,15 @@ export async function generateOnePagerPDF(data: {
   `;
 
   try {
-    const { uri } = await Print.printToFileAsync({ html });
+    const filename = `${bookName} ${chapter} - One Pager.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    const { uri } = await Print.printToFileAsync({
+      html,
+      base64: false
+    });
     await shareAsync(uri, {
       UTI: '.pdf',
       mimeType: 'application/pdf',
+      dialogTitle: filename,
     });
   } catch (error) {
     console.error('[PDF] Failed to generate One Pager PDF:', error);
@@ -355,10 +360,16 @@ export async function generateDevotionPDF(data: {
   `;
 
   try {
-    const { uri } = await Print.printToFileAsync({ html });
+    // Create clean filename from title
+    const filename = `${title}.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    const { uri } = await Print.printToFileAsync({
+      html,
+      base64: false
+    });
     await shareAsync(uri, {
       UTI: '.pdf',
       mimeType: 'application/pdf',
+      dialogTitle: filename,
     });
   } catch (error) {
     console.error('[PDF] Failed to generate Devotion PDF:', error);
