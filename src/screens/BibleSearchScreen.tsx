@@ -185,7 +185,7 @@ export default function BibleSearchScreen() {
         const { data: rangeData, error } = await supabase
           .from('bible_verses')
           .select('book_name, chapter_number, verse_number, verse_text')
-          .eq('book_name', normalizedBook)
+          .ilike('book_name', normalizedBook)
           .eq('chapter_number', parseInt(chapterNum))
           .gte('verse_number', parseInt(startVerse))
           .lte('verse_number', parseInt(endVerse))
@@ -226,7 +226,7 @@ export default function BibleSearchScreen() {
         const { data: verseData, error } = await supabase
           .from('bible_verses')
           .select('book_name, chapter_number, verse_number, verse_text')
-          .eq('book_name', normalizedBook)
+          .ilike('book_name', normalizedBook)
           .eq('chapter_number', parseInt(chapterNum))
           .eq('verse_number', parseInt(verseNum))
           .eq('translation', translation)
@@ -265,7 +265,7 @@ export default function BibleSearchScreen() {
         const { data: chapterData, error } = await supabase
           .from('bible_verses')
           .select('book_name, chapter_number, verse_number, verse_text')
-          .eq('book_name', normalizedBook)
+          .ilike('book_name', normalizedBook)
           .eq('chapter_number', parseInt(chapterNum))
           .eq('translation', translation)
           .order('verse_number', { ascending: true })

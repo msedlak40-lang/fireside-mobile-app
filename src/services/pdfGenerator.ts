@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import { shareAsync } from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 
 // Convert markdown to HTML
 function markdownToHtml(markdown: string): string {
@@ -258,15 +259,26 @@ export async function generateOnePagerPDF(data: {
   `;
 
   try {
-    const filename = `${bookName} ${chapter} - One Pager.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    // Generate PDF to temp file
     const { uri } = await Print.printToFileAsync({
       html,
       base64: false
     });
-    await shareAsync(uri, {
+
+    // Create filename and copy to cache directory with proper name
+    const filename = `${bookName} ${chapter} - One Pager.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+    // Copy temp file to new location with desired filename
+    await FileSystem.copyAsync({
+      from: uri,
+      to: fileUri
+    });
+
+    // Share the renamed file
+    await shareAsync(fileUri, {
       UTI: '.pdf',
       mimeType: 'application/pdf',
-      dialogTitle: filename,
     });
   } catch (error) {
     console.error('[PDF] Failed to generate One Pager PDF:', error);
@@ -360,16 +372,26 @@ export async function generateDevotionPDF(data: {
   `;
 
   try {
-    // Create clean filename from title
-    const filename = `${title}.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    // Generate PDF to temp file
     const { uri } = await Print.printToFileAsync({
       html,
       base64: false
     });
-    await shareAsync(uri, {
+
+    // Create filename and copy to cache directory with proper name
+    const filename = `${title}.pdf`.replace(/[^a-zA-Z0-9\s\-\.]/g, '');
+    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+    // Copy temp file to new location with desired filename
+    await FileSystem.copyAsync({
+      from: uri,
+      to: fileUri
+    });
+
+    // Share the renamed file
+    await shareAsync(fileUri, {
       UTI: '.pdf',
       mimeType: 'application/pdf',
-      dialogTitle: filename,
     });
   } catch (error) {
     console.error('[PDF] Failed to generate Devotion PDF:', error);
