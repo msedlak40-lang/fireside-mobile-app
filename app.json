@@ -3,7 +3,7 @@
     "scheme": "fireside",
     "name": "Fireside",
     "slug": "fireside-mobile",
-    "icon": "./assets/Fellowship_App_Logo.png",
+    "icon": "./assets/Fellowship_App_Icon.png",
     "splash": {
       "image": "./assets/Fellowship_App_Logo.png",
       "resizeMode": "contain",
@@ -39,7 +39,7 @@
       "package": "com.msedlak40.firesidemobile",
       "versionCode": 8,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Fellowship_App_Logo.png",
+        "foregroundImage": "./assets/Fellowship_App_Icon.png",
         "backgroundColor": "#1a1a1a"
       },
       "permissions": [
