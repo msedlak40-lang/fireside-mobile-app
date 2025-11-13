@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Share, Alert } from 'react-native';
 import ExpandableSection from './ExpandableSection';
 import { colors } from '../theme/colors';
+import { generateOnePagerPDF } from '../services/pdfGenerator';
 
 type Props = {
   summary: string | null; // from advanced summary_advanced
@@ -101,32 +102,20 @@ export default function OnePagerTab({
     practicalAppsMarkdown = practicalApplications;
   }
 
-  // Share One Pager
+  // Share One Pager as PDF
   const shareOnePager = async () => {
-    let message = `${bookName} ${chapter}\nONE PAGER SUMMARY\n\n`;
-
-    if (summary) {
-      message += `SUMMARY\n${stripMarkdown(summary)}\n\n`;
-    }
-
-    if (formattedTheologicalThemes) {
-      message += `THEOLOGICAL THEMES\n${stripMarkdown(formattedTheologicalThemes)}\n\n`;
-    }
-
-    if (keyVersesText) {
-      message += `KEY VERSES\n${stripMarkdown(keyVersesText)}\n\n`;
-    }
-
-    if (practicalAppsMarkdown) {
-      message += `PRACTICAL APPLICATIONS\n${stripMarkdown(practicalAppsMarkdown)}\n\n`;
-    }
-
     try {
-      await Share.share({
-        message: message.trim(),
+      await generateOnePagerPDF({
+        bookName,
+        chapter,
+        summary,
+        theologicalThemes: formattedTheologicalThemes,
+        keyVersesText,
+        practicalApplications: practicalAppsMarkdown,
       });
     } catch (error) {
-      console.error('[OnePagerTab] Share failed', error);
+      console.error('[OnePagerTab] PDF share failed', error);
+      Alert.alert('Share Failed', 'Could not generate PDF. Please try again.');
     }
   };
 
@@ -137,8 +126,8 @@ export default function OnePagerTab({
         onPress={shareOnePager}
         style={styles.shareButton}
       >
-        <Text style={styles.shareIcon}>📤</Text>
-        <Text style={styles.shareText}>Share One Pager</Text>
+        <Text style={styles.shareIcon}>📄</Text>
+        <Text style={styles.shareText}>Share as PDF</Text>
       </TouchableOpacity>
 
       {/* Summary */}

@@ -4,6 +4,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
 import { colors } from '../../theme/colors';
 import { completeDevotionProgress } from '../../services/progress';
+import { generateDevotionPDF } from '../../services/pdfGenerator';
 import type { Devotion } from '../../types/supabase-devotions';
 
 export default function DevotionDetailScreen() {
@@ -235,47 +236,29 @@ export default function DevotionDetailScreen() {
     }
   };
 
-  // Share devotion
+  // Share devotion as PDF
   const shareDevotion = async () => {
     if (!devotion) return;
 
     const dateText = formatISODateYYYYMMDD(devotion.devotion_date);
-    const keyRangeOrNum = devotion.key_verse_range ?? String(devotion.key_verse_number);
-
-    let message = `${devotion.title}\n`;
-    if (dateText) message += `${dateText}\n`;
-    message += `\n`;
-
-    // Key verse
-    message += `"${devotion.key_verse_text}"\n`;
-    message += `— ${devotion.key_verse_book} ${devotion.key_verse_chapter}:${keyRangeOrNum}\n\n`;
-
-    // Devotional text
-    if (devotion.devotional_text) {
-      message += `${devotion.devotional_text}\n`;
-    }
-
-    // Hard truth
-    if (devotion.hard_truth) {
-      message += `\nHARD TRUTH\n${devotion.hard_truth}\n`;
-    }
-
-    // Today's challenge
-    if (devotion.today_challenge) {
-      message += `\nTODAY'S CHALLENGE\n${devotion.today_challenge}\n`;
-    }
-
-    // Prayer starter
-    if (devotion.prayer_starter) {
-      message += `\nPRAYER STARTER\n${devotion.prayer_starter}\n`;
-    }
 
     try {
-      await Share.share({
-        message: message.trim(),
+      await generateDevotionPDF({
+        title: devotion.title,
+        devotionDate: dateText,
+        keyVerseText: devotion.key_verse_text,
+        keyVerseBook: devotion.key_verse_book,
+        keyVerseChapter: devotion.key_verse_chapter,
+        keyVerseRange: devotion.key_verse_range,
+        keyVerseNumber: devotion.key_verse_number,
+        devotionalText: devotion.devotional_text,
+        hardTruth: devotion.hard_truth,
+        todayChallenge: devotion.today_challenge,
+        prayerStarter: devotion.prayer_starter,
       });
     } catch (error) {
-      console.error('[DevotionDetail] Share failed', error);
+      console.error('[DevotionDetail] PDF share failed', error);
+      Alert.alert('Share Failed', 'Could not generate PDF. Please try again.');
     }
   };
 
