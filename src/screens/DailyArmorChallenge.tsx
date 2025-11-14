@@ -233,7 +233,7 @@ export default function DailyArmorChallengeScreen() {
               <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary, marginBottom: 8 }}>
                 "{battle.verse_text}"
               </Text>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accent.primary }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text.primary }}>
                 — {battle.verse_reference}
               </Text>
             </View>

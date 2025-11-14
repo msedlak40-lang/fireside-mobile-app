@@ -36,51 +36,44 @@ function reformatTheologicalThemes(text: string): string {
     return text;
   }
 
-  // Split by bold patterns to extract headers and content
-  const parts: string[] = [];
-  let currentIndex = 0;
+  // Split text by bold patterns while keeping the delimiters
+  const sections: string[] = [];
   const headerRegex = /\*\*([^*]+?)\*\*/g;
+
+  let lastIndex = 0;
   let match;
 
-  const matches: Array<{ header: string; start: number; end: number }> = [];
-
-  // Find all bold headers
   while ((match = headerRegex.exec(text)) !== null) {
-    matches.push({
-      header: match[1],
-      start: match.index,
-      end: match.index + match[0].length,
-    });
-  }
+    const header = match[1];
+    const matchStart = match.index;
+    const matchEnd = match.index + match[0].length;
 
-  // Build reformatted sections
-  if (matches.length > 0) {
-    for (let i = 0; i < matches.length; i++) {
-      const current = matches[i];
-      const next = matches[i + 1];
+    // Get any text before this match (for the first match, this might be intro text)
+    const beforeText = text.substring(lastIndex, matchStart).trim();
 
-      // Get content from end of current header to start of next header (or end of text)
-      const contentStart = current.end;
-      const contentEnd = next ? next.start : text.length;
-      let content = text.substring(contentStart, contentEnd).trim();
+    // Get text after the bold header until the next bold pattern or end
+    const afterStart = matchEnd;
+    const nextMatch = text.substring(afterStart).search(/\*\*[^*]+?\*\*/);
+    const afterEnd = nextMatch === -1 ? text.length : afterStart + nextMatch;
+    let afterText = text.substring(afterStart, afterEnd).trim();
 
-      // Remove leading connecting words like "forms", "is", "emerges" etc.
-      // if the content starts with a lowercase word
-      content = content.replace(/^(forms?|is|are|emerges?|appears?|demonstrates?)\s+/i, '');
+    // Remove leading connecting words
+    afterText = afterText.replace(/^(forms?|is|are|was|were|emerges?|appears?|demonstrates?|emphasizes?|emphasized)\s+/i, '');
 
-      // Capitalize first letter if needed
-      if (content.length > 0 && content[0] === content[0].toLowerCase()) {
-        content = content.charAt(0).toUpperCase() + content.slice(1);
-      }
-
-      // Format as "**Header**: content"
-      parts.push(`**${current.header}**: ${content}`);
+    // Capitalize first letter if needed
+    if (afterText.length > 0 && afterText[0] === afterText[0].toLowerCase()) {
+      afterText = afterText.charAt(0).toUpperCase() + afterText.slice(1);
     }
 
-    return parts.join('\n\n');
+    // Only add non-empty content
+    if (afterText) {
+      sections.push(`**${header}**: ${afterText}`);
+    }
+
+    lastIndex = afterEnd;
   }
 
-  return text;
+  return sections.length > 0 ? sections.join('\n\n') : text;
 }
 
 export default function OnePagerTab({
