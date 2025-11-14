@@ -117,7 +117,7 @@ Respond with ONLY valid JSON in this exact format:
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-3-haiku-20240307',
       max_tokens: 4000,
       messages: [{
         role: 'user',
