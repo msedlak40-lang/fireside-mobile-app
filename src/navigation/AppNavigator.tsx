@@ -52,6 +52,7 @@ import BattleIdentification from '../screens/BattleIdentification';
 import BattleVerse from '../screens/BattleVerse';
 import DailyReflection from '../screens/DailyReflection';
 import VictoryReflection from '../screens/VictoryReflection';
+import DailyArmorChallenge from '../screens/DailyArmorChallenge';
 
 // ---- Stacks ----
 const RootStack = createNativeStackNavigator();
@@ -206,6 +207,11 @@ function ProgressStackNavigator() {
         name="DailyReflection"
         component={DailyReflection}
         options={{ headerTitle: 'Daily Reflection' }}
+      />
+      <ProgressStack.Screen
+        name="DailyArmorChallenge"
+        component={DailyArmorChallenge}
+        options={{ headerTitle: 'Today\'s Armor Challenge' }}
       />
       <ProgressStack.Screen
         name="VictoryReflection"
