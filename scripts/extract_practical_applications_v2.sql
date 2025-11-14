@@ -30,11 +30,12 @@ BEGIN
 
   -- Split by double newline and filter for lines with **From
   FOR single_app IN
-    SELECT trim(both E'\n' from unnest(string_to_array(practical_section, E'\n\n')))
-    WHERE trim(both E'\n' from unnest) LIKE '%**From%'
+    SELECT trim(both E'\n' from app_chunk)::text as cleaned_app
+    FROM unnest(string_to_array(practical_section, E'\n\n')) as app_chunk
+    WHERE trim(both E'\n' from app_chunk) LIKE '%**From%'
   LOOP
     -- Clean up the markdown
-    single_app := regexp_replace(single_app, '\*\*From ["""]([^"""]+)["""] \(([^)]+)\):\*\*\s*\n?', 'From "\1" (\2): ', 'g');
+    single_app := regexp_replace(single_app.cleaned_app, '\*\*From ["""]([^"""]+)["""] \(([^)]+)\):\*\*\s*\n?', 'From "\1" (\2): ', 'g');
     single_app := regexp_replace(single_app, E'\n', ' ', 'g');
     single_app := trim(single_app);
 
