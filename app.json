@@ -29,7 +29,7 @@
     "version": "1.0.0",
     "ios": {
       "bundleIdentifier": "com.msedlak40.firesidemobile",
-      "buildNumber": "13",
+      "buildNumber": "14",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Fireside uses Face ID to securely unlock the app and keep your data safe."
@@ -37,7 +37,7 @@
     },
     "android": {
       "package": "com.msedlak40.firesidemobile",
-      "versionCode": 13,
+      "versionCode": 14,
       "adaptiveIcon": {
         "foregroundImage": "./assets/Fellowship_App_Icon.png",
         "backgroundColor": "#1a1a1a"
