@@ -148,7 +148,7 @@ export default function ArmorUpHome() {
           Put on the full armor of God, so that you can take your stand against the devil's schemes.
         </Text>
 
-        {/* Today's Challenge (7-Day Flow) */}
+        {/* Today's Challenge (7-Day Flow) - Only show when there's an active battle */}
         {todaysArmor && activeBattle && (
           <>
             <TouchableOpacity
@@ -269,8 +269,8 @@ export default function ArmorUpHome() {
           </>
         )}
 
-        {/* Current Armor Piece */}
-        {currentArmor && (
+        {/* Current Armor Piece (Old weekly system) - Only show when there's NO active battle */}
+        {currentArmor && !activeBattle && (
           <View style={{
             marginBottom: 20,
             padding: 20,
