@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/verseOfTheDay';
-import { saveBattleVerse, getUserBattleVerses, deleteBattleVerse, getCurrentArmorPiece, getActiveBattle } from '../../services/armor';
+import { saveBattleVerse, getUserBattleVerses, deleteBattleVerse, getCurrentArmorPiece, getTodaysArmorPiece, getActiveBattle } from '../../services/armor';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
@@ -122,7 +122,7 @@ export default function ProgressDashboardScreen() {
         fetchActiveReadingPlan(),
         fetchActiveCharacterStudy(),
         fetchVerseOfTheDay('KJV'),
-        getCurrentArmorPiece(),
+        getTodaysArmorPiece(),
       ]);
 
       // today's devotion
