@@ -506,27 +506,52 @@ export default function BibleSearchScreen() {
         {searchMode === 'lookup' && (
           <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TextInput
-                placeholder={searchMode === 'lookup' ? "John 3:16, Genesis 1, etc." : "Search keywords..."}
-                placeholderTextColor={colors.text.tertiary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-                autoCorrect={true}
-                spellCheck={true}
-                style={{
-                  flex: 1,
-                  paddingHorizontal: 12,
-                  paddingVertical: 12,
-                  borderWidth: 1,
-                  borderColor: colors.border.default,
-                  borderRadius: 10,
-                  backgroundColor: colors.background.secondary,
-                  color: colors.text.primary,
-                  fontSize: 16,
-                }}
-              />
+              <View style={{ flex: 1, position: 'relative' }}>
+                <TextInput
+                  placeholder={searchMode === 'lookup' ? "John 3:16, Genesis 1, etc." : "Search keywords..."}
+                  placeholderTextColor={colors.text.tertiary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  autoCorrect={true}
+                  spellCheck={true}
+                  style={{
+                    flex: 1,
+                    paddingHorizontal: 12,
+                    paddingRight: searchQuery ? 40 : 12,
+                    paddingVertical: 12,
+                    borderWidth: 1,
+                    borderColor: colors.border.default,
+                    borderRadius: 10,
+                    backgroundColor: colors.background.secondary,
+                    color: colors.text.primary,
+                    fontSize: 16,
+                  }}
+                />
+                {searchQuery ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSearchQuery('');
+                      setResults([]);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: 10,
+                      padding: 4,
+                      backgroundColor: colors.text.tertiary,
+                      borderRadius: 12,
+                      width: 24,
+                      height: 24,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: colors.background.primary, fontWeight: '700' }}>✕</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
               <Pressable
                 onPress={handleSearch}
                 disabled={!searchQuery.trim() || loading}
@@ -550,30 +575,56 @@ export default function BibleSearchScreen() {
             {/* Theme Input */}
             <View style={{ marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TextInput
-                  placeholder="Type a theme..."
-                  placeholderTextColor={colors.text.tertiary}
-                  value={themeInput}
-                  onChangeText={(text) => {
-                    setThemeInput(text);
-                    setSelectedTheme(null);
-                  }}
-                  onSubmitEditing={handleSearch}
-                  returnKeyType="search"
-                  autoCorrect={true}
-                  spellCheck={true}
-                  style={{
-                    flex: 1,
-                    paddingHorizontal: 12,
-                    paddingVertical: 12,
-                    borderWidth: 1,
-                    borderColor: colors.border.default,
-                    borderRadius: 10,
-                    backgroundColor: colors.background.secondary,
-                    color: colors.text.primary,
-                    fontSize: 16,
-                  }}
-                />
+                <View style={{ flex: 1, position: 'relative' }}>
+                  <TextInput
+                    placeholder="Type a theme..."
+                    placeholderTextColor={colors.text.tertiary}
+                    value={themeInput}
+                    onChangeText={(text) => {
+                      setThemeInput(text);
+                      setSelectedTheme(null);
+                    }}
+                    onSubmitEditing={handleSearch}
+                    returnKeyType="search"
+                    autoCorrect={true}
+                    spellCheck={true}
+                    style={{
+                      flex: 1,
+                      paddingHorizontal: 12,
+                      paddingRight: themeInput ? 40 : 12,
+                      paddingVertical: 12,
+                      borderWidth: 1,
+                      borderColor: colors.border.default,
+                      borderRadius: 10,
+                      backgroundColor: colors.background.secondary,
+                      color: colors.text.primary,
+                      fontSize: 16,
+                    }}
+                  />
+                  {themeInput ? (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setThemeInput('');
+                        setResults([]);
+                        setSelectedTheme(null);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: 8,
+                        top: 10,
+                        padding: 4,
+                        backgroundColor: colors.text.tertiary,
+                        borderRadius: 12,
+                        width: 24,
+                        height: 24,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, color: colors.background.primary, fontWeight: '700' }}>✕</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
                 <Pressable
                   onPress={handleSearch}
                   disabled={(!themeInput.trim() && !selectedTheme) || loading}
