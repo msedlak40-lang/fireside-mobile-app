@@ -25,14 +25,15 @@ export function getCurrentWeekAndYear(): { week: number; year: number } {
 }
 
 /**
- * Get the current armor piece based on week rotation (1-6)
+ * Get the current armor piece based on week rotation (1-7)
+ * DEPRECATED: Use getTodaysArmorPiece() for the new 7-day flow
  */
 export async function getCurrentArmorPiece(): Promise<ArmorPiece | null> {
   try {
     const { week } = getCurrentWeekAndYear();
 
-    // Rotate through 6 armor pieces
-    const weekOrder = ((week - 1) % 6) + 1;
+    // Rotate through 7 armor pieces (updated from 6)
+    const weekOrder = ((week - 1) % 7) + 1;
 
     const { data, error } = await supabase
       .from('armor_pieces')
@@ -49,6 +50,100 @@ export async function getCurrentArmorPiece(): Promise<ArmorPiece | null> {
   } catch (err) {
     console.error('[Armor] Get current armor piece failed:', err);
     return null;
+  }
+}
+
+/**
+ * Get today's armor piece based on day of week (1-7)
+ * Monday = 1 (Belt), Tuesday = 2 (Breastplate), ..., Sunday = 7 (Prayer)
+ */
+export async function getTodaysArmorPiece(): Promise<ArmorPiece | null> {
+  try {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+    // Convert to 1-7 where Monday = 1, Sunday = 7
+    const armorDayOrder = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+    const { data, error } = await supabase
+      .from('armor_pieces')
+      .select('*')
+      .eq('week_order', armorDayOrder)
+      .single();
+
+    if (error) {
+      console.error('[Armor] Get todays armor piece error:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('[Armor] Get todays armor piece failed:', err);
+    return null;
+  }
+}
+
+/**
+ * Get daily practical application for user's battle
+ */
+export async function getDailyApplication(
+  userId: string,
+  armorPieceId: number,
+  battleTag: BattleTag,
+  battleId?: string
+): Promise<{
+  id: number;
+  application_text: string;
+  book_name: string;
+  chapter_number: number;
+  armor_piece_name: string;
+  confidence_score: number;
+} | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_daily_armor_application', {
+      p_user_id: userId,
+      p_armor_piece_id: armorPieceId,
+      p_battle_tag: battleTag,
+      p_battle_id: battleId || null,
+    });
+
+    if (error) {
+      console.error('[Armor] Get daily application error:', error);
+      return null;
+    }
+
+    // RPC returns an array, get first result
+    return data?.[0] || null;
+  } catch (err) {
+    console.error('[Armor] Get daily application failed:', err);
+    return null;
+  }
+}
+
+/**
+ * Mark an application as seen by the user
+ */
+export async function markApplicationSeen(
+  userId: string,
+  applicationId: number,
+  battleId: string
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.rpc('mark_application_seen', {
+      p_user_id: userId,
+      p_application_id: applicationId,
+      p_battle_id: battleId,
+    });
+
+    if (error) {
+      console.error('[Armor] Mark application seen error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[Armor] Mark application seen failed:', err);
+    return false;
   }
 }
 
