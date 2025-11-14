@@ -65,6 +65,13 @@ export async function getTodaysArmorPiece(): Promise<ArmorPiece | null> {
     // Convert to 1-7 where Monday = 1, Sunday = 7
     const armorDayOrder = dayOfWeek === 0 ? 7 : dayOfWeek;
 
+    console.log('[Armor] getTodaysArmorPiece DEBUG:', {
+      currentDate: now.toISOString(),
+      dayOfWeek,
+      armorDayOrder,
+      expectedDay: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek]
+    });
+
     const { data, error } = await supabase
       .from('armor_pieces')
       .select('*')
@@ -75,6 +82,12 @@ export async function getTodaysArmorPiece(): Promise<ArmorPiece | null> {
       console.error('[Armor] Get todays armor piece error:', error);
       return null;
     }
+
+    console.log('[Armor] getTodaysArmorPiece RESULT:', {
+      armor_name: data?.armor_name,
+      week_order: data?.week_order,
+      id: data?.id
+    });
 
     return data;
   } catch (err) {

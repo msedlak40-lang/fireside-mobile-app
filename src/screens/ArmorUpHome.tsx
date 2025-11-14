@@ -34,6 +34,13 @@ export default function ArmorUpHome() {
         getActiveBattle(uid),
       ]);
 
+      console.log('[ArmorUpHome] Loaded data:', {
+        currentArmor: armorData?.armor_name,
+        todaysArmor: todaysArmorData?.armor_name,
+        activeBattle: battleData?.battle_text,
+        todaysArmorWeekOrder: todaysArmorData?.week_order
+      });
+
       setCurrentArmor(armorData);
       setTodaysArmor(todaysArmorData);
       setActiveBattle(battleData);
