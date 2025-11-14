@@ -19,9 +19,9 @@ DECLARE
 BEGIN
   -- Loop through all chapters
   FOR row_record IN
-    SELECT id, book_name, chapter_number, summary_advanced
-    FROM bible_chapter_summaries_strongs
-    ORDER BY book_name, chapter_number
+    SELECT t.id, t.book_name, t.chapter_number, t.summary_advanced
+    FROM bible_chapter_summaries_strongs t
+    ORDER BY t.book_name, t.chapter_number
   LOOP
     BEGIN
       -- Initialize
