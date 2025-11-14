@@ -19,7 +19,7 @@ BEGIN
   -- Extract just the Practical Applications section
   practical_section := substring(
     summary_text
-    from '## Practical Applications(.*?)(?=---|\z)'
+    from '## Practical Applications(.+?)(?=\n---|$)'
   );
 
   RAISE NOTICE 'Practical section found: %', CASE WHEN practical_section IS NOT NULL THEN 'YES' ELSE 'NO' END;
