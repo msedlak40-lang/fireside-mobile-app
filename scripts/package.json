@@ -1,0 +1,13 @@
+{
+  "name": "armor-of-god-tagging",
+  "version": "1.0.0",
+  "description": "AI tagging script for practical applications",
+  "type": "module",
+  "scripts": {
+    "tag": "node tag_applications.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@supabase/supabase-js": "^2.39.3"
+  }
+}
