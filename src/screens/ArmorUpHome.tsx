@@ -38,7 +38,10 @@ export default function ArmorUpHome() {
         currentArmor: armorData?.armor_name,
         todaysArmor: todaysArmorData?.armor_name,
         activeBattle: battleData?.battle_text,
-        todaysArmorWeekOrder: todaysArmorData?.week_order
+        todaysArmorWeekOrder: todaysArmorData?.week_order,
+        todaysArmorExists: !!todaysArmorData,
+        activeBattleExists: !!battleData,
+        willShowTodaysChallenge: !!(todaysArmorData && battleData)
       });
 
       setCurrentArmor(armorData);
@@ -154,6 +157,15 @@ export default function ArmorUpHome() {
         <Text style={{ fontSize: 15, color: colors.text.secondary, marginBottom: 24, lineHeight: 22 }}>
           Put on the full armor of God, so that you can take your stand against the devil's schemes.
         </Text>
+
+        {/* DEBUG INFO - TEMPORARY */}
+        <View style={{ padding: 12, backgroundColor: '#fff3cd', borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#ffc107' }}>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#856404', marginBottom: 4 }}>DEBUG INFO (Build 17):</Text>
+          <Text style={{ fontSize: 11, color: '#856404' }}>Today's Armor: {todaysArmor?.armor_name || 'NULL'} (week_order: {todaysArmor?.week_order || 'N/A'})</Text>
+          <Text style={{ fontSize: 11, color: '#856404' }}>Current Armor: {currentArmor?.armor_name || 'NULL'}</Text>
+          <Text style={{ fontSize: 11, color: '#856404' }}>Active Battle: {activeBattle ? 'YES' : 'NO'}</Text>
+          <Text style={{ fontSize: 11, color: '#856404' }}>Day of Week: {new Date().getDay()} ({['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date().getDay()]})</Text>
+        </View>
 
         {/* Today's Challenge (7-Day Flow) - Only show when there's an active battle */}
         {todaysArmor && activeBattle && (
