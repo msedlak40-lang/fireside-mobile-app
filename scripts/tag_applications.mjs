@@ -149,13 +149,22 @@ async function insertTaggedApplications(applications, tags) {
     const tag = tags[i];
     if (!tag) return null;
 
+    // Validate primary armor piece ID (must be 1-7)
+    if (!tag.primary_armor || tag.primary_armor < 1 || tag.primary_armor > 7) {
+      console.warn(`⚠️  Invalid primary armor ID ${tag.primary_armor} for: ${app.application_text.substring(0, 50)}...`);
+      return null;
+    }
+
+    // Validate secondary armor IDs
+    const validSecondaryArmor = (tag.secondary_armor || []).filter(id => id >= 1 && id <= 7);
+
     return {
       book_name: app.book_name,
       chapter_number: app.chapter_number,
       application_text: app.application_text,
       application_index: app.application_index,
       primary_armor_piece_id: tag.primary_armor,
-      secondary_armor_piece_ids: tag.secondary_armor || [],
+      secondary_armor_piece_ids: validSecondaryArmor,
       battle_tags: tag.battle_tags || [],
       extracted_keywords: tag.keywords || [],
       confidence_score: tag.confidence || 0.5
