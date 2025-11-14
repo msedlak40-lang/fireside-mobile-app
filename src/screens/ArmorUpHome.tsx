@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabaseClient';
-import { getCurrentArmorPiece, getActiveBattle, getBattleReflections } from '../services/armor';
+import { getCurrentArmorPiece, getTodaysArmorPiece, getActiveBattle, getBattleReflections } from '../services/armor';
 import { colors } from '../theme/colors';
 
 export default function ArmorUpHome() {
@@ -12,6 +12,7 @@ export default function ArmorUpHome() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentArmor, setCurrentArmor] = useState<any | null>(null);
+  const [todaysArmor, setTodaysArmor] = useState<any | null>(null);
   const [activeBattle, setActiveBattle] = useState<any | null>(null);
   const [reflections, setReflections] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -27,12 +28,14 @@ export default function ArmorUpHome() {
       }
       setUserId(uid);
 
-      const [armorData, battleData] = await Promise.all([
+      const [armorData, todaysArmorData, battleData] = await Promise.all([
         getCurrentArmorPiece(),
+        getTodaysArmorPiece(),
         getActiveBattle(uid),
       ]);
 
       setCurrentArmor(armorData);
+      setTodaysArmor(todaysArmorData);
       setActiveBattle(battleData);
 
       // Load reflections if there's an active battle
@@ -113,6 +116,10 @@ export default function ArmorUpHome() {
     }
   };
 
+  const viewTodaysChallenge = () => {
+    navigation.navigate('DailyArmorChallenge');
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary, justifyContent: 'center', alignItems: 'center' }}>
@@ -140,6 +147,127 @@ export default function ArmorUpHome() {
         <Text style={{ fontSize: 15, color: colors.text.secondary, marginBottom: 24, lineHeight: 22 }}>
           Put on the full armor of God, so that you can take your stand against the devil's schemes.
         </Text>
+
+        {/* Today's Challenge (7-Day Flow) */}
+        {todaysArmor && activeBattle && (
+          <>
+            <TouchableOpacity
+              onPress={viewTodaysChallenge}
+              activeOpacity={0.8}
+              style={{
+                marginBottom: 16,
+                padding: 20,
+                backgroundColor: '#e0f2fe',
+                borderRadius: 16,
+                borderLeftWidth: 6,
+                borderLeftColor: '#0284c7',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+                elevation: 5,
+              }}
+            >
+              <Text style={{ fontSize: 11, color: '#0c4a6e', fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 }}>
+                TODAY'S CHALLENGE
+              </Text>
+              <Text style={{ fontSize: 24, fontWeight: '800', marginBottom: 8, color: '#0c4a6e' }}>
+                {todaysArmor.armor_name}
+              </Text>
+              <Text style={{ fontSize: 14, color: '#075985', marginBottom: 12, lineHeight: 20 }}>
+                {todaysArmor.description}
+              </Text>
+              <View style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                backgroundColor: '#0284c7',
+                borderRadius: 8,
+                alignSelf: 'flex-start',
+              }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>
+                  View Today's Challenge →
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* 7-Day Calendar View */}
+            <View style={{
+              marginBottom: 20,
+              padding: 16,
+              backgroundColor: colors.background.secondary,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.border.default,
+            }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', marginBottom: 12, color: colors.text.primary }}>
+                This Week's Armor Journey
+              </Text>
+              <View style={{ gap: 6 }}>
+                {[
+                  { day: 'Mon', armor: 'Belt of Truth', dayNum: 1 },
+                  { day: 'Tue', armor: 'Breastplate of Righteousness', dayNum: 2 },
+                  { day: 'Wed', armor: 'Shoes of Peace', dayNum: 3 },
+                  { day: 'Thu', armor: 'Shield of Faith', dayNum: 4 },
+                  { day: 'Fri', armor: 'Helmet of Salvation', dayNum: 5 },
+                  { day: 'Sat', armor: 'Sword of the Spirit', dayNum: 6 },
+                  { day: 'Sun', armor: 'Prayer', dayNum: 0 },
+                ].map((item) => {
+                  const dayOfWeek = new Date().getDay();
+                  const isToday = item.dayNum === dayOfWeek;
+                  const hasReflection = reflections.some(r => r.day_of_week === (item.dayNum === 0 ? 7 : item.dayNum));
+
+                  return (
+                    <View
+                      key={item.day}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: 10,
+                        backgroundColor: isToday ? '#e0f2fe' : colors.background.primary,
+                        borderRadius: 8,
+                        borderWidth: isToday ? 2 : 1,
+                        borderColor: isToday ? '#0284c7' : colors.border.default,
+                      }}
+                    >
+                      <View style={{ width: 40 }}>
+                        <Text style={{
+                          fontSize: 12,
+                          fontWeight: isToday ? '800' : '600',
+                          color: isToday ? '#0284c7' : colors.text.secondary
+                        }}>
+                          {item.day}
+                        </Text>
+                      </View>
+                      <Text style={{
+                        flex: 1,
+                        fontSize: 13,
+                        fontWeight: isToday ? '700' : '500',
+                        color: isToday ? '#0c4a6e' : colors.text.primary
+                      }}>
+                        {item.armor}
+                      </Text>
+                      {hasReflection && (
+                        <Text style={{ fontSize: 16 }}>✓</Text>
+                      )}
+                      {isToday && (
+                        <View style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          backgroundColor: '#0284c7',
+                          borderRadius: 4,
+                        }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>
+                            TODAY
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Current Armor Piece */}
         {currentArmor && (
