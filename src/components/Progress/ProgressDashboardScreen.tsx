@@ -1,6 +1,6 @@
 // src/components/Progress/ProgressDashboardScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback, Alert, TextInput, Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
@@ -386,6 +386,19 @@ const openTodayDevotion = useCallback(() => {
     } catch (err) {
       console.error('[ProgressDashboard] Failed to toggle favorite:', err);
       Alert.alert('Error', 'Failed to update favorite. Please try again.');
+    }
+  };
+
+  const shareVerseHandler = async (verse: any) => {
+    try {
+      const message = `${verse.verse_reference}\n\n"${verse.verse_text}"${verse.battle_tag ? `\n\n#${verse.battle_tag}` : ''}`;
+
+      await Share.share({
+        message,
+        title: verse.verse_reference,
+      });
+    } catch (err) {
+      console.error('[ProgressDashboard] Failed to share verse:', err);
     }
   };
 
@@ -1354,6 +1367,19 @@ const openTodayDevotion = useCallback(() => {
                             >
                               <View style={{ flexDirection: 'row', position: 'absolute', top: 10, right: 10, gap: 8 }}>
                                 <TouchableOpacity
+                                  onPress={() => shareVerseHandler(verse)}
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    backgroundColor: '#3b82f6',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 16 }}>📤</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
                                   onPress={() => toggleFavoriteHandler(verse.id, verse.is_favorite)}
                                   style={{
                                     width: 32,
@@ -1381,7 +1407,7 @@ const openTodayDevotion = useCallback(() => {
                                 </TouchableOpacity>
                               </View>
 
-                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 72 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 104 }}>
                                 {verse.verse_reference}
                               </Text>
                               <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
@@ -1451,6 +1477,19 @@ const openTodayDevotion = useCallback(() => {
                               >
                                 <View style={{ flexDirection: 'row', position: 'absolute', top: 10, right: 10, gap: 8 }}>
                                   <TouchableOpacity
+                                    onPress={() => shareVerseHandler(verse)}
+                                    style={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 16,
+                                      backgroundColor: '#3b82f6',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 16 }}>📤</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
                                     onPress={() => toggleFavoriteHandler(verse.id, verse.is_favorite)}
                                     style={{
                                       width: 32,
@@ -1478,7 +1517,7 @@ const openTodayDevotion = useCallback(() => {
                                   </TouchableOpacity>
                                 </View>
 
-                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 72 }}>
+                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 104 }}>
                                   {verse.verse_reference}
                                 </Text>
                                 <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
