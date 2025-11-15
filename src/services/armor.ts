@@ -479,6 +479,28 @@ export async function getBattleHistory(
 }
 
 /**
+ * Toggle favorite status on a battle verse
+ */
+export async function toggleBattleVerseFavorite(verseId: string, isFavorite: boolean): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('user_battle_verses')
+      .update({ is_favorite: isFavorite })
+      .eq('id', verseId);
+
+    if (error) {
+      console.error('[Armor] Toggle battle verse favorite error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[Armor] Toggle battle verse favorite failed:', err);
+    return false;
+  }
+}
+
+/**
  * Complete current battle and mark as inactive
  */
 export async function completeBattle(battleId: string): Promise<boolean> {
