@@ -1223,8 +1223,8 @@ const openTodayDevotion = useCallback(() => {
                   <TouchableOpacity
                     onPress={() => setSelectedBattleFilter(null)}
                     style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
                       backgroundColor: !selectedBattleFilter ? '#2563eb' : colors.background.secondary,
                       borderRadius: 20,
                       marginRight: 8,
@@ -1241,8 +1241,8 @@ const openTodayDevotion = useCallback(() => {
                       key={tag}
                       onPress={() => setSelectedBattleFilter(tag)}
                       style={{
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
                         backgroundColor: selectedBattleFilter === tag ? '#2563eb' : colors.background.secondary,
                         borderRadius: 20,
                         marginRight: 8,
@@ -1258,8 +1258,8 @@ const openTodayDevotion = useCallback(() => {
                   <TouchableOpacity
                     onPress={() => setSelectedBattleFilter('general')}
                     style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
                       backgroundColor: selectedBattleFilter === 'general' ? '#2563eb' : colors.background.secondary,
                       borderRadius: 20,
                       marginRight: 8,
