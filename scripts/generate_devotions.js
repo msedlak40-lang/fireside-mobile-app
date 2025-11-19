@@ -1,8 +1,17 @@
 /**
- * Generate 365 Daily Devotions for 2026
+ * Generate 365/366 Daily Devotions for Any Year
  *
  * This script reads practical applications from export_practical_applications.json
- * and generates daily devotions for every day of 2026.
+ * and generates daily devotions for every day of the specified year.
+ *
+ * Usage:
+ *   node scripts/generate_devotions.js [YEAR]
+ *
+ * Examples:
+ *   node scripts/generate_devotions.js 2026
+ *   node scripts/generate_devotions.js 2027
+ *
+ * If no year is specified, defaults to current year.
  */
 
 import fs from 'fs';
@@ -11,6 +20,9 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Get target year from command line args or default to current year
+const TARGET_YEAR = process.argv[2] ? parseInt(process.argv[2]) : new Date().getFullYear();
 
 // Monthly themes for 2026
 const MONTHLY_THEMES = {
@@ -153,14 +165,25 @@ function getDifficultyLevel(bookName) {
   return 'intermediate';
 }
 
-// Generate devotions for all 365 days of 2026
-console.log('Generating 365 devotions for 2026...');
+// Validate year
+if (isNaN(TARGET_YEAR) || TARGET_YEAR < 2000 || TARGET_YEAR > 2100) {
+  console.error(`Invalid year: ${process.argv[2]}`);
+  console.error('Please provide a valid year between 2000 and 2100');
+  process.exit(1);
+}
+
+// Check if leap year
+const isLeapYear = (TARGET_YEAR % 4 === 0 && TARGET_YEAR % 100 !== 0) || (TARGET_YEAR % 400 === 0);
+const totalDays = isLeapYear ? 366 : 365;
+
+console.log(`\nGenerating ${totalDays} devotions for ${TARGET_YEAR}...`);
+console.log(`Leap year: ${isLeapYear ? 'Yes' : 'No'}`);
 
 const devotions = [];
 let dayIndex = 0;
 
 for (let month = 1; month <= 12; month++) {
-  const daysInMonth = new Date(2026, month, 0).getDate();
+  const daysInMonth = new Date(TARGET_YEAR, month, 0).getDate();
 
   for (let day = 1; day <= daysInMonth; day++) {
     if (dayIndex >= practicalApplications.length) {
@@ -171,7 +194,7 @@ for (let month = 1; month <= 12; month++) {
     const chapter = practicalApplications[dayIndex];
     const firstApp = chapter.applications[0]; // Use first application from each chapter
 
-    const devotionDate = getDateString(2026, month, day);
+    const devotionDate = getDateString(TARGET_YEAR, month, day);
     const bookName = chapter.book_name;
     const chapterNum = chapter.chapter_number;
     const verseRef = createVerseReference(bookName, chapterNum, 1);
@@ -203,9 +226,10 @@ console.log(`Generated ${devotions.length} devotions`);
 // Generate SQL INSERT statements
 console.log('Generating SQL...');
 
-let sql = `-- Daily Devotions for 2026
+let sql = `-- Daily Devotions for ${TARGET_YEAR}
 -- Generated from practical applications
 -- Total devotions: ${devotions.length}
+-- Generated on: ${new Date().toISOString()}
 
 `;
 
@@ -247,12 +271,12 @@ devotions.forEach((dev, index) => {
 });
 
 // Write to file
-const outputPath = path.join(__dirname, 'insert_2026_devotions.sql');
+const outputPath = path.join(__dirname, `insert_${TARGET_YEAR}_devotions.sql`);
 fs.writeFileSync(outputPath, sql);
 
 console.log(`\nSQL file generated: ${outputPath}`);
 console.log(`\nTo import into Supabase:`);
 console.log(`1. Open Supabase SQL Editor`);
-console.log(`2. Copy and paste the contents of scripts/insert_2026_devotions.sql`);
+console.log(`2. Copy and paste the contents of scripts/insert_${TARGET_YEAR}_devotions.sql`);
 console.log(`3. Run the query`);
 console.log(`\nNote: You'll need to update the key_verse_text placeholders with actual verse text.`);
