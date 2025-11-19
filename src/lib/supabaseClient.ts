@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // NEW: fallback to app.json so extra is always available in Dev Client
 import appConfig from '../../app.json';
 
@@ -16,5 +17,10 @@ if (!extra.supabaseUrl || !extra.supabaseAnonKey) {
 }
 
 export const supabase = createClient(extra.supabaseUrl!, extra.supabaseAnonKey!, {
-  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  }
 });
