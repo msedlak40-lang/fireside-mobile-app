@@ -1,60 +1,131 @@
-// ArmorUpHome - Weekly Armor Dashboard
+// ArmorUpHome - Simple Armor of God Reference
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabaseClient';
-import { getCurrentArmorPiece, getTodaysArmorPiece, getActiveBattle, getBattleReflections } from '../services/armor';
 import { colors } from '../theme/colors';
 
-export default function ArmorUpHome() {
-  const navigation = useNavigation<any>();
+// All 7 pieces of the Armor of God
+const ARMOR_PIECES = [
+  {
+    id: 1,
+    name: 'Belt of Truth',
+    scripture_reference: 'Ephesians 6:14a',
+    scripture_text: 'Stand firm then, with the belt of truth buckled around your waist...',
+    description: 'Truth holds everything together. Living honestly and embracing God\'s truth protects us from deception.',
+    keywords: ['truth', 'honest', 'integrity', 'deceive', 'lie', 'authentic', 'sincere', 'genuine'],
+    color: '#f59e0b',
+    bgColor: '#fef3c7',
+    textColor: '#92400e',
+  },
+  {
+    id: 2,
+    name: 'Breastplate of Righteousness',
+    scripture_reference: 'Ephesians 6:14b',
+    scripture_text: '...with the breastplate of righteousness in place...',
+    description: 'Righteousness guards our heart. Living rightly before God protects us from guilt and accusation.',
+    keywords: ['righteous', 'holy', 'pure', 'clean', 'blameless', 'just', 'moral', 'virtue', 'character'],
+    color: '#10b981',
+    bgColor: '#dcfce7',
+    textColor: '#065f46',
+  },
+  {
+    id: 3,
+    name: 'Shoes of Peace',
+    scripture_reference: 'Ephesians 6:15',
+    scripture_text: '...and with your feet fitted with the readiness that comes from the gospel of peace.',
+    description: 'Peace gives us sure footing. The gospel of peace makes us ready to stand firm and move forward.',
+    keywords: ['peace', 'calm', 'rest', 'anxiety', 'worry', 'stress', 'reconcile', 'harmony', 'tranquil'],
+    color: '#8b5cf6',
+    bgColor: '#ede9fe',
+    textColor: '#5b21b6',
+  },
+  {
+    id: 4,
+    name: 'Shield of Faith',
+    scripture_reference: 'Ephesians 6:16',
+    scripture_text: 'In addition to all this, take up the shield of faith, with which you can extinguish all the flaming arrows of the evil one.',
+    description: 'Faith deflects attacks. Trusting God extinguishes the enemy\'s attempts to make us doubt.',
+    keywords: ['faith', 'trust', 'believe', 'doubt', 'fear', 'confidence', 'assurance', 'rely'],
+    color: '#3b82f6',
+    bgColor: '#dbeafe',
+    textColor: '#1e40af',
+  },
+  {
+    id: 5,
+    name: 'Helmet of Salvation',
+    scripture_reference: 'Ephesians 6:17a',
+    scripture_text: 'Take the helmet of salvation...',
+    description: 'Salvation protects our mind. Knowing we are saved guards our thoughts from despair and hopelessness.',
+    keywords: ['salvation', 'save', 'redeem', 'hope', 'eternal', 'secure', 'assurance', 'mind', 'think'],
+    color: '#ec4899',
+    bgColor: '#fce7f3',
+    textColor: '#9d174d',
+  },
+  {
+    id: 6,
+    name: 'Sword of the Spirit',
+    scripture_reference: 'Ephesians 6:17b',
+    scripture_text: '...and the sword of the Spirit, which is the word of God.',
+    description: 'God\'s Word is our weapon. Scripture equips us to fight back against lies and temptation.',
+    keywords: ['word', 'scripture', 'bible', 'speak', 'proclaim', 'declare', 'command', 'authority'],
+    color: '#ef4444',
+    bgColor: '#fee2e2',
+    textColor: '#991b1b',
+  },
+  {
+    id: 7,
+    name: 'Prayer',
+    scripture_reference: 'Ephesians 6:18',
+    scripture_text: 'And pray in the Spirit on all occasions with all kinds of prayers and requests.',
+    description: 'Prayer connects us to God. Constant communication with God empowers all the other armor pieces.',
+    keywords: ['pray', 'prayer', 'intercede', 'petition', 'request', 'ask', 'seek', 'communion', 'talk'],
+    color: '#0891b2',
+    bgColor: '#cffafe',
+    textColor: '#155e75',
+  },
+];
 
+interface PracticalApplication {
+  book_name: string;
+  chapter_number: number;
+  application: string;
+}
+
+export default function ArmorUpHome() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentArmor, setCurrentArmor] = useState<any | null>(null);
-  const [todaysArmor, setTodaysArmor] = useState<any | null>(null);
-  const [activeBattle, setActiveBattle] = useState<any | null>(null);
-  const [reflections, setReflections] = useState<any[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [expandedPiece, setExpandedPiece] = useState<number | null>(null);
+  const [applications, setApplications] = useState<PracticalApplication[]>([]);
 
-  const loadData = async () => {
+  // Load practical applications from database
+  const loadApplications = async () => {
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      const uid = auth?.user?.id;
-      if (!uid) {
-        console.error('[ArmorUpHome] No user ID');
-        setLoading(false);
+      const { data, error } = await supabase
+        .from('bible_chapter_summaries_strongs')
+        .select('book_name, chapter_number, practical_applications')
+        .not('practical_applications', 'is', null);
+
+      if (error) {
+        console.error('[ArmorUpHome] Error loading applications:', error);
         return;
       }
-      setUserId(uid);
 
-      const [armorData, todaysArmorData, battleData] = await Promise.all([
-        getCurrentArmorPiece(),
-        getTodaysArmorPiece(),
-        getActiveBattle(uid),
-      ]);
-
-      console.log('[ArmorUpHome] Loaded data:', {
-        currentArmor: armorData?.armor_name,
-        todaysArmor: todaysArmorData?.armor_name,
-        activeBattle: battleData?.battle_text,
-        todaysArmorWeekOrder: todaysArmorData?.week_order,
-        todaysArmorExists: !!todaysArmorData,
-        activeBattleExists: !!battleData,
-        willShowTodaysChallenge: !!(todaysArmorData && battleData)
+      // Flatten all applications into a single array
+      const allApps: PracticalApplication[] = [];
+      data?.forEach(row => {
+        if (row.practical_applications && Array.isArray(row.practical_applications)) {
+          row.practical_applications.forEach((app: string) => {
+            allApps.push({
+              book_name: row.book_name,
+              chapter_number: row.chapter_number,
+              application: app,
+            });
+          });
+        }
       });
 
-      setCurrentArmor(armorData);
-      setTodaysArmor(todaysArmorData);
-      setActiveBattle(battleData);
-
-      // Load reflections if there's an active battle
-      if (battleData) {
-        const reflectionsData = await getBattleReflections(battleData.id);
-        setReflections(reflectionsData);
-      } else {
-        setReflections([]);
-      }
+      setApplications(allApps);
     } catch (err) {
       console.error('[ArmorUpHome] Load failed:', err);
     } finally {
@@ -62,72 +133,53 @@ export default function ArmorUpHome() {
     }
   };
 
+  // Get applications for a specific armor piece based on keyword matching
+  const getApplicationsForPiece = (piece: typeof ARMOR_PIECES[0]): PracticalApplication[] => {
+    if (applications.length === 0) return [];
+
+    // Filter applications that match any of the armor piece's keywords
+    const matchingApps = applications.filter(app => {
+      const lowerApp = app.application.toLowerCase();
+      return piece.keywords.some(keyword => lowerApp.includes(keyword.toLowerCase()));
+    });
+
+    if (matchingApps.length === 0) return [];
+
+    // Use date-based seeding for daily rotation
+    const today = new Date();
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
+    const seed = dayOfYear + piece.id; // Different seed for each piece
+
+    // Simple seeded shuffle to get consistent daily selection
+    const shuffled = [...matchingApps].sort((a, b) => {
+      const hashA = (seed * 31 + a.application.length) % 1000;
+      const hashB = (seed * 31 + b.application.length) % 1000;
+      return hashA - hashB;
+    });
+
+    // Return 2 applications
+    return shuffled.slice(0, 2);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await loadApplications();
     setRefreshing(false);
   };
 
   useEffect(() => {
-    loadData();
+    loadApplications();
   }, []);
 
   // Reload when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      loadApplications();
     }, [])
   );
 
-  const startBattle = () => {
-    navigation.navigate('BattleIdentification', {
-      armorId: currentArmor?.id,
-      armorName: currentArmor?.armor_name,
-    });
-  };
-
-  const viewBattleVerse = () => {
-    if (activeBattle) {
-      // Pass the saved verse from the battle record
-      const verse = activeBattle.verse_text ? {
-        book_name: activeBattle.verse_book,
-        chapter_number: activeBattle.verse_chapter,
-        verse_number: activeBattle.verse_number,
-        verse_reference: activeBattle.verse_reference,
-        verse_text: activeBattle.verse_text,
-        armor_name: 'Armor of God',
-        context_summary: '',
-      } : null;
-
-      navigation.navigate('BattleVerse', {
-        battleId: activeBattle.id,
-        battleTag: activeBattle.battle_tag,
-        verse,
-      });
-    }
-  };
-
-  const addReflection = () => {
-    if (activeBattle) {
-      navigation.navigate('DailyReflection', {
-        battleId: activeBattle.id,
-        armorName: currentArmor?.armor_name,
-        battleTag: activeBattle.battle_tag,
-      });
-    }
-  };
-
-  const completeWeek = () => {
-    if (activeBattle) {
-      navigation.navigate('VictoryReflection', {
-        battleId: activeBattle.id,
-        armorName: currentArmor?.armor_name,
-      });
-    }
-  };
-
-  const viewTodaysChallenge = () => {
-    navigation.navigate('DailyArmorChallenge');
+  const toggleExpanded = (pieceId: number) => {
+    setExpandedPiece(expandedPiece === pieceId ? null : pieceId);
   };
 
   if (loading) {
@@ -158,336 +210,149 @@ export default function ArmorUpHome() {
           Put on the full armor of God, so that you can take your stand against the devil's schemes.
         </Text>
 
-        {/* Today's Challenge (7-Day Flow) - Only show when there's an active battle */}
-        {todaysArmor && activeBattle && (
-          <>
+        {/* All 7 Armor Pieces */}
+        {ARMOR_PIECES.map((piece) => {
+          const isExpanded = expandedPiece === piece.id;
+          const pieceApplications = getApplicationsForPiece(piece);
+
+          return (
             <TouchableOpacity
-              onPress={viewTodaysChallenge}
+              key={piece.id}
+              onPress={() => toggleExpanded(piece.id)}
               activeOpacity={0.8}
               style={{
-                marginBottom: 16,
-                padding: 20,
-                backgroundColor: '#e0f2fe',
+                marginBottom: 12,
+                backgroundColor: isExpanded ? piece.bgColor : colors.background.secondary,
                 borderRadius: 16,
                 borderLeftWidth: 6,
-                borderLeftColor: '#0284c7',
+                borderLeftColor: piece.color,
+                overflow: 'hidden',
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 5,
+                shadowOpacity: isExpanded ? 0.15 : 0.08,
+                shadowRadius: isExpanded ? 8 : 4,
+                elevation: isExpanded ? 5 : 2,
               }}
             >
-              <Text style={{ fontSize: 11, color: '#0c4a6e', fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 }}>
-                TODAY'S CHALLENGE
-              </Text>
-              <Text style={{ fontSize: 24, fontWeight: '800', marginBottom: 8, color: '#0c4a6e' }}>
-                {todaysArmor.armor_name}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#075985', marginBottom: 12, lineHeight: 20 }}>
-                {todaysArmor.description}
-              </Text>
+              {/* Header - Always Visible */}
               <View style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                backgroundColor: '#0284c7',
-                borderRadius: 8,
-                alignSelf: 'flex-start',
+                padding: 16,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
               }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>
-                  View Today's Challenge →
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: '700',
+                    color: isExpanded ? piece.textColor : colors.text.primary,
+                    marginBottom: 4,
+                  }}>
+                    {piece.name}
+                  </Text>
+                  <Text style={{
+                    fontSize: 12,
+                    color: isExpanded ? piece.textColor : colors.text.secondary,
+                    fontWeight: '600',
+                    fontStyle: 'italic',
+                  }}>
+                    {piece.scripture_reference}
+                  </Text>
+                </View>
+                <Text style={{
+                  fontSize: 20,
+                  color: isExpanded ? piece.textColor : colors.text.secondary,
+                }}>
+                  {isExpanded ? '▼' : '▶'}
                 </Text>
               </View>
-            </TouchableOpacity>
 
-            {/* 7-Day Calendar View */}
-            <View style={{
-              marginBottom: 20,
-              padding: 16,
-              backgroundColor: colors.background.secondary,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: colors.border.default,
-            }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', marginBottom: 12, color: colors.text.primary }}>
-                This Week's Armor Journey
-              </Text>
-              <View style={{ gap: 6 }}>
-                {[
-                  { day: 'Mon', armor: 'Belt of Truth', dayNum: 1 },
-                  { day: 'Tue', armor: 'Breastplate of Righteousness', dayNum: 2 },
-                  { day: 'Wed', armor: 'Shoes of Peace', dayNum: 3 },
-                  { day: 'Thu', armor: 'Shield of Faith', dayNum: 4 },
-                  { day: 'Fri', armor: 'Helmet of Salvation', dayNum: 5 },
-                  { day: 'Sat', armor: 'Sword of the Spirit', dayNum: 6 },
-                  { day: 'Sun', armor: 'Prayer', dayNum: 0 },
-                ].map((item) => {
-                  const dayOfWeek = new Date().getDay();
-                  const isToday = item.dayNum === dayOfWeek;
-                  const hasReflection = reflections.some(r => r.day_of_week === (item.dayNum === 0 ? 7 : item.dayNum));
+              {/* Expanded Content */}
+              {isExpanded && (
+                <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+                  {/* Scripture Text */}
+                  <View style={{
+                    padding: 12,
+                    backgroundColor: 'rgba(255,255,255,0.7)',
+                    borderRadius: 8,
+                    marginBottom: 12,
+                  }}>
+                    <Text style={{
+                      fontSize: 14,
+                      color: piece.textColor,
+                      fontStyle: 'italic',
+                      lineHeight: 20,
+                    }}>
+                      "{piece.scripture_text}"
+                    </Text>
+                  </View>
 
-                  return (
-                    <View
-                      key={item.day}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        padding: 10,
-                        backgroundColor: isToday ? '#e0f2fe' : colors.background.primary,
-                        borderRadius: 8,
-                        borderWidth: isToday ? 2 : 1,
-                        borderColor: isToday ? '#0284c7' : colors.border.default,
-                      }}
-                    >
-                      <View style={{ width: 40 }}>
-                        <Text style={{
-                          fontSize: 12,
-                          fontWeight: isToday ? '800' : '600',
-                          color: isToday ? '#0284c7' : colors.text.secondary
-                        }}>
-                          {item.day}
-                        </Text>
-                      </View>
+                  {/* Description */}
+                  <Text style={{
+                    fontSize: 14,
+                    color: piece.textColor,
+                    lineHeight: 20,
+                    marginBottom: 16,
+                  }}>
+                    {piece.description}
+                  </Text>
+
+                  {/* Today's Applications */}
+                  {pieceApplications.length > 0 && (
+                    <View>
                       <Text style={{
-                        flex: 1,
-                        fontSize: 13,
-                        fontWeight: isToday ? '700' : '500',
-                        color: isToday ? '#0c4a6e' : colors.text.primary
+                        fontSize: 11,
+                        fontWeight: '800',
+                        letterSpacing: 1.5,
+                        color: piece.textColor,
+                        marginBottom: 8,
+                        opacity: 0.8,
                       }}>
-                        {item.armor}
+                        TODAY'S APPLICATIONS
                       </Text>
-                      {hasReflection && (
-                        <Text style={{ fontSize: 16 }}>✓</Text>
-                      )}
-                      {isToday && (
-                        <View style={{
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          backgroundColor: '#0284c7',
-                          borderRadius: 4,
-                        }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>
-                            TODAY
+                      {pieceApplications.map((app, index) => (
+                        <View
+                          key={index}
+                          style={{
+                            padding: 12,
+                            backgroundColor: 'rgba(255,255,255,0.5)',
+                            borderRadius: 8,
+                            marginBottom: 8,
+                            borderLeftWidth: 3,
+                            borderLeftColor: piece.color,
+                          }}
+                        >
+                          <Text style={{
+                            fontSize: 13,
+                            color: piece.textColor,
+                            lineHeight: 18,
+                          }}>
+                            {app.application}
+                          </Text>
+                          <Text style={{
+                            fontSize: 11,
+                            color: piece.textColor,
+                            opacity: 0.7,
+                            marginTop: 4,
+                          }}>
+                            — {app.book_name} {app.chapter_number}
                           </Text>
                         </View>
-                      )}
+                      ))}
                     </View>
-                  );
-                })}
-              </View>
-            </View>
-          </>
-        )}
-
-        {/* Current Armor Piece (Old weekly system) - Only show when there's NO active battle */}
-        {currentArmor && !activeBattle && (
-          <View style={{
-            marginBottom: 20,
-            padding: 20,
-            backgroundColor: '#fef3c7',
-            borderRadius: 16,
-            borderLeftWidth: 6,
-            borderLeftColor: '#f59e0b',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
-          }}>
-            <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 }}>
-              THIS WEEK'S ARMOR
-            </Text>
-            <Text style={{ fontSize: 24, fontWeight: '800', marginBottom: 8, color: '#92400e' }}>
-              {currentArmor.armor_name}
-            </Text>
-            <Text style={{ fontSize: 14, color: '#78350f', marginBottom: 8, lineHeight: 20 }}>
-              {currentArmor.description}
-            </Text>
-            <Text style={{ fontSize: 13, color: '#92400e', fontWeight: '600', fontStyle: 'italic' }}>
-              {currentArmor.scripture_reference}
-            </Text>
-          </View>
-        )}
-
-        {/* Active Battle or Start Battle */}
-        {!activeBattle ? (
-          <View style={{
-            marginBottom: 20,
-            padding: 20,
-            backgroundColor: colors.background.secondary,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: colors.border.default,
-          }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 12, color: colors.text.primary }}>
-              Ready for Battle?
-            </Text>
-            <Text style={{ fontSize: 15, color: colors.text.secondary, marginBottom: 16, lineHeight: 22 }}>
-              Start this week's battle by identifying what you're facing. God will provide His word to strengthen you.
-            </Text>
-            <TouchableOpacity
-              onPress={startBattle}
-              style={{
-                padding: 16,
-                backgroundColor: colors.accent.primary,
-                borderRadius: 12,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>
-                🛡️ Start This Week's Battle
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {/* Active Battle Card */}
-            <View style={{
-              marginBottom: 20,
-              padding: 20,
-              backgroundColor: '#dcfce7',
-              borderRadius: 16,
-              borderLeftWidth: 6,
-              borderLeftColor: '#10b981',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 4,
-            }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <Text style={{ fontSize: 11, color: '#065f46', fontWeight: '800', letterSpacing: 1.5 }}>
-                  ACTIVE BATTLE
-                </Text>
-                <View style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  backgroundColor: '#10b981',
-                  borderRadius: 6,
-                }}>
-                  <Text style={{ fontSize: 12, color: '#fff', fontWeight: '700' }}>✓ In Progress</Text>
-                </View>
-              </View>
-              <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#065f46' }}>
-                {activeBattle.battle_text}
-              </Text>
-              <View style={{
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                backgroundColor: '#6ee7b7',
-                borderRadius: 6,
-                alignSelf: 'flex-start',
-              }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#065f46' }}>
-                  {activeBattle.battle_tag}
-                </Text>
-              </View>
-            </View>
-
-            {/* Battle Verse */}
-            <TouchableOpacity
-              onPress={viewBattleVerse}
-              style={{
-                marginBottom: 20,
-                padding: 18,
-                backgroundColor: '#dbeafe',
-                borderRadius: 16,
-                borderLeftWidth: 6,
-                borderLeftColor: '#2563eb',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 }}>
-                YOUR BATTLE VERSE
-              </Text>
-              <Text style={{ fontSize: 15, color: '#1e3a8a', marginBottom: 8 }}>
-                Tap to view your assigned verse for this battle
-              </Text>
-              <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
-                View Verse →
-              </Text>
-            </TouchableOpacity>
-
-            {/* Weekly Progress */}
-            <View style={{
-              marginBottom: 20,
-              padding: 18,
-              backgroundColor: colors.background.secondary,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: colors.border.default,
-            }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: colors.text.primary }}>
-                This Week's Reflections
-              </Text>
-              {reflections.length === 0 ? (
-                <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 16 }}>
-                  No reflections yet this week. Add your first reflection to track your spiritual journey.
-                </Text>
-              ) : (
-                <View style={{ marginBottom: 16 }}>
-                  {reflections.map((reflection, index) => (
-                    <View
-                      key={reflection.id}
-                      style={{
-                        marginBottom: 8,
-                        padding: 12,
-                        backgroundColor: colors.background.primary,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: colors.border.default,
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 4 }}>
-                        {reflection.reflection_type === 'daily' ? '📝 Daily' : reflection.reflection_type === 'victory' ? '🎉 Victory' : '💭 Midweek'}
-                      </Text>
-                      <Text style={{ fontSize: 14, color: colors.text.primary, lineHeight: 20 }} numberOfLines={2}>
-                        {reflection.reflection_text}
-                      </Text>
-                    </View>
-                  ))}
+                  )}
                 </View>
               )}
-              <TouchableOpacity
-                onPress={addReflection}
-                style={{
-                  padding: 14,
-                  backgroundColor: colors.accent.secondary,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text.primary }}>
-                  + Add Daily Reflection
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={completeWeek}
-                style={{
-                  padding: 14,
-                  backgroundColor: '#10b981',
-                  borderRadius: 10,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
-                  🏆 Complete This Week
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+            </TouchableOpacity>
+          );
+        })}
 
-        {/* Ephesians 6 Reference */}
+        {/* Ephesians 6 Full Reference */}
         <View style={{
           padding: 16,
           backgroundColor: colors.background.tertiary,
           borderRadius: 12,
+          marginTop: 8,
           marginBottom: 20,
         }}>
           <Text style={{ fontSize: 12, color: colors.text.secondary, lineHeight: 18, fontStyle: 'italic' }}>
