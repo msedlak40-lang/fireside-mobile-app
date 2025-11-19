@@ -10,6 +10,22 @@ character_type: string | null;
 one_sentence_summary: string | null;
 total_lessons: number | null;
 created_at: string | null;
+// Enhanced profile fields
+era: string | null;
+tribe: string | null;
+key_locations: string[] | null;
+known_for: string[] | null;
+character_traits: string[] | null;
+};
+
+export type CharacterRelationship = {
+id: number;
+character_id: number;
+related_character_id: number | null;
+related_character_name: string;
+relationship_type: string;
+notes: string | null;
+created_at: string | null;
 };
 
 
