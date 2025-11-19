@@ -48,6 +48,9 @@ export default function Auth() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: 'fireside://auth/callback',
+        },
       });
       if (error) throw error;
       Alert.alert(
@@ -79,7 +82,9 @@ export default function Auth() {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'fireside://auth/callback',
+      });
       if (error) throw error;
 
       Alert.alert(
