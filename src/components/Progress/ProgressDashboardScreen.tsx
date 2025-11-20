@@ -1335,7 +1335,10 @@ const openTodayDevotion = useCallback(() => {
                 </View>
 
                 {/* Scrollable Content Area */}
-                <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
+                <ScrollView
+                  style={{ paddingHorizontal: 20 }}
+                  contentContainerStyle={{ paddingBottom: 20 }}
+                >
                   {/* Add VOTD Button */}
                   {verseOfTheDay && !votdSaved && (
                     <TouchableOpacity
