@@ -1219,7 +1219,7 @@ const openTodayDevotion = useCallback(() => {
                 </View>
 
                 {/* Filter Chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, marginBottom: 16 }}>
                   <TouchableOpacity
                     onPress={() => setSelectedBattleFilter(null)}
                     style={{
@@ -1273,7 +1273,7 @@ const openTodayDevotion = useCallback(() => {
                   </TouchableOpacity>
                 </ScrollView>
 
-                <ScrollView style={{ paddingHorizontal: 20 }}>
+                <ScrollView style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingTop: 4 }}>
                   {/* Add VOTD Button */}
                   {verseOfTheDay && !votdSaved && (
                     <TouchableOpacity
@@ -1367,19 +1367,6 @@ const openTodayDevotion = useCallback(() => {
                             >
                               <View style={{ flexDirection: 'row', position: 'absolute', top: 10, right: 10, gap: 8 }}>
                                 <TouchableOpacity
-                                  onPress={() => shareVerseHandler(verse)}
-                                  style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 16,
-                                    backgroundColor: '#3b82f6',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
-                                >
-                                  <Text style={{ fontSize: 16 }}>📤</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
                                   onPress={() => toggleFavoriteHandler(verse.id, verse.is_favorite)}
                                   style={{
                                     width: 32,
@@ -1407,26 +1394,31 @@ const openTodayDevotion = useCallback(() => {
                                 </TouchableOpacity>
                               </View>
 
-                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 104 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 72 }}>
                                 {verse.verse_reference}
                               </Text>
-                              <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
+                              <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', marginBottom: 8 }}>
                                 "{verse.verse_text}"
                               </Text>
-                              {verse.battle_tag && (
-                                <View style={{
-                                  marginTop: 8,
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 4,
-                                  backgroundColor: '#fde68a',
-                                  borderRadius: 6,
-                                  alignSelf: 'flex-start',
-                                }}>
-                                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400e' }}>
-                                    {verse.battle_tag}
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                {verse.battle_tag ? (
+                                  <View style={{
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4,
+                                    backgroundColor: '#fde68a',
+                                    borderRadius: 6,
+                                  }}>
+                                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400e' }}>
+                                      {verse.battle_tag}
+                                    </Text>
+                                  </View>
+                                ) : <View />}
+                                <TouchableOpacity onPress={() => shareVerseHandler(verse)}>
+                                  <Text style={{ fontSize: 13, color: '#3b82f6', fontWeight: '600' }}>
+                                    Share 📤
                                   </Text>
-                                </View>
-                              )}
+                                </TouchableOpacity>
+                              </View>
                             </View>
                           ))}
                         </View>
@@ -1477,19 +1469,6 @@ const openTodayDevotion = useCallback(() => {
                               >
                                 <View style={{ flexDirection: 'row', position: 'absolute', top: 10, right: 10, gap: 8 }}>
                                   <TouchableOpacity
-                                    onPress={() => shareVerseHandler(verse)}
-                                    style={{
-                                      width: 32,
-                                      height: 32,
-                                      borderRadius: 16,
-                                      backgroundColor: '#3b82f6',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}
-                                  >
-                                    <Text style={{ fontSize: 16 }}>📤</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
                                     onPress={() => toggleFavoriteHandler(verse.id, verse.is_favorite)}
                                     style={{
                                       width: 32,
@@ -1517,26 +1496,31 @@ const openTodayDevotion = useCallback(() => {
                                   </TouchableOpacity>
                                 </View>
 
-                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 104 }}>
+                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 72 }}>
                                   {verse.verse_reference}
                                 </Text>
-                                <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f' }}>
+                                <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', marginBottom: 8 }}>
                                   "{verse.verse_text}"
                                 </Text>
-                                {verse.battle_tag && (
-                                  <View style={{
-                                    marginTop: 8,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 4,
-                                    backgroundColor: '#fde68a',
-                                    borderRadius: 6,
-                                    alignSelf: 'flex-start',
-                                  }}>
-                                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400e' }}>
-                                      {verse.battle_tag}
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  {verse.battle_tag ? (
+                                    <View style={{
+                                      paddingHorizontal: 10,
+                                      paddingVertical: 4,
+                                      backgroundColor: '#fde68a',
+                                      borderRadius: 6,
+                                    }}>
+                                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400e' }}>
+                                        {verse.battle_tag}
+                                      </Text>
+                                    </View>
+                                  ) : <View />}
+                                  <TouchableOpacity onPress={() => shareVerseHandler(verse)}>
+                                    <Text style={{ fontSize: 13, color: '#3b82f6', fontWeight: '600' }}>
+                                      Share 📤
                                     </Text>
-                                  </View>
-                                )}
+                                  </TouchableOpacity>
+                                </View>
                               </View>
                             ))}
                           </View>

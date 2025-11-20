@@ -271,6 +271,13 @@ export default function BookChapterPicker({ books, initialBookName, initialChapt
     loadRecent()
   }, [selectedBook, chapter, translation])
 
+  // Reload recent entries when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadRecent()
+    }, [loadRecent])
+  )
+
   const go = useCallback(() => {
     if (selectedBook && chapter) {
       const chNum = Number(chapter)

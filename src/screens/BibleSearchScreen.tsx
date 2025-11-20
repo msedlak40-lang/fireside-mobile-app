@@ -641,37 +641,41 @@ export default function BibleSearchScreen() {
               </View>
             </View>
 
-            {/* Popular Themes */}
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.secondary, marginBottom: 12 }}>
-              Or select a popular theme:
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {POPULAR_THEMES.map((theme) => (
-                <Pressable
-                  key={theme.id}
-                  onPress={() => {
-                    setSelectedTheme(theme.id);
-                    setThemeInput('');
-                    handleThemeSearch(theme.id);
-                  }}
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    backgroundColor: selectedTheme === theme.id ? colors.accent.primary : colors.background.secondary,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: selectedTheme === theme.id ? colors.accent.primary : colors.border.default,
-                  }}
-                >
-                  <Text style={{
-                    fontWeight: '600',
-                    color: selectedTheme === theme.id ? colors.text.primary : colors.text.secondary,
-                  }}>
-                    {theme.emoji} {theme.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            {/* Popular Themes - only show when no results */}
+            {results.length === 0 && !loading && (
+              <>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.secondary, marginBottom: 12 }}>
+                  Or select a popular theme:
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {POPULAR_THEMES.map((theme) => (
+                    <Pressable
+                      key={theme.id}
+                      onPress={() => {
+                        setSelectedTheme(theme.id);
+                        setThemeInput('');
+                        handleThemeSearch(theme.id);
+                      }}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        backgroundColor: selectedTheme === theme.id ? colors.accent.primary : colors.background.secondary,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor: selectedTheme === theme.id ? colors.accent.primary : colors.border.default,
+                      }}
+                    >
+                      <Text style={{
+                        fontWeight: '600',
+                        color: selectedTheme === theme.id ? colors.text.primary : colors.text.secondary,
+                      }}>
+                        {theme.emoji} {theme.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         )}
 
