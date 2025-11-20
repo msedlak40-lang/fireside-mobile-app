@@ -222,7 +222,7 @@ export default function CharacterDetailScreen() {
       ) : hasStarted ? (
         <View style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 8 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#1e40af' }}>STUDY IN PROGRESS</Text>
-          <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
+          <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '600', color: '#1e3a8a' }}>
             {completedLessonsCount} of {lessons.length} lessons completed
           </Text>
           <View style={{ marginTop: 8, height: 8, backgroundColor: '#bfdbfe', borderRadius: 4, overflow: 'hidden' }}>

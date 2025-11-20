@@ -406,13 +406,10 @@ const openTodayDevotion = useCallback(() => {
     try {
       if (!verseOfTheDay || isSavingBattleVerse) return;
 
-      setIsSavingBattleVerse(true);
-
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth?.user?.id;
       if (!userId) {
         Alert.alert('Error', 'You must be signed in to save battle verses');
-        setIsSavingBattleVerse(false);
         return;
       }
 
@@ -420,36 +417,64 @@ const openTodayDevotion = useCallback(() => {
       const match = verseOfTheDay.reference.match(/^(.+?)\s+(\d+):(\d+)$/);
       if (!match) {
         Alert.alert('Error', 'Invalid verse reference format');
-        setIsSavingBattleVerse(false);
         return;
       }
 
       const [, bookName, chapter, verse] = match;
 
-      const result = await saveBattleVerse(
-        userId,
-        bookName,
-        parseInt(chapter),
-        parseInt(verse),
-        verseOfTheDay.reference,
-        verseOfTheDay.verse_text
-      );
+      // Show battle tag selection
+      const battleTagOptions: any[] = [
+        { text: 'Fear', onPress: () => saveWithTag('fear') },
+        { text: 'Anger', onPress: () => saveWithTag('anger') },
+        { text: 'Temptation', onPress: () => saveWithTag('temptation') },
+        { text: 'Doubt', onPress: () => saveWithTag('doubt') },
+        { text: 'Loneliness', onPress: () => saveWithTag('loneliness') },
+        { text: 'Identity', onPress: () => saveWithTag('identity') },
+        { text: 'Purpose', onPress: () => saveWithTag('purpose') },
+        { text: 'General (no tag)', onPress: () => saveWithTag(null) },
+        { text: 'Cancel', style: 'cancel' },
+      ];
 
-      if (result) {
-        Alert.alert('Saved!', 'Verse added to your Battle Verses collection');
-        setVotdSaved(true);
-        // Refresh battle verses if modal is open
-        if (showBattleVersesModal) {
-          loadBattleVerses();
+      const saveWithTag = async (tag: string | null) => {
+        try {
+          setIsSavingBattleVerse(true);
+
+          const result = await saveBattleVerse(
+            userId,
+            bookName,
+            parseInt(chapter),
+            parseInt(verse),
+            verseOfTheDay.reference,
+            verseOfTheDay.verse_text,
+            tag as any
+          );
+
+          if (result) {
+            Alert.alert('Saved!', 'Verse added to your Battle Verses collection');
+            setVotdSaved(true);
+            // Refresh battle verses if modal is open
+            if (showBattleVersesModal) {
+              loadBattleVerses();
+            }
+          } else {
+            Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
+          }
+        } catch (err) {
+          console.error('[ProgressDashboard] Save battle verse failed:', err);
+          Alert.alert('Error', 'Failed to save verse. Please try again.');
+        } finally {
+          setIsSavingBattleVerse(false);
         }
-      } else {
-        Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
-      }
+      };
+
+      Alert.alert(
+        'Tag this verse',
+        'Choose a battle category for this verse:',
+        battleTagOptions
+      );
     } catch (err) {
-      console.error('[ProgressDashboard] Save battle verse failed:', err);
-      Alert.alert('Error', 'Failed to save verse. Please try again.');
-    } finally {
-      setIsSavingBattleVerse(false);
+      console.error('[ProgressDashboard] Save battle verse handler failed:', err);
+      Alert.alert('Error', 'Failed to process request. Please try again.');
     }
   };
 
@@ -595,8 +620,11 @@ const openTodayDevotion = useCallback(() => {
             <Text style={{ fontSize: 20, fontWeight: '800', marginBottom: 8, color: '#92400e' }}>
               {currentArmor.armor_name}
             </Text>
-            <Text style={{ fontSize: 14, color: '#78350f', marginBottom: 12, lineHeight: 20 }}>
+            <Text style={{ fontSize: 14, color: '#78350f', marginBottom: 4, lineHeight: 20 }}>
               {currentArmor.description}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#92400e', fontStyle: 'italic', marginBottom: 12 }}>
+              Daily applications update every 24 hours
             </Text>
             <View style={{
               flexDirection: 'row',
@@ -607,25 +635,14 @@ const openTodayDevotion = useCallback(() => {
               <Text style={{ fontSize: 13, color: '#92400e', fontWeight: '600' }}>
                 {currentArmor.scripture_reference}
               </Text>
-              {activeBattle ? (
-                <View style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  backgroundColor: '#10b981',
-                  borderRadius: 8,
-                }}>
-                  <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>✓ Active</Text>
-                </View>
-              ) : (
-                <View style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  backgroundColor: '#f59e0b',
-                  borderRadius: 8,
-                }}>
-                  <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>Start Battle →</Text>
-                </View>
-              )}
+              <View style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                backgroundColor: '#f59e0b',
+                borderRadius: 8,
+              }}>
+                <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>View All 7 →</Text>
+              </View>
             </View>
           </TouchableOpacity>
         )}
@@ -1273,13 +1290,14 @@ const openTodayDevotion = useCallback(() => {
                   </TouchableOpacity>
                 </ScrollView>
 
-                <ScrollView style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingTop: 4 }}>
+                <ScrollView style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingTop: 8 }}>
                   {/* Add VOTD Button */}
                   {verseOfTheDay && !votdSaved && (
                     <TouchableOpacity
                       onPress={saveBattleVerseHandler}
                       disabled={isSavingBattleVerse}
                       style={{
+                        marginTop: 8,
                         marginBottom: 20,
                         padding: 16,
                         backgroundColor: '#dbeafe',

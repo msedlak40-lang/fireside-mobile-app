@@ -297,19 +297,9 @@ export default function ArmorUpHome() {
                     {piece.description}
                   </Text>
 
-                  {/* Today's Applications */}
+                  {/* Applications */}
                   {pieceApplications.length > 0 && (
-                    <View>
-                      <Text style={{
-                        fontSize: 11,
-                        fontWeight: '800',
-                        letterSpacing: 1.5,
-                        color: piece.textColor,
-                        marginBottom: 8,
-                        opacity: 0.8,
-                      }}>
-                        TODAY'S APPLICATIONS
-                      </Text>
+                    <View style={{ marginTop: 4 }}>
                       {pieceApplications.map((app, index) => (
                         <View
                           key={index}
@@ -328,14 +318,6 @@ export default function ArmorUpHome() {
                             lineHeight: 18,
                           }}>
                             {app.application}
-                          </Text>
-                          <Text style={{
-                            fontSize: 11,
-                            color: piece.textColor,
-                            opacity: 0.7,
-                            marginTop: 4,
-                          }}>
-                            — {app.book_name} {app.chapter_number}
                           </Text>
                         </View>
                       ))}
