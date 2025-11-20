@@ -1,0 +1,694 @@
+{
+  "character_updates": [
+    {
+      "name": "Abraham",
+      "era": "Patriarchs",
+      "tribe": null,
+      "key_locations": ["Ur", "Haran", "Canaan", "Egypt"],
+      "known_for": ["Father of faith", "Covenant with God", "Willingness to sacrifice Isaac"],
+      "character_traits": ["Faith", "Obedience", "Hospitality", "Trust", "Patience"]
+    },
+    {
+      "name": "Daniel",
+      "era": "Exile",
+      "tribe": "Judah",
+      "key_locations": ["Jerusalem", "Babylon", "Lions' den"],
+      "known_for": ["Interpreted dreams", "Survived lions' den", "Prophetic visions"],
+      "character_traits": ["Integrity", "Courage", "Wisdom", "Prayer", "Faithfulness"]
+    },
+    {
+      "name": "David",
+      "era": "United Monarchy",
+      "tribe": "Judah",
+      "key_locations": ["Bethlehem", "Jerusalem", "Wilderness of En Gedi", "Hebron"],
+      "known_for": ["Defeated Goliath", "Unified Israel as King", "Wrote many Psalms"],
+      "character_traits": ["Courage", "Worship", "Repentance", "Leadership", "Passion"]
+    },
+    {
+      "name": "Deborah",
+      "era": "Judges",
+      "tribe": "Ephraim",
+      "key_locations": ["Hill country of Ephraim", "Mount Tabor"],
+      "known_for": ["Prophet and judge of Israel", "Led victory over Canaanites"],
+      "character_traits": ["Wisdom", "Leadership", "Courage", "Faith", "Justice"]
+    },
+    {
+      "name": "Elijah",
+      "era": "Divided Kingdom",
+      "tribe": null,
+      "key_locations": ["Mount Carmel", "Brook Cherith", "Zarephath", "Mount Horeb"],
+      "known_for": ["Confronted prophets of Baal", "Taken to heaven in chariot", "Fed by ravens"],
+      "character_traits": ["Boldness", "Faith", "Zeal", "Courage", "Devotion"]
+    },
+    {
+      "name": "Esther",
+      "era": "Exile",
+      "tribe": "Benjamin",
+      "key_locations": ["Susa", "Persia"],
+      "known_for": ["Saved Jewish people from genocide", "Queen of Persia", "Brave approach to king"],
+      "character_traits": ["Courage", "Wisdom", "Selflessness", "Strategic thinking", "Faith"]
+    },
+    {
+      "name": "Gideon",
+      "era": "Judges",
+      "tribe": "Manasseh",
+      "key_locations": ["Ophrah", "Valley of Jezreel"],
+      "known_for": ["Defeated Midianites with 300 men", "Asked for signs from God"],
+      "character_traits": ["Faith", "Obedience", "Humility", "Courage", "Doubt"]
+    },
+    {
+      "name": "Hosea",
+      "era": "Divided Kingdom",
+      "tribe": null,
+      "key_locations": ["Northern Kingdom of Israel"],
+      "known_for": ["Married unfaithful wife as prophetic sign", "Prophesied God's love"],
+      "character_traits": ["Faithfulness", "Obedience", "Perseverance", "Love", "Forgiveness"]
+    },
+    {
+      "name": "Isaiah",
+      "era": "Divided Kingdom",
+      "tribe": null,
+      "key_locations": ["Jerusalem", "Judah"],
+      "known_for": ["Prophesied coming Messiah", "Vision of God's throne", "Called by God"],
+      "character_traits": ["Holiness", "Obedience", "Boldness", "Vision", "Dedication"]
+    },
+    {
+      "name": "Jacob",
+      "era": "Patriarchs",
+      "tribe": null,
+      "key_locations": ["Canaan", "Haran", "Bethel", "Peniel"],
+      "known_for": ["Wrestled with God", "Father of 12 tribes", "Deceived for birthright"],
+      "character_traits": ["Perseverance", "Transformation", "Cunning", "Faith", "Determination"]
+    },
+    {
+      "name": "Jeremiah",
+      "era": "Exile",
+      "tribe": "Benjamin",
+      "key_locations": ["Jerusalem", "Anathoth", "Egypt"],
+      "known_for": ["Weeping prophet", "Warned of Jerusalem's fall", "Faithful despite rejection"],
+      "character_traits": ["Faithfulness", "Courage", "Compassion", "Perseverance", "Obedience"]
+    },
+    {
+      "name": "Jesus Christ",
+      "era": "Life of Christ",
+      "tribe": "Judah",
+      "key_locations": ["Bethlehem", "Nazareth", "Jerusalem", "Galilee"],
+      "known_for": ["Son of God", "Died for humanity's sins", "Rose from the dead"],
+      "character_traits": ["Love", "Holiness", "Compassion", "Authority", "Humility"]
+    },
+    {
+      "name": "Job",
+      "era": "Patriarchs",
+      "tribe": null,
+      "key_locations": ["Land of Uz"],
+      "known_for": ["Endured suffering faithfully", "Questioned God", "Restored double"],
+      "character_traits": ["Patience", "Integrity", "Faithfulness", "Perseverance", "Humility"]
+    },
+    {
+      "name": "John",
+      "era": "Early Church",
+      "tribe": null,
+      "key_locations": ["Galilee", "Jerusalem", "Patmos", "Ephesus"],
+      "known_for": ["Beloved disciple", "Wrote Gospel and Revelation", "Exiled to Patmos"],
+      "character_traits": ["Love", "Devotion", "Boldness", "Vision", "Faithfulness"]
+    },
+    {
+      "name": "Jonah",
+      "era": "Divided Kingdom",
+      "tribe": null,
+      "key_locations": ["Nineveh", "Tarshish", "Belly of fish"],
+      "known_for": ["Swallowed by great fish", "Preached to Nineveh", "Ran from God"],
+      "character_traits": ["Disobedience", "Repentance", "Reluctance", "Anger", "Obedience"]
+    },
+    {
+      "name": "Jonathan",
+      "era": "United Monarchy",
+      "tribe": "Benjamin",
+      "key_locations": ["Gibeah", "Philistine garrison", "Wilderness"],
+      "known_for": ["Covenant friendship with David", "Military valor", "Selfless loyalty"],
+      "character_traits": ["Loyalty", "Courage", "Selflessness", "Honor", "Faith"]
+    },
+    {
+      "name": "Joseph",
+      "era": "Egyptian Bondage",
+      "tribe": null,
+      "key_locations": ["Canaan", "Egypt", "Prison", "Pharaoh's palace"],
+      "known_for": ["Sold into slavery by brothers", "Interpreted dreams", "Saved Egypt from famine"],
+      "character_traits": ["Integrity", "Forgiveness", "Wisdom", "Faithfulness", "Leadership"]
+    },
+    {
+      "name": "Joshua",
+      "era": "Conquest",
+      "tribe": "Ephraim",
+      "key_locations": ["Wilderness", "Jericho", "Ai", "Canaan"],
+      "known_for": ["Led conquest of Canaan", "Walls of Jericho fell", "Succeeded Moses"],
+      "character_traits": ["Courage", "Obedience", "Leadership", "Faith", "Strategic"]
+    },
+    {
+      "name": "Mary",
+      "era": "Life of Christ",
+      "tribe": "Judah",
+      "key_locations": ["Nazareth", "Bethlehem", "Jerusalem", "Cana"],
+      "known_for": ["Mother of Jesus", "Virgin birth", "Pondered things in her heart"],
+      "character_traits": ["Obedience", "Faith", "Humility", "Devotion", "Trust"]
+    },
+    {
+      "name": "Mary Magdalene",
+      "era": "Life of Christ",
+      "tribe": null,
+      "key_locations": ["Magdala", "Galilee", "Jerusalem", "Tomb"],
+      "known_for": ["First witness to resurrection", "Delivered from demons", "Devoted follower"],
+      "character_traits": ["Devotion", "Courage", "Faithfulness", "Gratitude", "Love"]
+    },
+    {
+      "name": "Moses",
+      "era": "Exodus & Wilderness",
+      "tribe": "Levi",
+      "key_locations": ["Egypt", "Mount Sinai", "Wilderness", "Midian"],
+      "known_for": ["Led Exodus from Egypt", "Received Ten Commandments", "Parted Red Sea"],
+      "character_traits": ["Humility", "Obedience", "Leadership", "Courage", "Intercession"]
+    },
+    {
+      "name": "Nehemiah",
+      "era": "Post-Exile",
+      "tribe": "Judah",
+      "key_locations": ["Susa", "Jerusalem"],
+      "known_for": ["Rebuilt Jerusalem's walls", "Reformed the people", "Cupbearer to king"],
+      "character_traits": ["Leadership", "Prayer", "Courage", "Determination", "Organization"]
+    },
+    {
+      "name": "Paul",
+      "era": "Early Church",
+      "tribe": "Benjamin",
+      "key_locations": ["Tarsus", "Damascus", "Jerusalem", "Rome"],
+      "known_for": ["Converted on Damascus road", "Missionary journeys", "Wrote many epistles"],
+      "character_traits": ["Zeal", "Transformation", "Perseverance", "Boldness", "Love"]
+    },
+    {
+      "name": "Peter",
+      "era": "Early Church",
+      "tribe": null,
+      "key_locations": ["Galilee", "Caesarea Philippi", "Jerusalem", "Rome"],
+      "known_for": ["Walked on water", "Denied Jesus three times", "Leader of early church"],
+      "character_traits": ["Boldness", "Impulsiveness", "Repentance", "Leadership", "Faith"]
+    },
+    {
+      "name": "Ruth",
+      "era": "Judges",
+      "tribe": null,
+      "key_locations": ["Moab", "Bethlehem"],
+      "known_for": ["Loyalty to Naomi", "Married Boaz", "Ancestor of David"],
+      "character_traits": ["Loyalty", "Faithfulness", "Devotion", "Kindness", "Humility"]
+    },
+    {
+      "name": "Samson",
+      "era": "Judges",
+      "tribe": "Dan",
+      "key_locations": ["Zorah", "Gaza", "Valley of Sorek"],
+      "known_for": ["Supernatural strength", "Killed lion", "Betrayed by Delilah"],
+      "character_traits": ["Strength", "Impulsiveness", "Passion", "Vengeance", "Repentance"]
+    },
+    {
+      "name": "Solomon",
+      "era": "United Monarchy",
+      "tribe": "Judah",
+      "key_locations": ["Jerusalem", "Temple"],
+      "known_for": ["Wisest man", "Built the Temple", "Wrote Proverbs and Ecclesiastes"],
+      "character_traits": ["Wisdom", "Wealth", "Leadership", "Pride", "Compromise"]
+    },
+    {
+      "name": "The Prodigal Son",
+      "era": "Life of Christ",
+      "tribe": null,
+      "key_locations": ["Father's house", "Distant country"],
+      "known_for": ["Squandered inheritance", "Returned to father", "Parable of grace"],
+      "character_traits": ["Rebellion", "Repentance", "Humility", "Restoration", "Gratitude"]
+    },
+    {
+      "name": "Thomas",
+      "era": "Early Church",
+      "tribe": null,
+      "key_locations": ["Galilee", "Jerusalem", "Upper room"],
+      "known_for": ["Doubted resurrection", "My Lord and my God declaration", "Willing to die with Jesus"],
+      "character_traits": ["Doubt", "Loyalty", "Courage", "Honesty", "Faith"]
+    }
+  ],
+  "relationships": [
+    {
+      "character_name": "Abraham",
+      "related_name": "Sarah",
+      "relationship_type": "spouse",
+      "notes": null
+    },
+    {
+      "character_name": "Abraham",
+      "related_name": "Isaac",
+      "relationship_type": "child",
+      "notes": "Son of promise"
+    },
+    {
+      "character_name": "Abraham",
+      "related_name": "Lot",
+      "relationship_type": "sibling",
+      "notes": "Nephew"
+    },
+    {
+      "character_name": "Daniel",
+      "related_name": "Shadrach",
+      "relationship_type": "friend",
+      "notes": "Fellow exile"
+    },
+    {
+      "character_name": "Daniel",
+      "related_name": "Meshach",
+      "relationship_type": "friend",
+      "notes": "Fellow exile"
+    },
+    {
+      "character_name": "Daniel",
+      "related_name": "Abednego",
+      "relationship_type": "friend",
+      "notes": "Fellow exile"
+    },
+    {
+      "character_name": "David",
+      "related_name": "Jesse",
+      "relationship_type": "father",
+      "notes": null
+    },
+    {
+      "character_name": "David",
+      "related_name": "Jonathan",
+      "relationship_type": "friend",
+      "notes": "Covenant friendship"
+    },
+    {
+      "character_name": "David",
+      "related_name": "Saul",
+      "relationship_type": "rival",
+      "notes": "Also father-in-law"
+    },
+    {
+      "character_name": "David",
+      "related_name": "Bathsheba",
+      "relationship_type": "spouse",
+      "notes": null
+    },
+    {
+      "character_name": "David",
+      "related_name": "Solomon",
+      "relationship_type": "child",
+      "notes": "by Bathsheba, successor"
+    },
+    {
+      "character_name": "David",
+      "related_name": "Samuel",
+      "relationship_type": "mentor",
+      "notes": "Anointed David as king"
+    },
+    {
+      "character_name": "Deborah",
+      "related_name": "Barak",
+      "relationship_type": "student",
+      "notes": "Military commander she led"
+    },
+    {
+      "character_name": "Elijah",
+      "related_name": "Elisha",
+      "relationship_type": "student",
+      "notes": "Successor prophet"
+    },
+    {
+      "character_name": "Elijah",
+      "related_name": "Ahab",
+      "relationship_type": "rival",
+      "notes": "Wicked king of Israel"
+    },
+    {
+      "character_name": "Elijah",
+      "related_name": "Jezebel",
+      "relationship_type": "rival",
+      "notes": "Queen who persecuted prophets"
+    },
+    {
+      "character_name": "Esther",
+      "related_name": "Mordecai",
+      "relationship_type": "father",
+      "notes": "Adoptive father, cousin"
+    },
+    {
+      "character_name": "Esther",
+      "related_name": "Xerxes",
+      "relationship_type": "spouse",
+      "notes": "King of Persia"
+    },
+    {
+      "character_name": "Esther",
+      "related_name": "Haman",
+      "relationship_type": "rival",
+      "notes": "Plotted genocide of Jews"
+    },
+    {
+      "character_name": "Gideon",
+      "related_name": "Joash",
+      "relationship_type": "father",
+      "notes": null
+    },
+    {
+      "character_name": "Jacob",
+      "related_name": "Isaac",
+      "relationship_type": "father",
+      "notes": null
+    },
+    {
+      "character_name": "Jacob",
+      "related_name": "Rebekah",
+      "relationship_type": "mother",
+      "notes": null
+    },
+    {
+      "character_name": "Jacob",
+      "related_name": "Esau",
+      "relationship_type": "sibling",
+      "notes": "Twin brother"
+    },
+    {
+      "character_name": "Jacob",
+      "related_name": "Rachel",
+      "relationship_type": "spouse",
+      "notes": "Beloved wife"
+    },
+    {
+      "character_name": "Jacob",
+      "related_name": "Leah",
+      "relationship_type": "spouse",
+      "notes": "First wife"
+    },
+    {
+      "character_name": "Jacob",
+      "related_name": "Joseph",
+      "relationship_type": "child",
+      "notes": "Favorite son"
+    },
+    {
+      "character_name": "Jacob",
+      "related_name": "Abraham",
+      "relationship_type": "predecessor",
+      "notes": "Grandfather"
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "Mary",
+      "relationship_type": "mother",
+      "notes": null
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "Joseph",
+      "relationship_type": "father",
+      "notes": "Earthly father"
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "John",
+      "relationship_type": "friend",
+      "notes": "Beloved disciple"
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "Peter",
+      "relationship_type": "student",
+      "notes": "Disciple"
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "Thomas",
+      "relationship_type": "student",
+      "notes": "Disciple"
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "Mary Magdalene",
+      "relationship_type": "friend",
+      "notes": "Devoted follower"
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "David",
+      "relationship_type": "predecessor",
+      "notes": "Ancestor, Son of David"
+    },
+    {
+      "character_name": "Jesus Christ",
+      "related_name": "Abraham",
+      "relationship_type": "predecessor",
+      "notes": "Ancestor"
+    },
+    {
+      "character_name": "John",
+      "related_name": "Jesus Christ",
+      "relationship_type": "mentor",
+      "notes": "Beloved disciple"
+    },
+    {
+      "character_name": "John",
+      "related_name": "Peter",
+      "relationship_type": "friend",
+      "notes": "Fellow apostle"
+    },
+    {
+      "character_name": "John",
+      "related_name": "James",
+      "relationship_type": "sibling",
+      "notes": "Brother, son of Zebedee"
+    },
+    {
+      "character_name": "Jonathan",
+      "related_name": "Saul",
+      "relationship_type": "father",
+      "notes": null
+    },
+    {
+      "character_name": "Jonathan",
+      "related_name": "David",
+      "relationship_type": "friend",
+      "notes": "Covenant friendship"
+    },
+    {
+      "character_name": "Joseph",
+      "related_name": "Jacob",
+      "relationship_type": "father",
+      "notes": null
+    },
+    {
+      "character_name": "Joseph",
+      "related_name": "Rachel",
+      "relationship_type": "mother",
+      "notes": null
+    },
+    {
+      "character_name": "Joseph",
+      "related_name": "Benjamin",
+      "relationship_type": "sibling",
+      "notes": "Full brother"
+    },
+    {
+      "character_name": "Joseph",
+      "related_name": "Judah",
+      "relationship_type": "sibling",
+      "notes": "Half brother"
+    },
+    {
+      "character_name": "Joseph",
+      "related_name": "Abraham",
+      "relationship_type": "predecessor",
+      "notes": "Great-grandfather"
+    },
+    {
+      "character_name": "Joshua",
+      "related_name": "Moses",
+      "relationship_type": "mentor",
+      "notes": "Successor"
+    },
+    {
+      "character_name": "Joshua",
+      "related_name": "Caleb",
+      "relationship_type": "friend",
+      "notes": "Fellow faithful spy"
+    },
+    {
+      "character_name": "Mary",
+      "related_name": "Jesus Christ",
+      "relationship_type": "child",
+      "notes": null
+    },
+    {
+      "character_name": "Mary",
+      "related_name": "Joseph",
+      "relationship_type": "spouse",
+      "notes": null
+    },
+    {
+      "character_name": "Mary",
+      "related_name": "Elizabeth",
+      "relationship_type": "friend",
+      "notes": "Cousin, mother of John the Baptist"
+    },
+    {
+      "character_name": "Mary Magdalene",
+      "related_name": "Jesus Christ",
+      "relationship_type": "mentor",
+      "notes": "Devoted follower"
+    },
+    {
+      "character_name": "Moses",
+      "related_name": "Aaron",
+      "relationship_type": "sibling",
+      "notes": "Brother, high priest"
+    },
+    {
+      "character_name": "Moses",
+      "related_name": "Miriam",
+      "relationship_type": "sibling",
+      "notes": "Sister, prophetess"
+    },
+    {
+      "character_name": "Moses",
+      "related_name": "Joshua",
+      "relationship_type": "student",
+      "notes": "Successor"
+    },
+    {
+      "character_name": "Moses",
+      "related_name": "Pharaoh",
+      "relationship_type": "rival",
+      "notes": "King of Egypt"
+    },
+    {
+      "character_name": "Nehemiah",
+      "related_name": "Ezra",
+      "relationship_type": "friend",
+      "notes": "Fellow reformer"
+    },
+    {
+      "character_name": "Paul",
+      "related_name": "Barnabas",
+      "relationship_type": "friend",
+      "notes": "Ministry partner"
+    },
+    {
+      "character_name": "Paul",
+      "related_name": "Timothy",
+      "relationship_type": "student",
+      "notes": "Son in the faith"
+    },
+    {
+      "character_name": "Paul",
+      "related_name": "Silas",
+      "relationship_type": "friend",
+      "notes": "Missionary companion"
+    },
+    {
+      "character_name": "Paul",
+      "related_name": "Peter",
+      "relationship_type": "friend",
+      "notes": "Fellow apostle"
+    },
+    {
+      "character_name": "Peter",
+      "related_name": "Jesus Christ",
+      "relationship_type": "mentor",
+      "notes": "Disciple"
+    },
+    {
+      "character_name": "Peter",
+      "related_name": "John",
+      "relationship_type": "friend",
+      "notes": "Fellow apostle"
+    },
+    {
+      "character_name": "Peter",
+      "related_name": "Andrew",
+      "relationship_type": "sibling",
+      "notes": "Brother"
+    },
+    {
+      "character_name": "Peter",
+      "related_name": "Paul",
+      "relationship_type": "friend",
+      "notes": "Fellow apostle"
+    },
+    {
+      "character_name": "Ruth",
+      "related_name": "Naomi",
+      "relationship_type": "mother",
+      "notes": "Mother-in-law"
+    },
+    {
+      "character_name": "Ruth",
+      "related_name": "Boaz",
+      "relationship_type": "spouse",
+      "notes": "Kinsman redeemer"
+    },
+    {
+      "character_name": "Ruth",
+      "related_name": "Obed",
+      "relationship_type": "child",
+      "notes": "Grandfather of David"
+    },
+    {
+      "character_name": "Ruth",
+      "related_name": "David",
+      "relationship_type": "successor",
+      "notes": "Great-grandmother"
+    },
+    {
+      "character_name": "Samson",
+      "related_name": "Manoah",
+      "relationship_type": "father",
+      "notes": null
+    },
+    {
+      "character_name": "Samson",
+      "related_name": "Delilah",
+      "relationship_type": "rival",
+      "notes": "Betrayed him"
+    },
+    {
+      "character_name": "Solomon",
+      "related_name": "David",
+      "relationship_type": "father",
+      "notes": null
+    },
+    {
+      "character_name": "Solomon",
+      "related_name": "Bathsheba",
+      "relationship_type": "mother",
+      "notes": null
+    },
+    {
+      "character_name": "Solomon",
+      "related_name": "Jesus Christ",
+      "relationship_type": "successor",
+      "notes": "Ancestor"
+    },
+    {
+      "character_name": "Thomas",
+      "related_name": "Jesus Christ",
+      "relationship_type": "mentor",
+      "notes": "Disciple"
+    },
+    {
+      "character_name": "Thomas",
+      "related_name": "Peter",
+      "relationship_type": "friend",
+      "notes": "Fellow disciple"
+    },
+    {
+      "character_name": "Thomas",
+      "related_name": "John",
+      "relationship_type": "friend",
+      "notes": "Fellow disciple"
+    }
+  ]
+}
