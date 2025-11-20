@@ -1,6 +1,6 @@
 // src/lib/characters.ts
 import { supabase } from './supabaseClient';
-import type { BibleCharacter, CharacterLesson } from '../types/supabase-characters';
+import type { BibleCharacter, CharacterLesson, CharacterRelationship } from '../types/supabase-characters';
 
 
 export async function listCharacters(params?: { q?: string | null; testament?: 'OT'|'NT'|null; limit?: number; offset?: number }) {
@@ -26,4 +26,15 @@ export async function listLessons(characterId: number, limit = 50, offset = 0) {
 const { data, error } = await supabase.rpc('rpc_list_lessons', { p_character_id: characterId, p_limit: limit, p_offset: offset });
 if (error) throw error;
 return (data ?? []) as CharacterLesson[];
+}
+
+
+export async function getCharacterRelationships(characterId: number) {
+const { data, error } = await supabase
+.from('character_relationships')
+.select('*')
+.eq('character_id', characterId)
+.order('relationship_type');
+if (error) throw error;
+return (data ?? []) as CharacterRelationship[];
 }

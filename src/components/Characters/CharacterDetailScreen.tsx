@@ -4,9 +4,9 @@ import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity,
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { supabase } from '../../lib/supabaseClient';
-import { getCharacterWithLessons } from '../../lib/characters';
+import { getCharacterWithLessons, getCharacterRelationships } from '../../lib/characters';
 import { completeCharacterStudy, fetchCharacterProgress, toggleCharacterFavorite } from '../../services/progress';
-import type { BibleCharacter, CharacterLesson } from '../../types/supabase-characters';
+import type { BibleCharacter, CharacterLesson, CharacterRelationship } from '../../types/supabase-characters';
 import type { CharacterProgress } from '../../services/progress';
 
 export default function CharacterDetailScreen() {
@@ -15,6 +15,7 @@ export default function CharacterDetailScreen() {
 
   const [character, setCharacter] = useState<BibleCharacter | null>(null);
   const [lessons, setLessons] = useState<CharacterLesson[]>([]);
+  const [relationships, setRelationships] = useState<CharacterRelationship[]>([]);
   const [characterProgress, setCharacterProgress] = useState<CharacterProgress | null>(null);
   const [lessonProgress, setLessonProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,9 +24,14 @@ export default function CharacterDetailScreen() {
 
   const load = useCallback(async () => {
     try {
-      const { character, lessons } = await getCharacterWithLessons(id);
+      const [{ character, lessons }, relationshipsData] = await Promise.all([
+        getCharacterWithLessons(id),
+        getCharacterRelationships(id)
+      ]);
+
       setCharacter(character);
       setLessons(lessons);
+      setRelationships(relationshipsData);
 
       // Load overall character progress
       const progress = await fetchCharacterProgress(id);
@@ -128,6 +134,30 @@ export default function CharacterDetailScreen() {
 
   const completedLessonsCount = lessonProgress.filter(lp => lp.completed).length;
 
+  // Group relationships by type
+  const groupedRelationships = relationships.reduce((acc, rel) => {
+    if (!acc[rel.relationship_type]) {
+      acc[rel.relationship_type] = [];
+    }
+    acc[rel.relationship_type].push(rel);
+    return acc;
+  }, {} as Record<string, CharacterRelationship[]>);
+
+  // Relationship type display names
+  const relationshipLabels: Record<string, string> = {
+    'father': 'Father',
+    'mother': 'Mother',
+    'spouse': 'Spouse',
+    'child': 'Children',
+    'sibling': 'Siblings',
+    'friend': 'Friends',
+    'mentor': 'Mentors',
+    'student': 'Students',
+    'rival': 'Rivals',
+    'predecessor': 'Preceded by',
+    'successor': 'Succeeded by',
+  };
+
   if (loading || !character) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
@@ -142,12 +172,14 @@ export default function CharacterDetailScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, backgroundColor: colors.background.primary }}>
       {/* Header with favorite */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text.primary }}>{character.name}</Text>
-          <Text style={{ marginTop: 6, fontSize: 13, color: colors.text.secondary }}>
-            {character.character_type ?? ''} {character.testament ? `• ${character.testament}` : ''}
-          </Text>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text.primary }}>{character.name}</Text>
+          {character.also_known_as && character.also_known_as.length > 0 && (
+            <Text style={{ marginTop: 4, fontSize: 13, color: colors.text.secondary, fontStyle: 'italic' }}>
+              Also known as: {character.also_known_as.join(', ')}
+            </Text>
+          )}
         </View>
 
         <TouchableOpacity onPress={handleToggleFavorite} style={{ padding: 4 }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
@@ -155,17 +187,42 @@ export default function CharacterDetailScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Quick Info Bar */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        {character.era && (
+          <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.background.secondary, borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '600' }}>
+              📅 {character.era}
+            </Text>
+          </View>
+        )}
+        {character.testament && (
+          <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.background.secondary, borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '600' }}>
+              📖 {character.testament}
+            </Text>
+          </View>
+        )}
+        {character.tribe && (
+          <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.background.secondary, borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.text.secondary, fontWeight: '600' }}>
+              🏛️ Tribe of {character.tribe}
+            </Text>
+          </View>
+        )}
+      </View>
+
       {/* Progress indicator */}
       {isCompleted ? (
-        <View style={{ marginTop: 12, padding: 12, backgroundColor: '#d1fae5', borderRadius: 8 }}>
+        <View style={{ marginBottom: 16, padding: 12, backgroundColor: '#d1fae5', borderRadius: 8 }}>
           <Text style={{ fontSize: 14, fontWeight: '600', color: '#065f46' }}>
             ✓ Completed on {new Date(characterProgress.completed_at!).toLocaleDateString()}
           </Text>
         </View>
       ) : hasStarted ? (
-        <View style={{ marginTop: 12, padding: 12, backgroundColor: '#dbeafe', borderRadius: 8 }}>
+        <View style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 8 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#1e40af' }}>STUDY IN PROGRESS</Text>
-          <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
             {completedLessonsCount} of {lessons.length} lessons completed
           </Text>
           <View style={{ marginTop: 8, height: 8, backgroundColor: '#bfdbfe', borderRadius: 4, overflow: 'hidden' }}>
@@ -182,17 +239,119 @@ export default function CharacterDetailScreen() {
 
       {/* One sentence summary */}
       {character.one_sentence_summary ? (
-        <Text style={{ marginTop: 12, fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
-          {character.one_sentence_summary}
+        <Text style={{ marginBottom: 16, fontSize: 16, lineHeight: 24, color: colors.text.primary, fontStyle: 'italic' }}>
+          "{character.one_sentence_summary}"
         </Text>
       ) : null}
 
-      {/* Appearance info */}
-      {(character.first_appearance || character.last_appearance) && (
-        <View style={{ marginTop: 12, flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-          <Text style={{ fontSize: 14, color: colors.text.secondary }}>
-            📍 {character.first_appearance ?? ''}{character.first_appearance && character.last_appearance ? ' → ' : ''}{character.last_appearance ?? ''}
+      {/* Known For */}
+      {character.known_for && character.known_for.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 8, color: colors.text.primary }}>
+            Known For
           </Text>
+          {character.known_for.map((item, index) => (
+            <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
+              <Text style={{ fontSize: 16, color: colors.text.secondary, marginRight: 8 }}>•</Text>
+              <Text style={{ flex: 1, fontSize: 15, color: colors.text.primary, lineHeight: 22 }}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Character Traits */}
+      {character.character_traits && character.character_traits.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 8, color: colors.text.primary }}>
+            Character Traits
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {character.character_traits.map((trait, index) => (
+              <View
+                key={index}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: '#bae6fd'
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#0369a1' }}>{trait}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Key Locations */}
+      {character.key_locations && character.key_locations.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 8, color: colors.text.primary }}>
+            Key Locations
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {character.key_locations.map((location, index) => (
+              <View
+                key={index}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  backgroundColor: colors.background.secondary,
+                  borderRadius: 8
+                }}
+              >
+                <Text style={{ fontSize: 13, color: colors.text.primary }}>📍 {location}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Relationships */}
+      {relationships.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: colors.text.primary }}>
+            Relationships
+          </Text>
+          {Object.entries(groupedRelationships).map(([type, rels]) => (
+            <View key={type} style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.secondary, marginBottom: 6 }}>
+                {relationshipLabels[type] || type}
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {rels.map((rel, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      if (rel.related_character_id) {
+                        navigation.push('CharacterDetail', { id: rel.related_character_id });
+                      }
+                    }}
+                    disabled={!rel.related_character_id}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      backgroundColor: rel.related_character_id ? '#eff6ff' : colors.background.secondary,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: rel.related_character_id ? '#3b82f6' : colors.border.default
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, color: rel.related_character_id ? '#1e40af' : colors.text.primary }}>
+                      {rel.related_character_name}
+                    </Text>
+                    {rel.notes && (
+                      <Text style={{ fontSize: 11, color: colors.text.tertiary, marginTop: 2 }}>
+                        {rel.notes}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
         </View>
       )}
 
@@ -202,7 +361,7 @@ export default function CharacterDetailScreen() {
           onPress={handleStartStudy}
           disabled={isStarting}
           style={{
-            marginTop: 16,
+            marginBottom: 20,
             padding: 16,
             backgroundColor: isStarting ? colors.text.tertiary : colors.accent.primary,
             borderRadius: 12,
@@ -215,11 +374,11 @@ export default function CharacterDetailScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Lessons section */}
-      <View style={{ marginTop: 24 }}>
+      {/* Timeline - Life Journey */}
+      <View style={{ marginBottom: 20 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
-            Lessons {lessons.length > 0 && `(${lessons.length})`}
+            Life Journey {lessons.length > 0 && `(${lessons.length} lessons)`}
           </Text>
 
           {hasStarted && !isCompleted && completedLessonsCount === lessons.length && lessons.length > 0 && (
@@ -240,45 +399,117 @@ export default function CharacterDetailScreen() {
             No lessons available yet.
           </Text>
         ) : (
-          lessons.map((l) => {
-            const lessonComplete = isLessonComplete(l.id);
-            return (
-              <Pressable
-                key={l.id}
-                onPress={() => navigation.navigate('CharacterLesson', { id: l.id })}
-                style={{
-                  marginBottom: 12,
-                  padding: 12,
-                  borderWidth: 1,
-                  borderColor: colors.border.default,
-                  borderRadius: 10,
-                  backgroundColor: lessonComplete ? '#f0fdf4' : colors.background.secondary
-                }}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text.primary }}>
-                      {l.lesson_number != null ? `Lesson ${l.lesson_number}: ` : ''}
-                      {l.lesson_title ?? 'Untitled'}
-                    </Text>
-                    {!!l.key_passage && (
-                      <Text style={{ marginTop: 4, fontSize: 14, color: colors.text.secondary }}>
-                        {l.key_passage}
-                      </Text>
-                    )}
-                    {!!l.life_stage && (
-                      <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>
-                        {l.life_stage}
+          <View style={{ position: 'relative' }}>
+            {/* Timeline line */}
+            <View style={{
+              position: 'absolute',
+              left: 20,
+              top: 20,
+              bottom: 20,
+              width: 3,
+              backgroundColor: colors.border.default
+            }} />
+
+            {lessons.map((lesson, index) => {
+              const lessonComplete = isLessonComplete(lesson.id);
+              return (
+                <Pressable
+                  key={lesson.id}
+                  onPress={() => navigation.navigate('CharacterLesson', { id: lesson.id })}
+                  style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'flex-start' }}
+                >
+                  {/* Timeline node */}
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: lessonComplete ? '#10b981' : colors.background.secondary,
+                    borderWidth: 3,
+                    borderColor: lessonComplete ? '#10b981' : colors.accent.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                    zIndex: 1
+                  }}>
+                    {lessonComplete ? (
+                      <Text style={{ fontSize: 18, color: '#fff' }}>✓</Text>
+                    ) : (
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accent.primary }}>
+                        {lesson.lesson_number ?? index + 1}
                       </Text>
                     )}
                   </View>
-                  {lessonComplete && <Text style={{ fontSize: 20 }}>✓</Text>}
-                </View>
-              </Pressable>
-            );
-          })
+
+                  {/* Lesson card */}
+                  <View
+                    style={{
+                      flex: 1,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: lessonComplete ? '#10b981' : colors.border.default,
+                      borderRadius: 12,
+                      backgroundColor: lessonComplete ? '#f0fdf4' : colors.background.secondary
+                    }}
+                  >
+                    {lesson.life_stage && (
+                      <Text style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        letterSpacing: 0.5,
+                        color: colors.text.secondary,
+                        marginBottom: 4
+                      }}>
+                        {lesson.life_stage.toUpperCase()}
+                      </Text>
+                    )}
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary, marginBottom: 4 }}>
+                      {lesson.lesson_title ?? 'Untitled'}
+                    </Text>
+                    {lesson.key_passage && (
+                      <Text style={{ fontSize: 13, color: colors.text.secondary, marginBottom: 8 }}>
+                        📖 {lesson.key_passage}
+                      </Text>
+                    )}
+                    {lesson.character_qualities && lesson.character_qualities.length > 0 && (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {lesson.character_qualities.slice(0, 3).map((quality, i) => (
+                          <View
+                            key={i}
+                            style={{
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              backgroundColor: lessonComplete ? '#d1fae5' : '#e0f2fe',
+                              borderRadius: 4
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, color: lessonComplete ? '#065f46' : '#0369a1', fontWeight: '600' }}>
+                              {quality}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
         )}
       </View>
+
+      {/* Bible Appearance */}
+      {(character.first_appearance || character.last_appearance) && (
+        <View style={{
+          padding: 14,
+          backgroundColor: colors.background.tertiary,
+          borderRadius: 12,
+          marginBottom: 20
+        }}>
+          <Text style={{ fontSize: 13, color: colors.text.secondary, fontWeight: '600' }}>
+            📍 Appears in: {character.first_appearance ?? ''}{character.first_appearance && character.last_appearance ? ' → ' : ''}{character.last_appearance ?? ''}
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
