@@ -170,7 +170,7 @@ export default function PrayerHomeScreen() {
         <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
           {weeklyMinutes} minutes
         </Text>
-        <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 4 }}>
+        <Text style={{ fontSize: 13, color: '#fff', marginTop: 4 }}>
           Time spent in prayer
         </Text>
       </View>

@@ -665,11 +665,6 @@ const openTodayDevotion = useCallback(() => {
             <Text style={{ fontSize: 15, color: '#78350f', fontWeight: '600', marginBottom: 4 }}>
               {battleVerses.length} Battle {battleVerses.length === 1 ? 'Verse' : 'Verses'} Saved
             </Text>
-            {activeBattle && (
-              <Text style={{ fontSize: 13, color: '#92400e', marginTop: 4 }}>
-                Active Battle: {activeBattle.battle_name}
-              </Text>
-            )}
           </View>
           <Text style={{ fontSize: 12, color: '#92400e', fontStyle: 'italic', marginBottom: 12 }}>
             Daily applications update every 24 hours
