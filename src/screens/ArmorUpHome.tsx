@@ -103,8 +103,8 @@ export default function ArmorUpHome() {
     try {
       const { data, error } = await supabase
         .from('bible_chapter_summaries_strongs')
-        .select('book_name, chapter_number, practical_applications')
-        .not('practical_applications', 'is', null);
+        .select('book_name, chapter_number, practical_applications_clean')
+        .not('practical_applications_clean', 'is', null);
 
       if (error) {
         console.error('[ArmorUpHome] Error loading applications:', error);
@@ -114,8 +114,8 @@ export default function ArmorUpHome() {
       // Flatten all applications into a single array
       const allApps: PracticalApplication[] = [];
       data?.forEach(row => {
-        if (row.practical_applications && Array.isArray(row.practical_applications)) {
-          row.practical_applications.forEach((app: string) => {
+        if (row.practical_applications_clean && Array.isArray(row.practical_applications_clean)) {
+          row.practical_applications_clean.forEach((app: string) => {
             allApps.push({
               book_name: row.book_name,
               chapter_number: row.chapter_number,
