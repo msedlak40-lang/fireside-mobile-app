@@ -343,7 +343,7 @@ export default function CharacterDetailScreen() {
                       {rel.related_character_name}
                     </Text>
                     {rel.notes && (
-                      <Text style={{ fontSize: 11, color: rel.related_character_id ? colors.text.tertiary : colors.text.secondary, marginTop: 2 }}>
+                      <Text style={{ fontSize: 11, color: rel.related_character_id ? colors.text.tertiary : colors.text.primary, marginTop: 2, opacity: rel.related_character_id ? 1 : 0.7 }}>
                         {rel.notes}
                       </Text>
                     )}
