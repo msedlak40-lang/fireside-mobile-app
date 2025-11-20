@@ -35,10 +35,10 @@ import ReadingPlanDetailScreen from '../components/ReadingPlans/ReadingPlanDetai
 // Progress = Home
 import ProgressDashboardScreen from '../components/Progress/ProgressDashboardScreen';
 
-// Journal
-import JournalHomeScreen from '../components/Journal/JournalHomeScreen';
-import JournalCreateScreen from '../components/Journal/JournalCreateScreen';
-import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
+// Prayer / Chair Time
+import PrayerHomeScreen from '../screens/Prayer/PrayerHomeScreen';
+import PrayerSessionScreen from '../screens/Prayer/PrayerSessionScreen';
+import PrayerHistoryScreen from '../screens/Prayer/PrayerHistoryScreen';
 
 // Notes & Highlights summary (new screen)
 import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
@@ -222,27 +222,27 @@ function ProgressStackNavigator() {
   );
 }
 
-// Journal Tab
-const JournalStack = createNativeStackNavigator();
-function JournalStackNavigator() {
+// Prayer Tab
+const PrayerStack = createNativeStackNavigator();
+function PrayerStackNavigator() {
   return (
-    <JournalStack.Navigator>
-      <JournalStack.Screen
-        name="JournalHome"
-        component={JournalHomeScreen}
-        options={{ headerTitle: 'Journal' }}
+    <PrayerStack.Navigator>
+      <PrayerStack.Screen
+        name="PrayerHome"
+        component={PrayerHomeScreen}
+        options={{ headerTitle: 'Prayer' }}
       />
-      <JournalStack.Screen
-        name="JournalCreate"
-        component={JournalCreateScreen}
-        options={{ headerTitle: 'New Entry' }}
+      <PrayerStack.Screen
+        name="PrayerSession"
+        component={PrayerSessionScreen}
+        options={{ headerTitle: 'Prayer Session', headerShown: false }}
       />
-      <JournalStack.Screen
-        name="JournalDetail"
-        component={JournalDetailScreen}
-        options={{ headerTitle: 'Entry' }}
+      <PrayerStack.Screen
+        name="PrayerHistory"
+        component={PrayerHistoryScreen}
+        options={{ headerTitle: 'Prayer History' }}
       />
-    </JournalStack.Navigator>
+    </PrayerStack.Navigator>
   );
 }
 
@@ -329,11 +329,11 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="JournalTab"
-        component={JournalStackNavigator}
+        name="PrayerTab"
+        component={PrayerStackNavigator}
         options={{
-          title: 'Journal',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>📝</Text>
+          title: 'Prayer',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🙏</Text>
         }}
       />
     </Tab.Navigator>
@@ -387,11 +387,11 @@ const linking = {
               BibleSearch: 'search'
             }
           },
-          JournalTab: {
+          PrayerTab: {
             screens: {
-              JournalHome: 'journal',
-              JournalCreate: 'journal/new',
-              JournalDetail: 'journal/:id'
+              PrayerHome: 'prayer',
+              PrayerSession: 'prayer/session',
+              PrayerHistory: 'prayer/history'
             }
           }
         }

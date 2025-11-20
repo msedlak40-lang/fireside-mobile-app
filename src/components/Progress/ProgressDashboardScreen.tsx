@@ -191,13 +191,14 @@ export default function ProgressDashboardScreen() {
   // Pull to refresh handler
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchFreshData();
+    await Promise.all([fetchFreshData(), loadBattleVerses()]);
     setRefreshing(false);
   };
 
   // Load data only once on mount
   useEffect(() => {
     load();
+    loadBattleVerses();
   }, []);
 
   // Check if VoTD is already saved when it loads
@@ -636,57 +637,53 @@ const openTodayDevotion = useCallback(() => {
         </View>
 
         {/* Armor of God Card */}
-        {currentArmor && (
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('ArmorUpHome');
-            }}
-            style={{
-              marginBottom: 16,
-              padding: 20,
-              backgroundColor: '#fef3c7',
-              borderRadius: 16,
-              borderLeftWidth: 6,
-              borderLeftColor: '#f59e0b',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 4,
-            }}
-          >
-            <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '800', letterSpacing: 1.5, marginBottom: 12 }}>
-              ⚔️ ARMOR OF GOD
+        <TouchableOpacity
+          onPress={() => {
+            navigation.navigate('ArmorUpHome');
+          }}
+          style={{
+            marginBottom: 16,
+            padding: 20,
+            backgroundColor: '#fef3c7',
+            borderRadius: 16,
+            borderLeftWidth: 6,
+            borderLeftColor: '#f59e0b',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+        >
+          <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '800', letterSpacing: 1.5, marginBottom: 12 }}>
+            ⚔️ ARMOR OF GOD
+          </Text>
+          <Text style={{ fontSize: 20, fontWeight: '800', marginBottom: 8, color: '#92400e' }}>
+            Your Spiritual Arsenal
+          </Text>
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ fontSize: 15, color: '#78350f', fontWeight: '600', marginBottom: 4 }}>
+              {battleVerses.length} Battle {battleVerses.length === 1 ? 'Verse' : 'Verses'} Saved
             </Text>
-            <Text style={{ fontSize: 20, fontWeight: '800', marginBottom: 8, color: '#92400e' }}>
-              {currentArmor.armor_name}
-            </Text>
-            <Text style={{ fontSize: 14, color: '#78350f', marginBottom: 4, lineHeight: 20 }}>
-              {currentArmor.description}
-            </Text>
-            <Text style={{ fontSize: 12, color: '#92400e', fontStyle: 'italic', marginBottom: 12 }}>
-              Daily applications update every 24 hours
-            </Text>
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: 8,
-            }}>
-              <Text style={{ fontSize: 13, color: '#92400e', fontWeight: '600' }}>
-                {currentArmor.scripture_reference}
+            {activeBattle && (
+              <Text style={{ fontSize: 13, color: '#92400e', marginTop: 4 }}>
+                Active Battle: {activeBattle.battle_name}
               </Text>
-              <View style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                backgroundColor: '#f59e0b',
-                borderRadius: 8,
-              }}>
-                <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>View All 7 →</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        )}
+            )}
+          </View>
+          <Text style={{ fontSize: 12, color: '#92400e', fontStyle: 'italic', marginBottom: 12 }}>
+            Daily applications update every 24 hours
+          </Text>
+          <View style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            backgroundColor: '#f59e0b',
+            borderRadius: 8,
+            alignSelf: 'flex-start',
+          }}>
+            <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>View All 7 Pieces →</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* Verse of the Day */}
         {verseOfTheDay && (
