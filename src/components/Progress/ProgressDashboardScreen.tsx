@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/verseOfTheDay';
-import { saveBattleVerse, getUserBattleVerses, deleteBattleVerse, toggleBattleVerseFavorite, getCurrentArmorPiece, getTodaysArmorPiece, getActiveBattle } from '../../services/armor';
+import { saveBattleVerse, getUserBattleVerses, deleteBattleVerse, toggleBattleVerseFavorite, updateBattleVerseTag, getCurrentArmorPiece, getTodaysArmorPiece, getActiveBattle } from '../../services/armor';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
@@ -386,6 +386,47 @@ const openTodayDevotion = useCallback(() => {
     } catch (err) {
       console.error('[ProgressDashboard] Failed to toggle favorite:', err);
       Alert.alert('Error', 'Failed to update favorite. Please try again.');
+    }
+  };
+
+  const editBattleVerseTagHandler = async (verse: any) => {
+    try {
+      const updateTag = async (tag: string | null) => {
+        try {
+          const success = await updateBattleVerseTag(verse.id, tag as any);
+          if (success) {
+            // Update local state
+            setBattleVerses(battleVerses.map(v =>
+              v.id === verse.id ? { ...v, battle_tag: tag } : v
+            ));
+            Alert.alert('Updated!', 'Battle verse tag updated successfully');
+          } else {
+            Alert.alert('Error', 'Failed to update tag');
+          }
+        } catch (err) {
+          console.error('[ProgressDashboard] Failed to update tag:', err);
+          Alert.alert('Error', 'Failed to update tag. Please try again.');
+        }
+      };
+
+      Alert.alert(
+        'Edit Tag',
+        `Current tag: ${verse.battle_tag || 'None'}\n\nChoose a new category:`,
+        [
+          { text: 'Fear', onPress: () => updateTag('fear') },
+          { text: 'Anger', onPress: () => updateTag('anger') },
+          { text: 'Temptation', onPress: () => updateTag('temptation') },
+          { text: 'Doubt', onPress: () => updateTag('doubt') },
+          { text: 'Loneliness', onPress: () => updateTag('loneliness') },
+          { text: 'Identity', onPress: () => updateTag('identity') },
+          { text: 'Purpose', onPress: () => updateTag('purpose') },
+          { text: 'Remove Tag', onPress: () => updateTag(null) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } catch (err) {
+      console.error('[ProgressDashboard] Edit tag handler failed:', err);
+      Alert.alert('Error', 'Failed to process request. Please try again.');
     }
   };
 
@@ -1215,82 +1256,86 @@ const openTodayDevotion = useCallback(() => {
               </View>
             ) : (
               <>
-                {/* Search Bar */}
-                <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
-                  <TextInput
-                    value={battleVerseSearch}
-                    onChangeText={setBattleVerseSearch}
-                    placeholder="Search verses..."
-                    placeholderTextColor={colors.text.secondary}
-                    style={{
-                      backgroundColor: colors.background.secondary,
-                      borderRadius: 10,
-                      paddingHorizontal: 16,
-                      paddingVertical: 12,
-                      fontSize: 15,
-                      color: colors.text.primary,
-                      borderWidth: 1,
-                      borderColor: '#e5e7eb',
-                    }}
-                  />
-                </View>
+                {/* Fixed Header Area - Search + Filters */}
+                <View style={{ backgroundColor: colors.background.primary }}>
+                  {/* Search Bar */}
+                  <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+                    <TextInput
+                      value={battleVerseSearch}
+                      onChangeText={setBattleVerseSearch}
+                      placeholder="Search verses..."
+                      placeholderTextColor={colors.text.secondary}
+                      style={{
+                        backgroundColor: colors.background.secondary,
+                        borderRadius: 10,
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
+                        fontSize: 15,
+                        color: colors.text.primary,
+                        borderWidth: 1,
+                        borderColor: '#e5e7eb',
+                      }}
+                    />
+                  </View>
 
-                {/* Filter Chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-                  <TouchableOpacity
-                    onPress={() => setSelectedBattleFilter(null)}
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      backgroundColor: !selectedBattleFilter ? '#2563eb' : colors.background.secondary,
-                      borderRadius: 20,
-                      marginRight: 8,
-                      borderWidth: 1,
-                      borderColor: !selectedBattleFilter ? '#2563eb' : '#d1d5db',
-                    }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: !selectedBattleFilter ? '#fff' : colors.text.secondary }}>
-                      All
-                    </Text>
-                  </TouchableOpacity>
-                  {battleTags.map(tag => (
+                  {/* Filter Chips */}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, marginBottom: 16 }} contentContainerStyle={{ paddingRight: 20 }}>
                     <TouchableOpacity
-                      key={tag}
-                      onPress={() => setSelectedBattleFilter(tag)}
+                      onPress={() => setSelectedBattleFilter(null)}
                       style={{
                         paddingHorizontal: 10,
                         paddingVertical: 5,
-                        backgroundColor: selectedBattleFilter === tag ? '#2563eb' : colors.background.secondary,
+                        backgroundColor: !selectedBattleFilter ? '#2563eb' : colors.background.secondary,
                         borderRadius: 20,
                         marginRight: 8,
                         borderWidth: 1,
-                        borderColor: selectedBattleFilter === tag ? '#2563eb' : '#d1d5db',
+                        borderColor: !selectedBattleFilter ? '#2563eb' : '#d1d5db',
                       }}
                     >
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: selectedBattleFilter === tag ? '#fff' : colors.text.secondary }}>
-                        {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: !selectedBattleFilter ? '#fff' : colors.text.secondary }}>
+                        All
                       </Text>
                     </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity
-                    onPress={() => setSelectedBattleFilter('general')}
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      backgroundColor: selectedBattleFilter === 'general' ? '#2563eb' : colors.background.secondary,
-                      borderRadius: 20,
-                      marginRight: 8,
-                      borderWidth: 1,
-                      borderColor: selectedBattleFilter === 'general' ? '#2563eb' : '#d1d5db',
-                    }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: selectedBattleFilter === 'general' ? '#fff' : colors.text.secondary }}>
-                      General
-                    </Text>
-                  </TouchableOpacity>
-                </ScrollView>
+                    {battleTags.map(tag => (
+                      <TouchableOpacity
+                        key={tag}
+                        onPress={() => setSelectedBattleFilter(tag)}
+                        style={{
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          backgroundColor: selectedBattleFilter === tag ? '#2563eb' : colors.background.secondary,
+                          borderRadius: 20,
+                          marginRight: 8,
+                          borderWidth: 1,
+                          borderColor: selectedBattleFilter === tag ? '#2563eb' : '#d1d5db',
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: selectedBattleFilter === tag ? '#fff' : colors.text.secondary }}>
+                          {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      onPress={() => setSelectedBattleFilter('general')}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        backgroundColor: selectedBattleFilter === 'general' ? '#2563eb' : colors.background.secondary,
+                        borderRadius: 20,
+                        marginRight: 8,
+                        borderWidth: 1,
+                        borderColor: selectedBattleFilter === 'general' ? '#2563eb' : '#d1d5db',
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: selectedBattleFilter === 'general' ? '#fff' : colors.text.secondary }}>
+                        General
+                      </Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
 
-                <ScrollView style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingTop: 8 }}>
+                {/* Scrollable Content Area */}
+                <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
                   {/* Add VOTD Button */}
                   {verseOfTheDay && !votdSaved && (
                     <TouchableOpacity
@@ -1385,6 +1430,19 @@ const openTodayDevotion = useCallback(() => {
                             >
                               <View style={{ flexDirection: 'row', position: 'absolute', top: 10, right: 10, gap: 8 }}>
                                 <TouchableOpacity
+                                  onPress={() => editBattleVerseTagHandler(verse)}
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    backgroundColor: '#3b82f6',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <Text style={{ color: '#fff', fontSize: 16 }}>✎</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
                                   onPress={() => toggleFavoriteHandler(verse.id, verse.is_favorite)}
                                   style={{
                                     width: 32,
@@ -1412,7 +1470,7 @@ const openTodayDevotion = useCallback(() => {
                                 </TouchableOpacity>
                               </View>
 
-                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 72 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 104 }}>
                                 {verse.verse_reference}
                               </Text>
                               <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', marginBottom: 8 }}>
@@ -1487,6 +1545,19 @@ const openTodayDevotion = useCallback(() => {
                               >
                                 <View style={{ flexDirection: 'row', position: 'absolute', top: 10, right: 10, gap: 8 }}>
                                   <TouchableOpacity
+                                    onPress={() => editBattleVerseTagHandler(verse)}
+                                    style={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 16,
+                                      backgroundColor: '#3b82f6',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    <Text style={{ color: '#fff', fontSize: 16 }}>✎</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
                                     onPress={() => toggleFavoriteHandler(verse.id, verse.is_favorite)}
                                     style={{
                                       width: 32,
@@ -1514,7 +1585,7 @@ const openTodayDevotion = useCallback(() => {
                                   </TouchableOpacity>
                                 </View>
 
-                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 72 }}>
+                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400e', marginBottom: 8, paddingRight: 104 }}>
                                   {verse.verse_reference}
                                 </Text>
                                 <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', marginBottom: 8 }}>

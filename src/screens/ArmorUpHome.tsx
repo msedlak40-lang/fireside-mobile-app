@@ -319,6 +319,14 @@ export default function ArmorUpHome() {
                           }}>
                             {app.application}
                           </Text>
+                          <Text style={{
+                            fontSize: 11,
+                            color: piece.textColor,
+                            opacity: 0.7,
+                            marginTop: 4,
+                          }}>
+                            — {app.book_name} {app.chapter_number}
+                          </Text>
                         </View>
                       ))}
                     </View>

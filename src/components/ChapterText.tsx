@@ -140,22 +140,47 @@ export default function ChapterText(props: Props) {
       const verseRef = `${book} ${chapter}:${v}`
       const verseText = rawVerse?.text ?? String(rawVerse ?? '')
 
-      const result = await saveBattleVerse(
-        userId,
-        book,
-        chapter,
-        v,
-        verseRef,
-        verseText
-      )
+      // Show battle tag selection
+      const saveWithTag = async (tag: string | null) => {
+        try {
+          const result = await saveBattleVerse(
+            userId,
+            book,
+            chapter,
+            v,
+            verseRef,
+            verseText,
+            tag as any
+          )
 
-      if (result) {
-        Alert.alert('Saved!', `${verseRef} added to your Battle Verses`)
-      } else {
-        Alert.alert('Already Saved', 'This verse is already in your Battle Verses')
+          if (result) {
+            Alert.alert('Saved!', `${verseRef} added to your Battle Verses`)
+          } else {
+            Alert.alert('Already Saved', 'This verse is already in your Battle Verses')
+          }
+        } catch (err: any) {
+          console.warn('[ChapterText] save battle verse error:', err)
+          Alert.alert('Could not save', err?.message ?? 'Please try again.')
+        }
       }
+
+      Alert.alert(
+        'Tag this verse',
+        'Choose a battle category for this verse:',
+        [
+          { text: 'Fear', onPress: () => saveWithTag('fear') },
+          { text: 'Anger', onPress: () => saveWithTag('anger') },
+          { text: 'Temptation', onPress: () => saveWithTag('temptation') },
+          { text: 'Doubt', onPress: () => saveWithTag('doubt') },
+          { text: 'Loneliness', onPress: () => saveWithTag('loneliness') },
+          { text: 'Identity', onPress: () => saveWithTag('identity') },
+          { text: 'Purpose', onPress: () => saveWithTag('purpose') },
+          { text: 'General (no tag)', onPress: () => saveWithTag(null) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      )
     } catch (err: any) {
-      console.warn('[ChapterText] save battle verse error:', err)
+      console.warn('[ChapterText] save battle verse handler failed:', err)
       Alert.alert('Could not save', err?.message ?? 'Please try again.')
     }
   }

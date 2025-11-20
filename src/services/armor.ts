@@ -388,6 +388,31 @@ export async function deleteBattleVerse(verseId: string): Promise<boolean> {
 }
 
 /**
+ * Update battle verse tag
+ */
+export async function updateBattleVerseTag(
+  verseId: number,
+  battleTag: BattleTag | null
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('user_battle_verses')
+      .update({ battle_tag: battleTag })
+      .eq('id', verseId);
+
+    if (error) {
+      console.error('[Armor] Update battle verse tag error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[Armor] Update battle verse tag failed:', err);
+    return false;
+  }
+}
+
+/**
  * Create a reflection for the current battle
  */
 export async function createReflection(

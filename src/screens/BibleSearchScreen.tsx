@@ -393,23 +393,48 @@ export default function BibleSearchScreen() {
         return;
       }
 
-      const saved = await saveBattleVerse(
-        userId,
-        result.book_name,
-        result.chapter_number,
-        result.verse_number,
-        result.reference,
-        result.verse_text
-      );
+      // Show battle tag selection
+      const saveWithTag = async (tag: string | null) => {
+        try {
+          const saved = await saveBattleVerse(
+            userId,
+            result.book_name,
+            result.chapter_number,
+            result.verse_number,
+            result.reference,
+            result.verse_text,
+            tag as any
+          );
 
-      if (saved) {
-        Alert.alert('Saved!', `${result.reference} added to your Battle Verses`);
-      } else {
-        Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
-      }
+          if (saved) {
+            Alert.alert('Saved!', `${result.reference} added to your Battle Verses`);
+          } else {
+            Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
+          }
+        } catch (err) {
+          console.error('[BibleSearch] Save battle verse failed:', err);
+          Alert.alert('Error', 'Failed to save verse. Please try again.');
+        }
+      };
+
+      Alert.alert(
+        'Tag this verse',
+        'Choose a battle category for this verse:',
+        [
+          { text: 'Fear', onPress: () => saveWithTag('fear') },
+          { text: 'Anger', onPress: () => saveWithTag('anger') },
+          { text: 'Temptation', onPress: () => saveWithTag('temptation') },
+          { text: 'Doubt', onPress: () => saveWithTag('doubt') },
+          { text: 'Loneliness', onPress: () => saveWithTag('loneliness') },
+          { text: 'Identity', onPress: () => saveWithTag('identity') },
+          { text: 'Purpose', onPress: () => saveWithTag('purpose') },
+          { text: 'General (no tag)', onPress: () => saveWithTag(null) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
     } catch (err) {
-      console.error('[BibleSearch] Save battle verse failed:', err);
-      Alert.alert('Error', 'Failed to save verse. Please try again.');
+      console.error('[BibleSearch] Save battle verse handler failed:', err);
+      Alert.alert('Error', 'Failed to process request. Please try again.');
     }
   };
 
