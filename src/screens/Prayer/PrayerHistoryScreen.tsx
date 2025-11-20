@@ -7,28 +7,36 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
+import { colors } from '../../theme/colors';
 import { getPrayerSessions, type PrayerSession } from '../../services/prayer';
 
 export default function PrayerHistoryScreen() {
-  const { colors } = useTheme();
-  const { user } = useAuth();
-
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<PrayerSession[]>([]);
   const [expandedSession, setExpandedSession] = useState<number | null>(null);
 
   useEffect(() => {
-    loadSessions();
+    loadUser();
   }, []);
 
-  const loadSessions = async () => {
-    if (!user?.id) return;
+  const loadUser = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    setUserId(auth?.user?.id || null);
+    if (auth?.user?.id) {
+      loadSessions(auth.user.id);
+    } else {
+      setLoading(false);
+    }
+  };
+
+  const loadSessions = async (uid: string) => {
+    if (!uid) return;
 
     setLoading(true);
     try {
-      const data = await getPrayerSessions(user.id, 100);
+      const data = await getPrayerSessions(uid, 100);
       setSessions(data);
     } catch (err) {
       console.error('[PrayerHistory] Load failed:', err);

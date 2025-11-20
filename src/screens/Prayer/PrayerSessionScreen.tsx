@@ -11,8 +11,8 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
+import { colors } from '../../theme/colors';
 import { createPrayerSession, updatePrayerSessionNotes } from '../../services/prayer';
 
 type RouteParams = {
@@ -24,14 +24,13 @@ type RouteParams = {
 type SessionPhase = 'pre' | 'active' | 'post';
 
 export default function PrayerSessionScreen() {
-  const { colors } = useTheme();
-  const { user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'PrayerSession'>>();
 
   const { durationMinutes } = route.params;
   const totalSeconds = durationMinutes * 60;
 
+  const [userId, setUserId] = useState<string | null>(null);
   const [phase, setPhase] = useState<SessionPhase>('pre');
   const [secondsRemaining, setSecondsRemaining] = useState(totalSeconds);
   const [isPaused, setIsPaused] = useState(false);
@@ -42,12 +41,18 @@ export default function PrayerSessionScreen() {
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    loadUser();
     return () => {
       if (timerInterval.current) {
         clearInterval(timerInterval.current);
       }
     };
   }, []);
+
+  const loadUser = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    setUserId(auth?.user?.id || null);
+  };
 
   const startSession = () => {
     setPhase('active');
@@ -74,10 +79,10 @@ export default function PrayerSessionScreen() {
   };
 
   const saveSession = async () => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     const session = await createPrayerSession(
-      user.id,
+      userId,
       durationMinutes,
       preVerse || null,
       null

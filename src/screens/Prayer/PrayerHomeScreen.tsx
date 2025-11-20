@@ -9,8 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
+import { colors } from '../../theme/colors';
 import {
   getPrayerStreak,
   hasPrayedToday,
@@ -28,30 +28,39 @@ const TIMER_OPTIONS = [
 ];
 
 export default function PrayerHomeScreen() {
-  const { colors } = useTheme();
-  const { user } = useAuth();
   const navigation = useNavigation();
 
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [prayedToday, setPrayedToday] = useState(false);
   const [weeklyMinutes, setWeeklyMinutes] = useState(0);
   const [recentSessions, setRecentSessions] = useState<PrayerSession[]>([]);
 
   useEffect(() => {
-    loadPrayerData();
+    loadUser();
   }, []);
 
-  const loadPrayerData = async () => {
-    if (!user?.id) return;
+  const loadUser = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    setUserId(auth?.user?.id || null);
+    if (auth?.user?.id) {
+      loadPrayerData(auth.user.id);
+    } else {
+      setLoading(false);
+    }
+  };
+
+  const loadPrayerData = async (uid: string) => {
+    if (!uid) return;
 
     setLoading(true);
     try {
       const [streakData, todayData, weeklyData, sessionsData] = await Promise.all([
-        getPrayerStreak(user.id),
-        hasPrayedToday(user.id),
-        getWeeklyPrayerMinutes(user.id),
-        getPrayerSessions(user.id, 5),
+        getPrayerStreak(uid),
+        hasPrayedToday(uid),
+        getWeeklyPrayerMinutes(uid),
+        getPrayerSessions(uid, 5),
       ]);
 
       setStreak(streakData);
@@ -66,7 +75,7 @@ export default function PrayerHomeScreen() {
   };
 
   const handleStartSession = (durationMinutes: number) => {
-    if (!user?.id) {
+    if (!userId) {
       Alert.alert('Sign in required', 'Please sign in to track your prayer time.');
       return;
     }
