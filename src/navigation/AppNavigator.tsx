@@ -54,6 +54,9 @@ import DailyReflection from '../screens/DailyReflection';
 import VictoryReflection from '../screens/VictoryReflection';
 import DailyArmorChallenge from '../screens/DailyArmorChallenge';
 
+// Settings
+import SettingsScreen from '../screens/SettingsScreen';
+
 // ---- Stacks ----
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -174,7 +177,17 @@ function ProgressStackNavigator() {
       <ProgressStack.Screen
         name="ProgressDashboard"
         component={ProgressDashboardScreen}
-        options={{ headerTitle: 'Home' }}
+        options={({ navigation }) => ({
+          headerTitle: 'Home',
+          headerRight: () => (
+            <Text
+              onPress={() => navigation.navigate('Settings')}
+              style={{ fontSize: 22, paddingRight: 8 }}
+            >
+              ⚙️
+            </Text>
+          ),
+        })}
       />
       <ProgressStack.Screen
         name="NotesHighlightsSummary"
@@ -217,6 +230,12 @@ function ProgressStackNavigator() {
         name="VictoryReflection"
         component={VictoryReflection}
         options={{ headerTitle: 'Victory Reflection' }}
+      />
+      {/* Settings */}
+      <ProgressStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ headerTitle: 'Settings' }}
       />
     </ProgressStack.Navigator>
   );
@@ -352,7 +371,8 @@ const linking = {
             screens: {
               ProgressDashboard: 'home',
               NotesHighlightsSummary: 'home/notes',
-              DevotionDetail: 'home/devotion/:id'
+              DevotionDetail: 'home/devotion/:id',
+              Settings: 'home/settings'
             }
           },
           BibleTab: {
