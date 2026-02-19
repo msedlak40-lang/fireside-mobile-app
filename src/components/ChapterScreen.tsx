@@ -15,12 +15,13 @@ import OnePagerTab from './OnePagerTab'
 import CrossReferencesTab from './CrossReferencesTab'
 import DiscussionQuestionsTab from './DiscussionQuestionsTab'
 import KeyHebrewWordsTab from './KeyHebrewWordsTab'
+import MyThemeTab from './MyThemeTab'
 import { supabase } from '../lib/supabaseClient'
 import { colors } from '../theme/colors'
 
 type RouteParams = { bookId: number; chapter: number; bookName?: string; translation?: string }
 type Verse = { number: number; text: string }
-type TabType = 'read' | 'onepager' | 'crossrefs' | 'discussion' | 'hebrew'
+type TabType = 'read' | 'onepager' | 'mytheme' | 'crossrefs' | 'discussion'
 
 export default function ChapterScreen() {
   const route = useRoute<any>() as { params?: Partial<RouteParams> }
@@ -275,9 +276,9 @@ export default function ChapterScreen() {
       >
         <TabButton tabKey="read" label="Read" />
         <TabButton tabKey="onepager" label="One Pager" />
+        <TabButton tabKey="mytheme" label="My Theme" />
         <TabButton tabKey="crossrefs" label="Cross-Refs" />
         <TabButton tabKey="discussion" label="Discussion" />
-        <TabButton tabKey="hebrew" label="Hebrew" />
       </ScrollView>
 
       {/* Content */}
@@ -319,16 +320,16 @@ export default function ChapterScreen() {
             />
           )}
 
+          {tab === 'mytheme' && bookNameResolved && (
+            <MyThemeTab bookName={bookNameResolved} chapter={chapter} />
+          )}
+
           {tab === 'crossrefs' && (
             <CrossReferencesTab markdownContent={crossRefsData} />
           )}
 
           {tab === 'discussion' && (
             <DiscussionQuestionsTab markdownContent={discussionData} />
-          )}
-
-          {tab === 'hebrew' && (
-            <KeyHebrewWordsTab markdownContent={hebrewWordsData} />
           )}
 
           <View style={{ height: 40 }} />
