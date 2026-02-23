@@ -4,9 +4,9 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Share,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabaseClient';
@@ -17,6 +17,7 @@ import {
   getThemeColors,
   isValidTheme,
 } from '../services/themes';
+import { saveApplication, isApplicationSaved } from '../services/arsenal';
 import { colors } from '../theme/colors';
 
 interface Props {
@@ -30,19 +31,25 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
   const [themeApplication, setThemeApplication] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const loadThemeApplication = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
+      // Use getSession() instead of getUser() to avoid network call for auth
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
         setError('Please log in to see theme applications');
         return;
       }
+      const user = session.user;
+      setUserId(user.id);
 
       const yearlyTheme = await getUserYearlyTheme(user.id);
       if (!yearlyTheme) {
@@ -61,19 +68,23 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
 
       setThemeApplication(application);
 
-      // Record sub-theme discovery if present
+      // Record sub-theme discovery if present (non-blocking)
       if (application.sub_theme) {
-        await recordThemeDiscovery(
+        recordThemeDiscovery(
           user.id,
           yearlyTheme.theme,
           application.sub_theme,
           bookName,
           chapter
-        );
+        ).catch(() => {});
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[MyThemeTab] Error loading theme application:', err);
-      setError('Failed to load theme application');
+      if (err?.message?.includes('Network request failed') || err?.message?.includes('fetch')) {
+        setError('network-error');
+      } else {
+        setError('Failed to load theme application');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +93,52 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
   useEffect(() => {
     loadThemeApplication();
   }, [loadThemeApplication]);
+
+  // Check if already saved to Arsenal
+  useEffect(() => {
+    if (themeApplication?.id && userId) {
+      isApplicationSaved(userId, themeApplication.id)
+        .then(setIsSaved)
+        .catch(() => {});
+    }
+  }, [themeApplication, userId]);
+
+  const handleSaveToArsenal = useCallback(async () => {
+    if (!themeApplication || !userTheme || !userId) return;
+
+    try {
+      setIsSaving(true);
+      await saveApplication({
+        userId,
+        chapterThemeId: themeApplication.id,
+        book: bookName,
+        chapter,
+        themeTag: userTheme,
+        subThemeTag: themeApplication.sub_theme,
+      });
+      setIsSaved(true);
+    } catch (err) {
+      console.error('[MyThemeTab] Error saving to arsenal:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [themeApplication, userTheme, userId, bookName, chapter]);
+
+  const handleShare = useCallback(async () => {
+    if (!themeApplication || !userTheme) return;
+    try {
+      let message = `${userTheme}`;
+      if (themeApplication.sub_theme) message += ` - ${themeApplication.sub_theme}`;
+      message += `\n\n${bookName} ${chapter}`;
+      if (themeApplication.application) message += `\n\n${themeApplication.application}`;
+      if (themeApplication.key_insight) message += `\n\nKey Insight: ${themeApplication.key_insight}`;
+      if (themeApplication.action_step) message += `\n\nAction Step: ${themeApplication.action_step}`;
+      message += `\n\n- Shared from Fireside Fellowship`;
+      await Share.share({ message });
+    } catch (error) {
+      console.error('[MyThemeTab] Share error:', error);
+    }
+  }, [themeApplication, userTheme, bookName, chapter]);
 
   const themeColors = userTheme && isValidTheme(userTheme) ? getThemeColors(userTheme) : null;
   const accentColor = themeColors?.primary || colors.accent.primary;
@@ -92,6 +149,24 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.accent.primary} />
         <Text style={styles.loadingText}>Loading your theme...</Text>
+      </View>
+    );
+  }
+
+  // Network error - show retry
+  if (error === 'network-error') {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyTitle}>Connection Error</Text>
+        <Text style={styles.emptyDescription}>
+          Could not load theme content. Please check your internet connection.
+        </Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={loadThemeApplication}
+        >
+          <Text style={styles.buttonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -161,13 +236,17 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
       </Text>
 
       {/* Application Text */}
-      <Text style={styles.application}>{themeApplication.application}</Text>
+      {themeApplication.application?.split('\n\n').map((paragraph: string, index: number) => (
+        <Text key={index} selectable style={styles.application}>
+          {paragraph}
+        </Text>
+      ))}
 
       {/* Key Insight */}
       {themeApplication.key_insight && (
         <View style={[styles.insightBox, { borderLeftColor: accentColor }]}>
           <Text style={styles.insightLabel}>🎯 Key Insight</Text>
-          <Text style={styles.insightText}>{themeApplication.key_insight}</Text>
+          <Text selectable style={styles.insightText}>{themeApplication.key_insight}</Text>
         </View>
       )}
 
@@ -175,9 +254,28 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
       {themeApplication.action_step && (
         <View style={styles.actionBox}>
           <Text style={styles.actionLabel}>💪 Today's Challenge</Text>
-          <Text style={styles.actionText}>{themeApplication.action_step}</Text>
+          <Text selectable style={styles.actionText}>{themeApplication.action_step}</Text>
         </View>
       )}
+
+      {/* Actions Row */}
+      <View style={styles.actionsRow}>
+        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+          <Text style={styles.shareButtonText}>📤 Share</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            isSaved && styles.saveButtonSaved,
+          ]}
+          onPress={handleSaveToArsenal}
+          disabled={isSaved || isSaving}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSaving ? 'Saving...' : isSaved ? '✓ Saved to Arsenal' : 'Save to Arsenal'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -309,5 +407,42 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: colors.text.primary,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  shareButton: {
+    flex: 1,
+    backgroundColor: colors.background.tertiary,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  shareButtonText: {
+    color: colors.text.primary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: colors.accent.primary,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonSaved: {
+    backgroundColor: '#95a5a6',
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

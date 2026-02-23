@@ -74,7 +74,7 @@ export default function Home() {
 
   const onBrowsePlans = useCallback(() => {
     // Navigate to your reading plans home screen within the Plans tab
-    nav.navigate('PlansTab', { screen: 'ReadingPlansHome' });
+    nav.navigate('StudyTab', { screen: 'ReadingPlansHome' });
   }, [nav]);
 
   const onOpenNotesSummary = useCallback(() => {
@@ -297,7 +297,7 @@ export default function Home() {
               </View>
             )}
             <TouchableOpacity
-              onPress={() => nav.navigate('PlansTab', { screen: 'ReadingPlansHome' })}
+              onPress={() => nav.navigate('StudyTab', { screen: 'ReadingPlansHome' })}
               style={{
                 marginTop: 12,
                 padding: 12,

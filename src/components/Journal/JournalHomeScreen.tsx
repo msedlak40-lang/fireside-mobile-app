@@ -42,7 +42,7 @@ export default function JournalHomeScreen() {
               Capture your spiritual journey through handwritten notes and reflections.
             </Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('JournalCreate')}
+              onPress={() => navigation.navigate('PrayerCreate')}
               style={{
                 padding: 16,
                 backgroundColor: '#2563eb',
@@ -66,7 +66,7 @@ export default function JournalHomeScreen() {
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => navigation.navigate('JournalDetail', { id: item.id })}
+            onPress={() => navigation.navigate('PrayerDetail', { id: item.id })}
             style={{
               marginHorizontal: 16,
               marginBottom: 12,

@@ -52,7 +52,7 @@ export default function JournalCreateScreen() {
         [
           {
             text: 'View Entry',
-            onPress: () => navigation.replace('JournalDetail', { id: entry.id })
+            onPress: () => navigation.replace('PrayerDetail', { id: entry.id })
           },
           {
             text: 'Done',

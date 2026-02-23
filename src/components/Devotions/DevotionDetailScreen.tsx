@@ -4,6 +4,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
 import { colors } from '../../theme/colors';
 import { completeDevotionProgress } from '../../services/progress';
+import { saveDevotionHighlight, getDevotionHighlights, deleteDevotionHighlight } from '../../services/devotionHighlights';
 import type { Devotion } from '../../types/supabase-devotions';
 
 export default function DevotionDetailScreen() {
@@ -24,7 +25,7 @@ export default function DevotionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [highlights, setHighlights] = useState<Array<{ start_pos: number; length: number; selected_text: string; color: string }>>([]);
+  const [highlights, setHighlights] = useState<Array<{ id?: string; start_pos: number; length: number; selected_text: string; color: string }>>([]);
   const [showHighlights, setShowHighlights] = useState(false);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [selectedParagraph, setSelectedParagraph] = useState<{ start: number; length: number; text: string } | null>(null);
@@ -103,8 +104,8 @@ export default function DevotionDetailScreen() {
         setDevotion(data as Devotion);
 
         // Check completion for this user + devotion
-        const { data: auth } = await supabase.auth.getUser();
-        const userId = auth?.user?.id;
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
         if (userId) {
           const { data: progressData } = await supabase
             .from('user_devotion_progress')
@@ -118,15 +119,8 @@ export default function DevotionDetailScreen() {
           }
 
           // Load saved highlights for this devotion
-          const { data: highlightsData } = await supabase
-            .from('daily_devotion_highlights')
-            .select('start_pos, length, selected_text, color')
-            .eq('user_id', userId)
-            .eq('devotion_id', devotionId);
-
-          if (highlightsData) {
-            setHighlights(highlightsData);
-          }
+          const highlightsData = await getDevotionHighlights(devotionId);
+          setHighlights(highlightsData);
         }
       } catch (err) {
         console.error('[DevotionDetail] Load failed', err);
@@ -154,29 +148,13 @@ export default function DevotionDetailScreen() {
     }
 
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      const userId = auth?.user?.id;
-      if (!userId) return;
-
-      // Calculate the actual position in the full devotional text
       const actualStart = selectedParagraph.start + selectionStart;
       const actualLength = selectionEnd - selectionStart;
       const selectedText = selectedParagraph.text.substring(selectionStart, selectionEnd);
 
-      const newHighlight = {
-        user_id: userId,
-        devotion_id: devotionId,
-        start_pos: actualStart,
-        length: actualLength,
-        selected_text: selectedText,
-        color: 'yellow',
-      };
+      await saveDevotionHighlight(devotionId, actualStart, actualLength, selectedText, 'yellow');
 
-      await supabase
-        .from('daily_devotion_highlights')
-        .insert(newHighlight);
-
-      setHighlights([...highlights, newHighlight]);
+      setHighlights([...highlights, { start_pos: actualStart, length: actualLength, selected_text: selectedText, color: 'yellow' }]);
       setShowSelectionModal(false);
       setSelectedParagraph(null);
     } catch (err) {
@@ -191,23 +169,26 @@ export default function DevotionDetailScreen() {
   };
 
   // Delete a highlight
-  const deleteHighlight = async (startPos: number, length: number) => {
+  const deleteHighlight = async (highlight: { id?: string; start_pos: number; length: number }) => {
     if (devotionId == null) return;
 
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      const userId = auth?.user?.id;
-      if (!userId) return;
+      if (highlight.id) {
+        await deleteDevotionHighlight(highlight.id);
+      } else {
+        // Fallback: delete by position
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        await supabase
+          .from('daily_devotion_highlights')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('devotion_id', devotionId)
+          .eq('start_pos', highlight.start_pos)
+          .eq('length', highlight.length);
+      }
 
-      await supabase
-        .from('daily_devotion_highlights')
-        .delete()
-        .eq('user_id', userId)
-        .eq('devotion_id', devotionId)
-        .eq('start_pos', startPos)
-        .eq('length', length);
-
-      setHighlights(highlights.filter(h => !(h.start_pos === startPos && h.length === length)));
+      setHighlights(highlights.filter(h => !(h.start_pos === highlight.start_pos && h.length === highlight.length)));
     } catch (err) {
       console.error('[DevotionDetail] Failed to delete highlight:', err);
       Alert.alert('Error', 'Failed to delete highlight.');
@@ -329,7 +310,7 @@ export default function DevotionDetailScreen() {
           borderRadius: 8,
         }}
       >
-        <Text style={{ fontSize: 15, fontStyle: 'italic', color: colors.text.primary }}>{devotion.key_verse_text}</Text>
+        <Text selectable style={{ fontSize: 15, fontStyle: 'italic', color: colors.text.primary }}>{devotion.key_verse_text}</Text>
         <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>
           {devotion.key_verse_book} {devotion.key_verse_chapter}:{keyRangeOrNum}
         </Text>
@@ -340,7 +321,7 @@ export default function DevotionDetailScreen() {
         <View style={{ marginTop: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{ fontSize: 12, color: colors.text.secondary }}>
-              Long-press paragraphs to highlight text
+              Long-press a paragraph to highlight
             </Text>
             {highlights.length > 0 && (
               <TouchableOpacity onPress={() => setShowHighlights(true)}>
@@ -365,7 +346,7 @@ export default function DevotionDetailScreen() {
                   borderLeftColor: '#f59e0b',
                 }}
               >
-                <Text style={{ fontSize: 16, lineHeight: 24, color: isHighlighted ? '#78350f' : colors.text.primary }}>
+                <Text selectable style={{ fontSize: 16, lineHeight: 24, color: isHighlighted ? '#78350f' : colors.text.primary }}>
                   {para.text}
                 </Text>
               </Pressable>
@@ -378,7 +359,7 @@ export default function DevotionDetailScreen() {
       {devotion.hard_truth ? (
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#fff7ed', borderRadius: 8 }}>
           <Text style={{ fontSize: 12, color: '#9a3412', fontWeight: '700' }}>HARD TRUTH</Text>
-          <Text style={{ marginTop: 6, fontSize: 15, color: '#9a3412' }}>{devotion.hard_truth}</Text>
+          <Text selectable style={{ marginTop: 6, fontSize: 15, color: '#9a3412' }}>{devotion.hard_truth}</Text>
         </View>
       ) : null}
 
@@ -386,7 +367,7 @@ export default function DevotionDetailScreen() {
       {devotion.today_challenge ? (
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#ecfeff', borderRadius: 8 }}>
           <Text style={{ fontSize: 12, color: '#155e75', fontWeight: '700' }}>TODAY'S CHALLENGE</Text>
-          <Text style={{ marginTop: 6, fontSize: 15, color: '#155e75' }}>{devotion.today_challenge}</Text>
+          <Text selectable style={{ marginTop: 6, fontSize: 15, color: '#155e75' }}>{devotion.today_challenge}</Text>
         </View>
       ) : null}
 
@@ -394,7 +375,7 @@ export default function DevotionDetailScreen() {
       {devotion.prayer_starter ? (
         <View style={{ marginTop: 16, padding: 12, backgroundColor: '#eef2ff', borderRadius: 8 }}>
           <Text style={{ fontSize: 12, color: '#3730a3', fontWeight: '700' }}>PRAYER STARTER</Text>
-          <Text style={{ marginTop: 6, fontSize: 15, color: '#3730a3' }}>{devotion.prayer_starter}</Text>
+          <Text selectable style={{ marginTop: 6, fontSize: 15, color: '#3730a3' }}>{devotion.prayer_starter}</Text>
         </View>
       ) : null}
 
@@ -607,7 +588,7 @@ export default function DevotionDetailScreen() {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={() => deleteHighlight(highlight.start_pos, highlight.length)}
+                    onPress={() => deleteHighlight(highlight)}
                     style={{
                       position: 'absolute',
                       top: 8,

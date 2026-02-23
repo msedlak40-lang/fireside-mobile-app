@@ -1,0 +1,16 @@
+# Create .gitignore with proper exclusions
+echo "node_modules/
+.expo/
+*.pdf
+output/
+scripts/node_modules/
+scripts/package-lock.json
+.env.local
+.DS_Store
+*.log
+dist/
+build/
+.vscode/
+*.swp
+*.swo
+*~" > .gitignore

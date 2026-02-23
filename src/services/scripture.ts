@@ -345,8 +345,6 @@ export async function fetchTermsInChapter(bookId: number, chapter: number): Prom
       .rpc('rpc_get_terms_in_chapter', { p_book_id: bookId, p_chapter: chapter })
     
     if (!rpcError && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
-      console.log('[fetchTermsInChapter] RPC returned', rpcData.length, 'terms')
-      console.log('[fetchTermsInChapter] First term raw:', JSON.stringify(rpcData[0], null, 2))
       return (rpcData ?? []).map((t: any) => ({
         term_id: t.term_id ?? t.id ?? -1,
         term: String(t.term ?? '').trim(),
@@ -358,7 +356,6 @@ export async function fetchTermsInChapter(bookId: number, chapter: number): Prom
     }
     
     // Fallback: fetch all terms from the table (they'll apply to all chapters)
-    console.log('[fetchTermsInChapter] RPC not available or returned no data, fetching all terms from table')
     const { data: allTermsData, error: termsError } = await supabase
       .from('biblical_terms')
       .select('id, term, simple_definition, detailed_explanation, definition')
@@ -367,11 +364,6 @@ export async function fetchTermsInChapter(bookId: number, chapter: number): Prom
     if (termsError) {
       console.warn('[fetchTermsInChapter] Error fetching terms:', termsError)
       return []
-    }
-
-    console.log('[fetchTermsInChapter] Fetched', allTermsData?.length, 'terms from table')
-    if (allTermsData && allTermsData.length > 0) {
-      console.log('[fetchTermsInChapter] First term from table:', JSON.stringify(allTermsData[0], null, 2))
     }
 
     const terms = (allTermsData ?? []).map((t: any) => ({
@@ -383,10 +375,6 @@ export async function fetchTermsInChapter(bookId: number, chapter: number): Prom
       matched_verses: [], // No chapter-specific matching in fallback
     })).filter((t: ChapterTerm) => t.term.length > 0)
 
-    console.log('[fetchTermsInChapter] Returning', terms.length, 'processed terms')
-    if (terms.length > 0) {
-      console.log('[fetchTermsInChapter] First processed term:', JSON.stringify(terms[0], null, 2))
-    }
     return terms
   } catch (err) {
     console.error('[fetchTermsInChapter] Unexpected error:', err)

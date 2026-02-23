@@ -8,9 +8,11 @@ type Props = {
   content?: string | null
   /** Legacy prop (kept for back-compat) */
   markdown?: string | null
+  /** Allow text selection via long-press */
+  selectable?: boolean
 }
 
-export default function MarkdownRenderer({ content, markdown }: Props) {
+export default function MarkdownRenderer({ content, markdown, selectable }: Props) {
   const raw = typeof content === 'string' ? content : markdown
   const safe = typeof raw === 'string' ? raw : ''
   if (!safe.trim()) return null
@@ -28,7 +30,7 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
   const flushParagraph = (para: string) => {
     const children = renderInline(para)
     elements.push(
-      <Text key={`p-${idx++}`} style={styles.paragraph}>
+      <Text key={`p-${idx++}`} selectable={selectable} style={styles.paragraph}>
         {children}
       </Text>
     )
@@ -51,7 +53,7 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
       return (
         <View key={`li-${idx++}-${i}`} style={styles.listItem}>
           <Text style={styles.bullet}>{listType === 'ul' ? '•' : `${i + 1}.`}</Text>
-          <Text style={styles.listText}>{renderInline(t)}</Text>
+          <Text selectable={selectable} style={styles.listText}>{renderInline(t)}</Text>
         </View>
       )
     })
@@ -91,27 +93,27 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
     // Headings
     if (/^#####\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h5-${idx++}`} style={styles.h5}>{renderInline(line.replace(/^#####\s+/, ''))}</Text>)
+      elements.push(<Text key={`h5-${idx++}`} selectable={selectable} style={styles.h5}>{renderInline(line.replace(/^#####\s+/, ''))}</Text>)
       continue
     }
     if (/^####\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h4-${idx++}`} style={styles.h4}>{renderInline(line.replace(/^####\s+/, ''))}</Text>)
+      elements.push(<Text key={`h4-${idx++}`} selectable={selectable} style={styles.h4}>{renderInline(line.replace(/^####\s+/, ''))}</Text>)
       continue
     }
     if (/^###\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h3-${idx++}`} style={styles.h3}>{renderInline(line.replace(/^###\s+/, ''))}</Text>)
+      elements.push(<Text key={`h3-${idx++}`} selectable={selectable} style={styles.h3}>{renderInline(line.replace(/^###\s+/, ''))}</Text>)
       continue
     }
     if (/^##\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h2-${idx++}`} style={styles.h2}>{renderInline(line.replace(/^##\s+/, ''))}</Text>)
+      elements.push(<Text key={`h2-${idx++}`} selectable={selectable} style={styles.h2}>{renderInline(line.replace(/^##\s+/, ''))}</Text>)
       continue
     }
     if (/^#\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h1-${idx++}`} style={styles.h1}>{renderInline(line.replace(/^#\s+/, ''))}</Text>)
+      elements.push(<Text key={`h1-${idx++}`} selectable={selectable} style={styles.h1}>{renderInline(line.replace(/^#\s+/, ''))}</Text>)
       continue
     }
 
@@ -121,7 +123,7 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
       const text = line.replace(/^\s*>\s?/, '')
       elements.push(
         <View key={`quote-${idx++}`} style={styles.quote}>
-          <Text style={styles.quoteText}>{renderInline(text)}</Text>
+          <Text selectable={selectable} style={styles.quoteText}>{renderInline(text)}</Text>
         </View>
       )
       continue

@@ -86,6 +86,7 @@ export default function OnePagerTab({
           studyTier={null}
           sectionKey="onepager-summary"
           enableAnnotations={true}
+          selectable
           bookName={bookName}
           chapter={chapter}
         />
@@ -100,6 +101,7 @@ export default function OnePagerTab({
           studyTier={null}
           sectionKey="onepager-theological-themes"
           enableAnnotations={true}
+          selectable
           bookName={bookName}
           chapter={chapter}
         />
@@ -114,6 +116,7 @@ export default function OnePagerTab({
           studyTier={null}
           sectionKey="onepager-key-verses"
           enableAnnotations={true}
+          selectable
           bookName={bookName}
           chapter={chapter}
         />
@@ -128,6 +131,7 @@ export default function OnePagerTab({
           studyTier={null}
           sectionKey="onepager-practical-applications"
           enableAnnotations={true}
+          selectable
           bookName={bookName}
           chapter={chapter}
         />

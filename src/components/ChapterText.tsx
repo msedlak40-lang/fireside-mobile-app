@@ -2,10 +2,11 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ActionSheetIOS,
-  Modal, TextInput, Alert
+  Modal, TextInput, Alert, ScrollView, Platform
 } from 'react-native'
 import { supabase } from '../lib/supabaseClient'
 import InsightModal from './InsightModal'
+import { saveBattleVerse, BATTLE_TAGS } from '../services/battleVerses'
 import { colors } from '../theme/colors'
 
 type RawVerse = any
@@ -65,11 +66,6 @@ function collectKeywordsForVerse(v: RawVerse, biblicalTerms?: Keyword[], chapter
     })
     .filter(k => k.word && !seen.has(k.word.toLowerCase()) && (seen.add(k.word.toLowerCase()) || true))
   
-  // Log first result for debugging
-  if (result.length > 0) {
-    console.log('[collectKeywordsForVerse] First keyword:', JSON.stringify(result[0], null, 2))
-  }
-  
   return result
 }
 
@@ -90,6 +86,10 @@ export default function ChapterText(props: Props) {
   const [insightTitle, setInsightTitle] = useState('')
   const [insightBody, setInsightBody] = useState('')
   const [insightDetailed, setInsightDetailed] = useState('')
+
+  // Battle verse tag selection modal
+  const [battleTagOpen, setBattleTagOpen] = useState(false)
+  const [battleVerseData, setBattleVerseData] = useState<{ verseNum: number; verseText: string } | null>(null)
 
   const [highlightMap, setHighlightMap] = useState<Map<number, string>>(new Map())
 
@@ -136,11 +136,12 @@ export default function ChapterText(props: Props) {
     if (!v) { Alert.alert('Unknown verse', 'Could not determine verse number.'); return }
 
     const isHighlighted = highlightMap.has(v)
+    const verseText = rawVerse?.text ?? String(rawVerse ?? '')
 
     // Show different options based on whether verse is already highlighted
     const options = isHighlighted
-      ? ['Add Note', 'Remove Highlight', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
-      : ['Add Note', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
+      ? ['Add Note', 'Save to Battle Verses', 'Remove Highlight', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
+      : ['Add Note', 'Save to Battle Verses', 'Highlight (Yellow)', 'Highlight (Green)', 'Highlight (Pink)', 'Highlight (Blue)', 'Cancel']
 
     const cancelIndex = options.length - 1
 
@@ -149,7 +150,7 @@ export default function ChapterText(props: Props) {
         title: `Verse ${v}`,
         options,
         cancelButtonIndex: cancelIndex,
-        destructiveButtonIndex: isHighlighted ? 1 : undefined,
+        destructiveButtonIndex: isHighlighted ? 2 : undefined,
         userInterfaceStyle: 'dark',
       },
       async (idx) => {
@@ -157,26 +158,54 @@ export default function ChapterText(props: Props) {
           setActiveVerse(v);
           setNoteOpen(true)
         }
-        else if (isHighlighted && idx === 1) {
+        else if (idx === 1) {
+          // Save to Battle Verses — open tag picker
+          setBattleVerseData({ verseNum: v, verseText })
+          setBattleTagOpen(true)
+        }
+        else if (isHighlighted && idx === 2) {
           // Remove highlight
           await removeHighlight(v)
           await loadHighlights()
         }
-        else if (isHighlighted && idx >= 2 && idx <= 5) {
+        else if (isHighlighted && idx >= 3 && idx <= 6) {
           // Change highlight color
           const colors = ['yellow', 'green', 'pink', 'blue'] as const
           await removeHighlight(v) // Remove old highlight first
-          await insertHighlight(v, colors[idx - 2])
+          await insertHighlight(v, colors[idx - 3])
           await loadHighlights()
         }
-        else if (!isHighlighted && idx >= 1 && idx <= 4) {
+        else if (!isHighlighted && idx >= 2 && idx <= 5) {
           // Add new highlight
           const colors = ['yellow', 'green', 'pink', 'blue'] as const
-          await insertHighlight(v, colors[idx - 1])
+          await insertHighlight(v, colors[idx - 2])
           await loadHighlights()
         }
       }
     )
+  }
+
+  async function handleSaveBattleVerse(tag: string) {
+    if (!battleVerseData || !book) return
+    setBattleTagOpen(false)
+    try {
+      const saved = await saveBattleVerse(
+        book,
+        chapter,
+        battleVerseData.verseNum,
+        battleVerseData.verseText,
+        tag,
+      )
+      if (saved) {
+        Alert.alert('Saved!', `${book} ${chapter}:${battleVerseData.verseNum} added to Battle Verses`)
+      } else {
+        Alert.alert('Already Saved', 'This verse is already in your Battle Verses')
+      }
+    } catch (err: any) {
+      console.error('[ChapterText] Save battle verse error:', err)
+      Alert.alert('Error', 'Could not save verse')
+    }
+    setBattleVerseData(null)
   }
 
   // Tap on verse number -> open INSIGHT if available
@@ -305,14 +334,16 @@ export default function ChapterText(props: Props) {
 
             <TouchableOpacity
               style={{ flex: 1 }}
+              onPress={verseInsight ? () => onPressVerseNum(raw) : undefined}
               onLongPress={() => openVerseActions(raw)}
-              activeOpacity={0.7}
+              activeOpacity={verseInsight ? 0.7 : 1}
             >
-              <Text style={[styles.verseText, highlighted && styles.verseTextHighlighted]}>
+              <Text style={[
+                styles.verseText,
+                highlighted && styles.verseTextHighlighted,
+                verseInsight ? styles.keyVerseText : null,
+              ]}>
                 {renderTextWithKeywords(raw?.text ?? String(raw ?? ''), keywords, (w, ins, detailed) => {
-                  console.log('[ChapterText] Keyword tapped:', w)
-                  console.log('[ChapterText] Insight:', ins)
-                  console.log('[ChapterText] Detailed:', detailed)
                   setInsightTitle(w)
                   setInsightBody(ins || `Insight on ${w}`)
                   setInsightDetailed(detailed || '')
@@ -367,6 +398,44 @@ export default function ChapterText(props: Props) {
         content={insightBody}
         detailedExplanation={insightDetailed}
       />
+
+      {/* BATTLE TAG SELECTION MODAL */}
+      <Modal visible={battleTagOpen} transparent animationType="fade" onRequestClose={() => { setBattleTagOpen(false); setBattleVerseData(null) }}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Save to Battle Verses</Text>
+            <Text style={{ color: colors.text.secondary, fontSize: 14, marginBottom: 12 }}>
+              {book} {chapter}:{battleVerseData?.verseNum} — Choose a battle tag:
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {BATTLE_TAGS.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    backgroundColor: colors.background.tertiary,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: colors.border.default,
+                  }}
+                  onPress={() => handleSaveBattleVerse(tag)}
+                >
+                  <Text style={{ color: colors.text.primary, fontWeight: '600', fontSize: 14, textTransform: 'capitalize' }}>
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.btn, styles.btnGhost, { marginTop: 12, alignSelf: 'flex-end' }]}
+              onPress={() => { setBattleTagOpen(false); setBattleVerseData(null) }}
+            >
+              <Text style={styles.btnGhostText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -430,6 +499,7 @@ const styles = StyleSheet.create({
 
   verseText: { flex: 1, color: colors.text.primary, lineHeight: 22 },
   verseTextHighlighted: { fontWeight: '600' },
+  keyVerseText: { textDecorationLine: 'underline', textDecorationColor: colors.accent.tertiary },
 
   keyword: { color: colors.accent.tertiary, textDecorationLine: 'underline' },
 

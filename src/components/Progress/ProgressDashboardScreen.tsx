@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/verseOfTheDay';
+import { getUserBattleVerses, deleteBattleVerse, BATTLE_TAGS, type BattleVerse } from '../../services/battleVerses';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import { colors } from '../../theme/colors';
@@ -68,6 +69,10 @@ export default function ProgressDashboardScreen() {
   const [showHighlightsModal, setShowHighlightsModal] = useState(false);
   const [highlights, setHighlights] = useState<HighlightWithDevotion[]>([]);
   const [highlightsLoading, setHighlightsLoading] = useState(false);
+  const [showBattleVersesModal, setShowBattleVersesModal] = useState(false);
+  const [battleVerses, setBattleVerses] = useState<BattleVerse[]>([]);
+  const [battleVersesLoading, setBattleVersesLoading] = useState(false);
+  const [battleTagFilter, setBattleTagFilter] = useState<string | null>(null);
 
   // Close modal with a delay to let React Native clean up touch handlers
   const closeInsightModal = () => {
@@ -184,11 +189,11 @@ export default function ProgressDashboardScreen() {
 
   const openPlans = useCallback(() => {
     // ✅ just switch to the Plans tab — avoids nested hook issues
-    navigation.navigate('PlansTab', { screen: 'ReadingPlansHome' });
+    navigation.navigate('StudyTab', { screen: 'ReadingPlansHome' });
   }, [navigation]);
 
   const openCharacters = useCallback(() => {
-    navigation.navigate('CharactersTab', { screen: 'CharactersHome' });
+    navigation.navigate('StudyTab', { screen: 'CharactersHome' });
   }, [navigation]);
 
   const openNotesSummary = useCallback(() => {
@@ -279,6 +284,38 @@ const openTodayDevotion = useCallback(() => {
     } catch (err) {
       console.error('[ProgressDashboard] Failed to delete highlight:', err);
     }
+  };
+
+  const loadBattleVerses = async (tag?: string | null) => {
+    try {
+      setBattleVersesLoading(true);
+      const verses = await getUserBattleVerses(tag || undefined);
+      setBattleVerses(verses);
+    } catch (err) {
+      console.error('[ProgressDashboard] Load battle verses error:', err);
+    } finally {
+      setBattleVersesLoading(false);
+    }
+  };
+
+  const openBattleVersesModal = () => {
+    setShowBattleVersesModal(true);
+    setBattleTagFilter(null);
+    loadBattleVerses();
+  };
+
+  const handleDeleteBattleVerse = async (verseId: string) => {
+    try {
+      await deleteBattleVerse(verseId);
+      setBattleVerses(battleVerses.filter(v => v.id !== verseId));
+    } catch (err) {
+      console.error('[ProgressDashboard] Delete battle verse error:', err);
+    }
+  };
+
+  const filterBattleVerses = (tag: string | null) => {
+    setBattleTagFilter(tag);
+    loadBattleVerses(tag);
   };
 
   const formatDate = (dateStr: string) => {
@@ -399,6 +436,19 @@ const openTodayDevotion = useCallback(() => {
                 💡 Tap to view insight
               </Text>
             )}
+            <TouchableOpacity
+              onPress={openBattleVersesModal}
+              style={{
+                marginTop: 12,
+                paddingVertical: 10,
+                paddingHorizontal: 16,
+                backgroundColor: '#1e40af',
+                borderRadius: 8,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Battle Verses</Text>
+            </TouchableOpacity>
           </Pressable>
         )}
 
@@ -877,6 +927,147 @@ const openTodayDevotion = useCallback(() => {
                           </Text>
                         </View>
                       ))}
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Battle Verses Modal */}
+      <Modal
+        visible={showBattleVersesModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowBattleVersesModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{
+            backgroundColor: colors.background.primary,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingTop: 20,
+            paddingBottom: 40,
+            maxHeight: '85%',
+          }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
+                Battle Verses
+              </Text>
+              <TouchableOpacity onPress={() => setShowBattleVersesModal(false)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tag Filter */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 16, marginBottom: 12, maxHeight: 40 }}>
+              <TouchableOpacity
+                onPress={() => filterBattleVerses(null)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                  marginRight: 8,
+                  backgroundColor: battleTagFilter === null ? '#1e40af' : colors.background.tertiary,
+                }}
+              >
+                <Text style={{ color: battleTagFilter === null ? '#fff' : colors.text.secondary, fontWeight: '600', fontSize: 13 }}>All</Text>
+              </TouchableOpacity>
+              {BATTLE_TAGS.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  onPress={() => filterBattleVerses(tag)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    marginRight: 8,
+                    backgroundColor: battleTagFilter === tag ? '#1e40af' : colors.background.tertiary,
+                  }}
+                >
+                  <Text style={{
+                    color: battleTagFilter === tag ? '#fff' : colors.text.secondary,
+                    fontWeight: '600',
+                    fontSize: 13,
+                    textTransform: 'capitalize',
+                  }}>
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Content */}
+            {battleVersesLoading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator color={colors.accent.primary} />
+              </View>
+            ) : (
+              <ScrollView style={{ paddingHorizontal: 20 }}>
+                <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 16 }}>
+                  {battleVerses.length} verse{battleVerses.length !== 1 ? 's' : ''} saved
+                </Text>
+
+                {battleVerses.length === 0 ? (
+                  <View style={{ marginTop: 20, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 48, marginBottom: 16 }}>⚔️</Text>
+                    <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', lineHeight: 22 }}>
+                      No battle verses yet. Long-press a verse while reading the Bible to save it here!
+                    </Text>
+                  </View>
+                ) : (
+                  battleVerses.map((verse) => (
+                    <View
+                      key={verse.id}
+                      style={{
+                        marginBottom: 16,
+                        padding: 14,
+                        backgroundColor: colors.background.secondary,
+                        borderRadius: 10,
+                        borderLeftWidth: 4,
+                        borderLeftColor: '#1e40af',
+                        position: 'relative',
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => handleDeleteBattleVerse(verse.id)}
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: '#dc2626',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
+                      </TouchableOpacity>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1e40af', marginBottom: 6 }}>
+                        {verse.verse_reference}
+                      </Text>
+                      <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary, paddingRight: 28, fontStyle: 'italic' }}>
+                        "{verse.verse_text}"
+                      </Text>
+                      {verse.battle_tag && (
+                        <View style={{
+                          marginTop: 8,
+                          alignSelf: 'flex-start',
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          backgroundColor: '#1e40af',
+                          borderRadius: 12,
+                        }}>
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }}>
+                            {verse.battle_tag}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   ))
                 )}

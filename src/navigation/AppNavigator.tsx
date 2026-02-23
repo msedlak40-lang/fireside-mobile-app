@@ -1,6 +1,6 @@
 // src/navigation/AppNavigator.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, View, Text, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, Platform, TouchableOpacity } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as ExpoLinking from 'expo-linking';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
+import { getUserFires, getUnreadShareCount } from '../services/fire';
 
 // Screens
 import Auth from '../screens/Auth';
@@ -35,25 +36,41 @@ import ReadingPlanDetailScreen from '../components/ReadingPlans/ReadingPlanDetai
 // Progress = Home
 import ProgressDashboardScreen from '../components/Progress/ProgressDashboardScreen';
 
-// Journal
+// Journal (shown under Prayer tab)
 import JournalHomeScreen from '../components/Journal/JournalHomeScreen';
 import JournalCreateScreen from '../components/Journal/JournalCreateScreen';
 import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
 
-// Notes & Highlights summary (new screen)
+// Notes & Highlights summary
 import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
 
-// Search
+// Search (now inside Bible stack)
 import BibleSearchScreen from '../screens/BibleSearchScreen';
 
 // Settings
 import SettingsScreen from '../screens/SettingsScreen';
 
+// Arsenal
+import ArsenalScreen from '../screens/ArsenalScreen';
+
+// Fire
+import FireScreen from '../screens/FireScreen';
+import FireDetailsScreen from '../screens/FireDetailsScreen';
+
+// Study
+import StudyHomeScreen from '../screens/StudyHomeScreen';
+
+// Journeys
+import JourneyCatalogScreen from '../screens/JourneyCatalogScreen';
+import JourneyDetailScreen from '../screens/JourneyDetailScreen';
+import JourneyExperienceScreen from '../screens/JourneyExperienceScreen';
+import JourneyLocationScreen from '../screens/JourneyLocationScreen';
+
 // ---- Stacks ----
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Bible Tab
+// Bible Tab (now includes Search)
 const BibleStack = createNativeStackNavigator();
 function BibleStackNavigator() {
   return (
@@ -71,7 +88,17 @@ function BibleStackNavigator() {
       <BibleStack.Screen
         name="BibleHome"
         component={BibleHomeScreen}
-        options={{ headerTitle: 'Bible' }}
+        options={({ navigation }: any) => ({
+          headerTitle: 'Bible',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('BibleSearch')}
+              style={{ marginRight: 8 }}
+            >
+              <Text style={{ fontSize: 24 }}>🔍</Text>
+            </TouchableOpacity>
+          ),
+        })}
       />
       <BibleStack.Screen
         name="Chapter"
@@ -82,6 +109,11 @@ function BibleStackNavigator() {
         name="Verse"
         component={VerseScreen}
         options={{ headerTitle: 'Verse' }}
+      />
+      <BibleStack.Screen
+        name="BibleSearch"
+        component={BibleSearchScreen}
+        options={{ headerTitle: 'Search' }}
       />
     </BibleStack.Navigator>
   );
@@ -111,57 +143,74 @@ function DevotionsStackNavigator() {
   );
 }
 
-// Characters Tab
-const CharactersStack = createNativeStackNavigator();
-function CharactersStackNavigator() {
+// Study Tab (combines Characters + Reading Plans)
+const StudyStack = createNativeStackNavigator();
+function StudyStackNavigator() {
   return (
-    <CharactersStack.Navigator>
-      <CharactersStack.Screen
+    <StudyStack.Navigator>
+      <StudyStack.Screen
+        name="StudyHome"
+        component={StudyHomeScreen}
+        options={{ headerTitle: 'Study' }}
+      />
+      {/* Characters screens */}
+      <StudyStack.Screen
         name="CharactersHome"
         component={CharactersHomeScreen}
-        options={{ headerTitle: 'Bible Characters' }}
+        options={{ headerTitle: 'Biblical Characters' }}
       />
-      <CharactersStack.Screen
+      <StudyStack.Screen
         name="CharacterDetail"
         component={CharacterDetailScreen}
         options={{ headerTitle: 'Character' }}
       />
-      <CharactersStack.Screen
+      <StudyStack.Screen
         name="CharacterLesson"
         component={CharacterLessonScreen}
         options={{ headerTitle: 'Lesson' }}
       />
-    </CharactersStack.Navigator>
-  );
-}
-
-// Reading Plans Tab
-const ReadingPlansStack = createNativeStackNavigator();
-function ReadingPlansStackNavigator() {
-  return (
-    <ReadingPlansStack.Navigator>
-      <ReadingPlansStack.Screen
+      {/* Reading Plans screens */}
+      <StudyStack.Screen
         name="ReadingPlansHome"
         component={ReadingPlansHomeScreen}
         options={{ headerTitle: 'Reading Plans' }}
       />
-      <ReadingPlansStack.Screen
+      <StudyStack.Screen
         name="ReadingPlanDetail"
         component={ReadingPlanDetailScreen}
         options={{ headerTitle: 'Plan Details' }}
       />
-      {/* NEW: opens when a day is tapped */}
-      <ReadingPlansStack.Screen
+      <StudyStack.Screen
         name="ReadingPlanDay"
         component={ReadingPlanDayScreen}
         options={{ headerTitle: 'Plan Day' }}
       />
-    </ReadingPlansStack.Navigator>
+      {/* Journey screens */}
+      <StudyStack.Screen
+        name="JourneyCatalog"
+        component={JourneyCatalogScreen}
+        options={{ headerTitle: 'Journeys' }}
+      />
+      <StudyStack.Screen
+        name="JourneyDetail"
+        component={JourneyDetailScreen}
+        options={{ headerTitle: 'Journey' }}
+      />
+      <StudyStack.Screen
+        name="JourneyExperience"
+        component={JourneyExperienceScreen}
+        options={{ headerShown: false }}
+      />
+      <StudyStack.Screen
+        name="JourneyLocation"
+        component={JourneyLocationScreen}
+        options={{ headerTitle: 'Location' }}
+      />
+    </StudyStack.Navigator>
   );
 }
 
-
-// Progress/Home Tab (now includes Notes & Highlights + DevotionDetail for direct nav from Home)
+// Progress/Home Tab (includes Notes & Highlights + DevotionDetail for direct nav from Home)
 const ProgressStack = createNativeStackNavigator();
 function ProgressStackNavigator() {
   return (
@@ -186,13 +235,11 @@ function ProgressStackNavigator() {
         component={NotesHighlightsSummary}
         options={{ headerTitle: 'Notes & Highlights' }}
       />
-      {/* Add DevotionDetail here too, so Home can open it directly */}
       <ProgressStack.Screen
         name="DevotionDetail"
         component={DevotionDetailScreen}
         options={{ headerTitle: 'Devotion' }}
       />
-      {/* Settings */}
       <ProgressStack.Screen
         name="Settings"
         component={SettingsScreen}
@@ -202,48 +249,88 @@ function ProgressStackNavigator() {
   );
 }
 
-// Journal Tab
-const JournalStack = createNativeStackNavigator();
-function JournalStackNavigator() {
+// Prayer Tab (formerly Journal)
+const PrayerStack = createNativeStackNavigator();
+function PrayerStackNavigator() {
   return (
-    <JournalStack.Navigator>
-      <JournalStack.Screen
-        name="JournalHome"
+    <PrayerStack.Navigator>
+      <PrayerStack.Screen
+        name="PrayerHome"
         component={JournalHomeScreen}
-        options={{ headerTitle: 'Journal' }}
+        options={{ headerTitle: 'Prayer' }}
       />
-      <JournalStack.Screen
-        name="JournalCreate"
+      <PrayerStack.Screen
+        name="PrayerCreate"
         component={JournalCreateScreen}
         options={{ headerTitle: 'New Entry' }}
       />
-      <JournalStack.Screen
-        name="JournalDetail"
+      <PrayerStack.Screen
+        name="PrayerDetail"
         component={JournalDetailScreen}
         options={{ headerTitle: 'Entry' }}
       />
-    </JournalStack.Navigator>
+    </PrayerStack.Navigator>
   );
 }
 
-// Search Tab
-const SearchStack = createNativeStackNavigator();
-function SearchStackNavigator() {
+// Arsenal Tab
+const ArsenalStack = createNativeStackNavigator();
+function ArsenalStackNavigator() {
   return (
-    <SearchStack.Navigator>
-      <SearchStack.Screen
-        name="BibleSearch"
-        component={BibleSearchScreen}
-        options={{ headerTitle: 'Search' }}
+    <ArsenalStack.Navigator>
+      <ArsenalStack.Screen
+        name="ArsenalHome"
+        component={ArsenalScreen}
+        options={{ headerTitle: 'Arsenal' }}
       />
-    </SearchStack.Navigator>
+    </ArsenalStack.Navigator>
   );
 }
 
-// ---- Bottom Tabs ----
+// Fire Tab
+const FireStack = createNativeStackNavigator();
+function FireStackNavigator() {
+  return (
+    <FireStack.Navigator>
+      <FireStack.Screen
+        name="FireHome"
+        component={FireScreen}
+        options={{ headerTitle: 'Fire' }}
+      />
+      <FireStack.Screen
+        name="FireDetails"
+        component={FireDetailsScreen}
+        options={{ headerTitle: 'Fire' }}
+      />
+    </FireStack.Navigator>
+  );
+}
+
+// ---- Bottom Tabs (6 tabs) ----
 function MainTabs() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 6);
+  const [fireUnreadCount, setFireUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadFireUnreadCount();
+    const interval = setInterval(loadFireUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function loadFireUnreadCount() {
+    try {
+      const fires = await getUserFires();
+      let total = 0;
+      for (const fire of fires) {
+        const count = await getUnreadShareCount(fire.id);
+        total += count;
+      }
+      setFireUnreadCount(total);
+    } catch (error) {
+      // Silently fail - badge is non-critical
+    }
+  }
 
   return (
     <Tab.Navigator
@@ -285,35 +372,36 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="CharactersTab"
-        component={CharactersStackNavigator}
+        name="ArsenalTab"
+        component={ArsenalStackNavigator}
         options={{
-          title: 'People',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>👤</Text>
+          title: 'Arsenal',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🗡️</Text>
         }}
       />
       <Tab.Screen
-        name="PlansTab"
-        component={ReadingPlansStackNavigator}
+        name="StudyTab"
+        component={StudyStackNavigator}
         options={{
-          title: 'Plans',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>📅</Text>
+          title: 'Study',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>📚</Text>
         }}
       />
       <Tab.Screen
-        name="SearchTab"
-        component={SearchStackNavigator}
+        name="FireTab"
+        component={FireStackNavigator}
         options={{
-          title: 'Search',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🔍</Text>
+          title: 'Fire',
+          tabBarBadge: fireUnreadCount > 0 ? fireUnreadCount : undefined,
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🔥</Text>
         }}
       />
       <Tab.Screen
-        name="JournalTab"
-        component={JournalStackNavigator}
+        name="PrayerTab"
+        component={PrayerStackNavigator}
         options={{
-          title: 'Journal',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>📝</Text>
+          title: 'Prayer',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🙏</Text>
         }}
       />
     </Tab.Navigator>
@@ -340,39 +428,41 @@ const linking = {
             screens: {
               BibleHome: 'bible',
               Chapter: 'bible/:bookId/:chapter',
-              Verse: 'bible/:bookId/:chapter/:verse'
-            }
-          },
-          DevotionsTab: {
-            screens: {
-              DevotionsHome: 'devotions',
-              ThemeList: 'devotions/theme/:category',
-              DevotionDetail: 'devotions/:id'
-            }
-          },
-          CharactersTab: {
-            screens: {
-              CharactersHome: 'characters',
-              CharacterDetail: 'characters/:id',
-              CharacterLesson: 'characters/lesson/:id'
-            }
-          },
-          PlansTab: {
-            screens: {
-              ReadingPlansHome: 'plans',
-              ReadingPlanDetail: 'plans/:planId'
-            }
-          },
-          SearchTab: {
-            screens: {
+              Verse: 'bible/:bookId/:chapter/:verse',
               BibleSearch: 'search'
             }
           },
-          JournalTab: {
+          ArsenalTab: {
             screens: {
-              JournalHome: 'journal',
-              JournalCreate: 'journal/new',
-              JournalDetail: 'journal/:id'
+              ArsenalHome: 'arsenal'
+            }
+          },
+          StudyTab: {
+            screens: {
+              StudyHome: 'study',
+              CharactersHome: 'study/characters',
+              CharacterDetail: 'study/characters/:id',
+              CharacterLesson: 'study/characters/lesson/:id',
+              ReadingPlansHome: 'study/plans',
+              ReadingPlanDetail: 'study/plans/:planId',
+              ReadingPlanDay: 'study/plans/:planId/day/:dayNumber',
+              JourneyCatalog: 'study/journeys',
+              JourneyDetail: 'study/journeys/:journeyId',
+              JourneyExperience: 'study/journeys/:journeyId/experience',
+              JourneyLocation: 'study/journeys/:journeyId/location/:locationIndex'
+            }
+          },
+          FireTab: {
+            screens: {
+              FireHome: 'fire',
+              FireDetails: 'fire/:fireId'
+            }
+          },
+          PrayerTab: {
+            screens: {
+              PrayerHome: 'prayer',
+              PrayerCreate: 'prayer/new',
+              PrayerDetail: 'prayer/:id'
             }
           }
         }
@@ -380,8 +470,6 @@ const linking = {
     }
   }
 };
-
-// ---- Auth helpers removed (no longer using magic links) ----
 
 // ---- Root Navigator ----
 export default function AppNavigator() {
@@ -411,12 +499,9 @@ export default function AppNavigator() {
         const hasSession = !!data.session;
 
         if (hasSession) {
-          // Session exists - allow access
-          // Note: Biometric unlock will be implemented for app resume from background
           console.log('[AppNavigator] Session exists, allowing access');
           setIsAuthed(true);
         } else {
-          // No session - show login screen
           console.log('[AppNavigator] No session, showing login screen');
           setIsAuthed(false);
         }

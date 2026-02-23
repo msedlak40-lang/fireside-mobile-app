@@ -1,7 +1,7 @@
 // src/components/ChapterScreen.tsx — UPDATED WITH NEW TABS
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView, RefreshControl } from 'react-native'
-import { useRoute } from '@react-navigation/native'
+import { useRoute, useNavigation } from '@react-navigation/native'
 import {
   fetchChapterText,
   fetchChapterSummary,
@@ -9,7 +9,9 @@ import {
   fetchChapterPage,
   fetchTermsInChapter,
   fetchChapterKeyVerses,
+  fetchBooks,
 } from '../services/scripture'
+import type { Book } from '../services/scripture'
 import ChapterText from './ChapterText'
 import OnePagerTab from './OnePagerTab'
 import CrossReferencesTab from './CrossReferencesTab'
@@ -25,6 +27,7 @@ type TabType = 'read' | 'onepager' | 'mytheme' | 'crossrefs' | 'discussion'
 
 export default function ChapterScreen() {
   const route = useRoute<any>() as { params?: Partial<RouteParams> }
+  const navigation = useNavigation<any>()
   const initialBookId = route?.params?.bookId ?? null
   const initialChapter = route?.params?.chapter ?? 1
   const paramBookName = route?.params?.bookName ?? null
@@ -36,6 +39,7 @@ export default function ChapterScreen() {
   const [translation] = useState<string | null>(paramTranslation ?? null)
 
   const [tab, setTab] = useState<TabType>('read')
+  const [books, setBooks] = useState<Book[]>([])
 
   const [verses, setVerses] = useState<Verse[]>([])
   const [basic, setBasic] = useState<{ summary_title?: string; summary_content?: string } | null>(null)
@@ -50,6 +54,48 @@ export default function ChapterScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
   const mountTimeRef = useRef<number>(Date.now())
+
+  // Fetch books for chapter navigation
+  useEffect(() => {
+    fetchBooks().then(setBooks).catch(() => {})
+  }, [])
+
+  // Compute previous/next chapter
+  const previousChapter = useMemo(() => {
+    if (!bookId || books.length === 0) return null
+    if (chapter > 1) {
+      return { bookId, chapter: chapter - 1, bookName: bookNameResolved }
+    }
+    const currentIdx = books.findIndex(b => b.id === bookId)
+    if (currentIdx > 0) {
+      const prevBook = books[currentIdx - 1]
+      return { bookId: prevBook.id, chapter: prevBook.total_chapters, bookName: prevBook.book_name }
+    }
+    return null // Genesis 1
+  }, [bookId, chapter, books, bookNameResolved])
+
+  const nextChapter = useMemo(() => {
+    if (!bookId || books.length === 0) return null
+    const currentBook = books.find(b => b.id === bookId)
+    if (currentBook && chapter < currentBook.total_chapters) {
+      return { bookId, chapter: chapter + 1, bookName: bookNameResolved }
+    }
+    const currentIdx = books.findIndex(b => b.id === bookId)
+    if (currentIdx >= 0 && currentIdx < books.length - 1) {
+      const nextBook = books[currentIdx + 1]
+      return { bookId: nextBook.id, chapter: 1, bookName: nextBook.book_name }
+    }
+    return null // Revelation 22
+  }, [bookId, chapter, books, bookNameResolved])
+
+  const navigateToChapter = useCallback((target: { bookId: number; chapter: number; bookName: string | null }) => {
+    navigation.push('Chapter', {
+      bookId: target.bookId,
+      chapter: target.chapter,
+      bookName: target.bookName,
+      translation,
+    })
+  }, [navigation, translation])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -332,6 +378,40 @@ export default function ChapterScreen() {
             <DiscussionQuestionsTab markdownContent={discussionData} />
           )}
 
+          {/* Chapter Navigation */}
+          {books.length > 0 && (
+            <View style={styles.chapterNav}>
+              <TouchableOpacity
+                style={[styles.navBtn, !previousChapter && styles.navBtnDisabled]}
+                onPress={() => previousChapter && navigateToChapter(previousChapter)}
+                disabled={!previousChapter}
+              >
+                <Text style={[styles.navBtnText, !previousChapter && styles.navBtnTextDisabled]}>
+                  Previous
+                </Text>
+                {previousChapter && (
+                  <Text style={styles.navBtnSub}>
+                    {previousChapter.bookName} {previousChapter.chapter}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.navBtn, !nextChapter && styles.navBtnDisabled]}
+                onPress={() => nextChapter && navigateToChapter(nextChapter)}
+                disabled={!nextChapter}
+              >
+                <Text style={[styles.navBtnText, !nextChapter && styles.navBtnTextDisabled]}>
+                  Next
+                </Text>
+                {nextChapter && (
+                  <Text style={styles.navBtnSub}>
+                    {nextChapter.bookName} {nextChapter.chapter}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
@@ -364,4 +444,11 @@ const styles = StyleSheet.create({
 
   completeBtn: { backgroundColor: colors.accent.primary, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginHorizontal: 12, marginTop: 12 },
   completeText: { color: colors.text.primary, fontWeight: '700' },
+
+  chapterNav: { flexDirection: 'row', padding: 16, gap: 12, borderTopWidth: 1, borderTopColor: colors.border.default, marginTop: 16 },
+  navBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.border.default, alignItems: 'center' },
+  navBtnDisabled: { opacity: 0.3 },
+  navBtnText: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
+  navBtnTextDisabled: { color: colors.text.tertiary },
+  navBtnSub: { fontSize: 12, color: colors.text.secondary, marginTop: 4 },
 })
