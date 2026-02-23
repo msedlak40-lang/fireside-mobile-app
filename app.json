@@ -20,14 +20,18 @@
         "projectId": "1798fa36-7c32-4e97-8188-6151c5a4d464"
       }
     },
-    "version": "1.0.0",
+    "version": "2.0.0",
     "ios": {
       "bundleIdentifier": "com.msedlak40.firesidemobile",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Fireside uses Face ID to securely unlock the app and keep your data safe."
       }
+    },
+    "android": {
+      "package": "com.msedlak40.firesidemobile",
+      "versionCode": 2
     }
   }
 }
