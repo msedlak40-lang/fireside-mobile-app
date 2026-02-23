@@ -36,10 +36,13 @@ import ReadingPlanDetailScreen from '../components/ReadingPlans/ReadingPlanDetai
 // Progress = Home
 import ProgressDashboardScreen from '../components/Progress/ProgressDashboardScreen';
 
-// Journal (shown under Prayer tab)
-import JournalHomeScreen from '../components/Journal/JournalHomeScreen';
-import JournalCreateScreen from '../components/Journal/JournalCreateScreen';
-import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
+// TODO: Re-enable when Prayer feature is ready
+// import JournalHomeScreen from '../components/Journal/JournalHomeScreen';
+// import JournalCreateScreen from '../components/Journal/JournalCreateScreen';
+// import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
+
+// Prayer (Coming Soon placeholder)
+import PrayerComingSoonScreen from '../screens/PrayerComingSoonScreen';
 
 // Notes & Highlights summary
 import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
@@ -249,25 +252,15 @@ function ProgressStackNavigator() {
   );
 }
 
-// Prayer Tab (formerly Journal)
+// Prayer Tab (Coming Soon)
 const PrayerStack = createNativeStackNavigator();
 function PrayerStackNavigator() {
   return (
     <PrayerStack.Navigator>
       <PrayerStack.Screen
         name="PrayerHome"
-        component={JournalHomeScreen}
+        component={PrayerComingSoonScreen}
         options={{ headerTitle: 'Prayer' }}
-      />
-      <PrayerStack.Screen
-        name="PrayerCreate"
-        component={JournalCreateScreen}
-        options={{ headerTitle: 'New Entry' }}
-      />
-      <PrayerStack.Screen
-        name="PrayerDetail"
-        component={JournalDetailScreen}
-        options={{ headerTitle: 'Entry' }}
       />
     </PrayerStack.Navigator>
   );
@@ -460,9 +453,7 @@ const linking = {
           },
           PrayerTab: {
             screens: {
-              PrayerHome: 'prayer',
-              PrayerCreate: 'prayer/new',
-              PrayerDetail: 'prayer/:id'
+              PrayerHome: 'prayer'
             }
           }
         }
