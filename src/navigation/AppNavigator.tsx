@@ -23,6 +23,7 @@ import ReadingPlanDayScreen from '../screens/ReadingPlanDayScreen';
 import DevotionsHomeTabs from '../components/Devotions/DevotionsHomeTabs';
 import ThemeListScreen from '../components/Devotions/ThemeListScreen';
 import DevotionDetailScreen from '../components/Devotions/DevotionDetailScreen';
+import DevotionArchiveScreen from '../screens/DevotionArchiveScreen';
 
 // Characters
 import CharactersHomeScreen from '../components/Characters/CharactersHomeScreen';
@@ -41,8 +42,8 @@ import ProgressDashboardScreen from '../components/Progress/ProgressDashboardScr
 // import JournalCreateScreen from '../components/Journal/JournalCreateScreen';
 // import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
 
-// Prayer (Coming Soon placeholder)
-import PrayerComingSoonScreen from '../screens/PrayerComingSoonScreen';
+// Prayer (Coming Soon placeholder) — disabled for App Store submission
+// import PrayerComingSoonScreen from '../screens/PrayerComingSoonScreen';
 
 // Notes & Highlights summary
 import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
@@ -52,6 +53,9 @@ import BibleSearchScreen from '../screens/BibleSearchScreen';
 
 // Settings
 import SettingsScreen from '../screens/SettingsScreen';
+
+// VOTD Archive
+import VOTDArchiveScreen from '../screens/VOTDArchiveScreen';
 
 // Arsenal
 import ArsenalScreen from '../screens/ArsenalScreen';
@@ -68,6 +72,10 @@ import JourneyCatalogScreen from '../screens/JourneyCatalogScreen';
 import JourneyDetailScreen from '../screens/JourneyDetailScreen';
 import JourneyExperienceScreen from '../screens/JourneyExperienceScreen';
 import JourneyLocationScreen from '../screens/JourneyLocationScreen';
+
+// Verse Review Queue
+import ReviewQueueScreen from '../screens/ReviewQueueScreen';
+import DeepStudyScreen from '../screens/DeepStudyScreen';
 
 // ---- Stacks ----
 const RootStack = createNativeStackNavigator();
@@ -142,6 +150,11 @@ function DevotionsStackNavigator() {
         component={DevotionDetailScreen}
         options={{ headerTitle: 'Devotion' }}
       />
+      <DevotionsStack.Screen
+        name="DevotionArchive"
+        component={DevotionArchiveScreen}
+        options={{ headerTitle: 'Past Devotions' }}
+      />
     </DevotionsStack.Navigator>
   );
 }
@@ -209,6 +222,17 @@ function StudyStackNavigator() {
         component={JourneyLocationScreen}
         options={{ headerTitle: 'Location' }}
       />
+      {/* Verse Review Queue */}
+      <StudyStack.Screen
+        name="ReviewQueue"
+        component={ReviewQueueScreen}
+        options={{ headerTitle: 'Review Queue' }}
+      />
+      <StudyStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
+      />
     </StudyStack.Navigator>
   );
 }
@@ -244,6 +268,16 @@ function ProgressStackNavigator() {
         options={{ headerTitle: 'Devotion' }}
       />
       <ProgressStack.Screen
+        name="DevotionArchive"
+        component={DevotionArchiveScreen}
+        options={{ headerTitle: 'Past Devotions' }}
+      />
+      <ProgressStack.Screen
+        name="VOTDArchive"
+        component={VOTDArchiveScreen}
+        options={{ headerTitle: 'Verse of the Day Archive' }}
+      />
+      <ProgressStack.Screen
         name="Settings"
         component={SettingsScreen}
         options={{ headerTitle: 'Settings' }}
@@ -252,19 +286,19 @@ function ProgressStackNavigator() {
   );
 }
 
-// Prayer Tab (Coming Soon)
-const PrayerStack = createNativeStackNavigator();
-function PrayerStackNavigator() {
-  return (
-    <PrayerStack.Navigator>
-      <PrayerStack.Screen
-        name="PrayerHome"
-        component={PrayerComingSoonScreen}
-        options={{ headerTitle: 'Prayer' }}
-      />
-    </PrayerStack.Navigator>
-  );
-}
+// Prayer Tab — disabled for App Store submission (re-enable when feature is ready)
+// const PrayerStack = createNativeStackNavigator();
+// function PrayerStackNavigator() {
+//   return (
+//     <PrayerStack.Navigator>
+//       <PrayerStack.Screen
+//         name="PrayerHome"
+//         component={PrayerComingSoonScreen}
+//         options={{ headerTitle: 'Prayer' }}
+//       />
+//     </PrayerStack.Navigator>
+//   );
+// }
 
 // Arsenal Tab
 const ArsenalStack = createNativeStackNavigator();
@@ -299,7 +333,7 @@ function FireStackNavigator() {
   );
 }
 
-// ---- Bottom Tabs (6 tabs) ----
+// ---- Bottom Tabs (5 tabs — Prayer disabled for App Store) ----
 function MainTabs() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 6);
@@ -389,6 +423,7 @@ function MainTabs() {
           tabBarIcon: () => <Text style={{ fontSize: 20 }}>🔥</Text>
         }}
       />
+      {/* Prayer tab disabled for App Store submission
       <Tab.Screen
         name="PrayerTab"
         component={PrayerStackNavigator}
@@ -397,6 +432,7 @@ function MainTabs() {
           tabBarIcon: () => <Text style={{ fontSize: 20 }}>🙏</Text>
         }}
       />
+      */}
     </Tab.Navigator>
   );
 }
@@ -442,7 +478,9 @@ const linking = {
               JourneyCatalog: 'study/journeys',
               JourneyDetail: 'study/journeys/:journeyId',
               JourneyExperience: 'study/journeys/:journeyId/experience',
-              JourneyLocation: 'study/journeys/:journeyId/location/:locationIndex'
+              JourneyLocation: 'study/journeys/:journeyId/location/:locationIndex',
+              ReviewQueue: 'study/review-queue',
+              DeepStudy: 'study/review-queue/:verseId'
             }
           },
           FireTab: {
@@ -451,11 +489,12 @@ const linking = {
               FireDetails: 'fire/:fireId'
             }
           },
-          PrayerTab: {
-            screens: {
-              PrayerHome: 'prayer'
-            }
-          }
+          // PrayerTab disabled for App Store submission
+          // PrayerTab: {
+          //   screens: {
+          //     PrayerHome: 'prayer'
+          //   }
+          // }
         }
       }
     }

@@ -21,10 +21,10 @@
         "projectId": "1798fa36-7c32-4e97-8188-6151c5a4d464"
       }
     },
-    "version": "2.0.0",
+    "version": "2.0.1",
     "ios": {
       "bundleIdentifier": "com.msedlak40.firesidemobile",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "icon": "./assets/Fellowship_App_Logo.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
