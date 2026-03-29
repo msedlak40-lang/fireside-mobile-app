@@ -7,7 +7,6 @@ import {
   fetchChapterSummary,
   fetchAdvancedChapterSummary,
   fetchChapterPage,
-  fetchTermsInChapter,
   fetchChapterKeyVerses,
   fetchBooks,
 } from '../services/scripture'
@@ -33,10 +32,10 @@ export default function ChapterScreen() {
   const paramBookName = route?.params?.bookName ?? null
   const paramTranslation = route?.params?.translation ?? null
 
-  const [bookId] = useState<number | null>(Number(initialBookId) || null)
-  const [chapter] = useState<number>(Number(initialChapter) || 1)
+  const [bookId, setBookId] = useState<number | null>(Number(initialBookId) || null)
+  const [chapter, setChapter] = useState<number>(Number(initialChapter) || 1)
   const [bookNameResolved, setBookNameResolved] = useState<string | null>(paramBookName ?? null)
-  const [translation] = useState<string | null>(paramTranslation ?? null)
+  const [translation, setTranslation] = useState<string | null>(paramTranslation ?? null)
 
   const [tab, setTab] = useState<TabType>('read')
   const [books, setBooks] = useState<Book[]>([])
@@ -47,18 +46,79 @@ export default function ChapterScreen() {
   const [keyVerses, setKeyVerses] = useState<Array<{ verse_number: number; text: string }>>([])
 
   const [verseInsightsByVerse, setVerseInsightsByVerse] = useState<Record<number, string>>({})
-  const [biblicalTerms, setBiblicalTerms] = useState<Array<{ word: string; insight?: string; related_verses?: string[] }>>([])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [chapterReadDate, setChapterReadDate] = useState<string | null>(null)
 
   const mountTimeRef = useRef<number>(Date.now())
 
-  // Fetch books for chapter navigation
+  // Fetch books for chapter navigation + resolve bookName → bookId if needed
   useEffect(() => {
-    fetchBooks().then(setBooks).catch(() => {})
+    fetchBooks().then((bks) => {
+      setBooks(bks)
+      if (!bookId && paramBookName && bks.length > 0) {
+        const match = bks.find(b => b.book_name.toLowerCase() === paramBookName.toLowerCase())
+        if (match) {
+          setBookId(match.id)
+          if (!bookNameResolved) setBookNameResolved(match.book_name)
+        }
+      }
+    }).catch(() => {})
   }, [])
+
+  // Sync state when route params change (e.g. cross-ref navigation reuses this screen)
+  useEffect(() => {
+    const newBookId = Number(route?.params?.bookId) || null
+    const newChapter = Number(route?.params?.chapter) || 1
+    const newBookName = route?.params?.bookName ?? null
+    const newTranslation = route?.params?.translation ?? null
+
+    if (newBookId && newBookId !== bookId) setBookId(newBookId)
+    if (newChapter !== chapter) setChapter(newChapter)
+    if (newBookName && newBookName !== bookNameResolved) setBookNameResolved(newBookName)
+    if (newTranslation !== translation) setTranslation(newTranslation)
+
+    // If no bookId but bookName provided, resolve from books list
+    if (!newBookId && newBookName && books.length > 0) {
+      const match = books.find(b => b.book_name.toLowerCase() === newBookName.toLowerCase())
+      if (match && match.id !== bookId) {
+        setBookId(match.id)
+        setBookNameResolved(match.book_name)
+      }
+    }
+  }, [route?.params?.bookId, route?.params?.chapter, route?.params?.bookName, route?.params?.translation])
+
+  // Update header title + ensure back button when book/chapter changes
+  useEffect(() => {
+    if (bookNameResolved) {
+      navigation.setOptions({
+        headerTitle: `${bookNameResolved} ${chapter}`,
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack()
+              } else {
+                navigation.navigate('BibleHome')
+              }
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }}
+          >
+            <Text style={{ fontSize: 28, color: colors.accent.primary, lineHeight: 28 }}>{'\u2039'}</Text>
+            <Text style={{ fontSize: 16, color: colors.accent.primary, fontWeight: '600', marginLeft: 2 }}>Bible</Text>
+          </TouchableOpacity>
+        ),
+        headerRight: chapterReadDate ? () => (
+          <View style={styles.readBadge}>
+            <Text style={styles.readBadgeCheck}>{'\u2713'}</Text>
+            <Text style={styles.readBadgeText}>{formatReadDate(chapterReadDate)}</Text>
+          </View>
+        ) : undefined,
+      })
+    }
+  }, [navigation, bookNameResolved, chapter, chapterReadDate])
 
   // Compute previous/next chapter
   const previousChapter = useMemo(() => {
@@ -140,12 +200,11 @@ export default function ChapterScreen() {
     setError(null)
 
     try {
-      const [textRes, basicRes, advRes, pageRes, termsRes, keyVersesRes] = await Promise.all([
+      const [textRes, basicRes, advRes, pageRes, keyVersesRes] = await Promise.all([
         fetchChapterText(bookId, chapter, translation ?? undefined),
         fetchChapterSummary(bookId, chapter),
         fetchAdvancedChapterSummary(bookId, chapter),
         fetchChapterPage(bookId, chapter),
-        fetchTermsInChapter(bookId, chapter),
         fetchChapterKeyVerses(bookId, chapter),
       ])
 
@@ -176,15 +235,6 @@ export default function ChapterScreen() {
       }
       setVerseInsightsByVerse(mappedInsights)
 
-      // Build biblical terms with insights
-      const terms = (termsRes ?? []).map((t: any) => ({
-        word: String(t.term ?? '').trim(),
-        insight: t.simple_definition || '',
-        detailed_explanation: t.detailed_explanation || '',
-      })).filter((t: any) => t.word.length > 0)
-
-      setBiblicalTerms(terms)
-
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load chapter.')
     } finally {
@@ -196,6 +246,29 @@ export default function ChapterScreen() {
     loadAll()
     mountTimeRef.current = Date.now()
   }, [loadAll])
+
+  // Fetch chapter read status
+  const loadReadStatus = useCallback(async () => {
+    if (!bookNameResolved) return
+    try {
+      const { data: auth } = await supabase.auth.getUser()
+      const userId = auth?.user?.id
+      if (!userId) return
+      const { data } = await supabase
+        .from('user_reading_progress')
+        .select('completed_at')
+        .eq('user_id', userId)
+        .eq('book_name', bookNameResolved)
+        .eq('chapter_number', chapter)
+        .maybeSingle()
+      setChapterReadDate(data?.completed_at ?? null)
+    } catch {}
+  }, [bookNameResolved, chapter])
+
+  useEffect(() => {
+    setChapterReadDate(null)
+    loadReadStatus()
+  }, [loadReadStatus])
 
   // Get advanced summary as string
   const advancedSummaryString = useMemo(() => {
@@ -296,6 +369,7 @@ export default function ChapterScreen() {
         if (error) throw error
       }
 
+      setChapterReadDate(new Date().toISOString())
       Alert.alert('✓ Marked Read', `${bookNameResolved} ${chapter} marked as read`)
     } catch (e: any) {
       console.error('[markChapterRead] error:', e)
@@ -304,6 +378,18 @@ export default function ChapterScreen() {
   }, [bookNameResolved, chapter])
 
   const noVerses = !verses || verses.length === 0
+
+  function formatReadDate(dateStr: string): string {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
 
   // Tab button helper
   const TabButton = ({ tabKey, label }: { tabKey: TabType; label: string }) => (
@@ -342,7 +428,6 @@ export default function ChapterScreen() {
                 <ChapterText
                   verses={verses}
                   verseInsightsByVerse={verseInsightsByVerse}
-                  biblicalTerms={biblicalTerms}
                   bookName={bookNameResolved ?? undefined}
                   chapter={chapter}
                 />
@@ -451,4 +536,19 @@ const styles = StyleSheet.create({
   navBtnText: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
   navBtnTextDisabled: { color: colors.text.tertiary },
   navBtnSub: { fontSize: 12, color: colors.text.secondary, marginTop: 4 },
+
+  // Read status badge in header
+  readBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(39, 174, 96, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(39, 174, 96, 0.3)',
+    marginRight: 4,
+  },
+  readBadgeCheck: { fontSize: 12, color: colors.success, marginRight: 4, fontWeight: '700' },
+  readBadgeText: { fontSize: 11, color: colors.success, fontWeight: '600' },
 })

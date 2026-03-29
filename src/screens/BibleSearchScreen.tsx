@@ -1,9 +1,39 @@
 // src/screens/BibleSearchScreen.tsx
-import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, SafeAreaView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Pressable,
+  TouchableOpacity,
+  ActivityIndicator,
+  SafeAreaView,
+  Alert,
+  Modal,
+  StyleSheet,
+  TouchableWithoutFeedback,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabaseClient';
+import { parseReference } from '../utils/bibleReferenceParser';
+import { saveBattleVersesBatch } from '../services/battleVerses';
+import { addToReviewQueue } from '../services/verseReviewQueue';
+import { CORE_THEMES, THEME_DESCRIPTIONS, THEME_COLORS } from '../services/themes';
+import type { ChapterTheme } from '../services/themes';
+import { hybridThemeSearch, getThemeChapterCounts } from '../services/themeSearch';
+import WordStudyModal from '../components/Bible/WordStudyModal';
+import CommentaryModal from '../components/Bible/CommentaryModal';
+
+type WordMapping = {
+  verse_number: number;
+  word_position: number;
+  english_word: string;
+  original_word: string;
+  strongs_number: string;
+  transliteration: string;
+};
 
 type SearchResult = {
   book_name: string;
@@ -13,183 +43,140 @@ type SearchResult = {
   reference: string;
 };
 
-const POPULAR_THEMES = [
-  { id: 'love', label: 'Love', emoji: '❤️' },
-  { id: 'faith', label: 'Faith', emoji: '🙏' },
-  { id: 'hope', label: 'Hope', emoji: '✨' },
-  { id: 'wisdom', label: 'Wisdom', emoji: '🦉' },
-  { id: 'courage', label: 'Courage', emoji: '💪' },
-  { id: 'peace', label: 'Peace', emoji: '🕊️' },
-  { id: 'joy', label: 'Joy', emoji: '😊' },
-  { id: 'prayer', label: 'Prayer', emoji: '🙏' },
-];
-
 const TRANSLATIONS = ['KJV', 'WEB'];
-
-// Normalize book names to handle variations like Psalm/Psalms
-function normalizeBookName(bookName: string): string {
-  const normalized = bookName.trim();
-  // Handle Psalm/Psalms variation
-  if (normalized.toLowerCase() === 'psalm') {
-    return 'Psalms';
-  }
-  // Add other common variations here if needed
-  return normalized;
-}
 
 export default function BibleSearchScreen() {
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
   const [themeInput, setThemeInput] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [themeChapterResults, setThemeChapterResults] = useState<ChapterTheme[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchMode, setSearchMode] = useState<'lookup' | 'theme'>('lookup');
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [translation, setTranslation] = useState('KJV');
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [themeCounts, setThemeCounts] = useState<Record<string, number>>({});
+  const [modalChapter, setModalChapter] = useState<ChapterTheme | null>(null);
+
+  // Commentary state
+  const [commentaryOpen, setCommentaryOpen] = useState(false);
+
+  // Word study state
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [actionMenuResult, setActionMenuResult] = useState<SearchResult | null>(null);
+  const [wordStudyKey, setWordStudyKey] = useState<string | null>(null); // verseKey of active study
+  const [wordMappings, setWordMappings] = useState<WordMapping[]>([]);
+  const [wordStudyOpen, setWordStudyOpen] = useState(false);
+  const [wordStudyStrongs, setWordStudyStrongs] = useState<string | null>(null);
+  const [wordStudyEnglish, setWordStudyEnglish] = useState('');
+  const [wordStudyContext, setWordStudyContext] = useState<{ book: string; chapter: number; verse: number; text: string }>({ book: '', chapter: 0, verse: 0, text: '' });
+
+  // Load theme counts on mount
+  useEffect(() => {
+    getThemeChapterCounts().then(setThemeCounts).catch(() => {});
+  }, []);
+
+  // ------------------------------------------------------------------
+  // Search handlers
+  // ------------------------------------------------------------------
 
   const handleTextSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
-
+    if (!query.trim()) { setResults([]); return; }
     setLoading(true);
+    setSelectedKeys(new Set());
+    setThemeChapterResults([]);
     try {
-      // Try to parse as a verse reference first (e.g., "John 3:16" or "Genesis 1:1")
-      const verseMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+):(\d+)$/);
-      if (verseMatch) {
-        const [, bookName, chapterNum, verseNum] = verseMatch;
-        const normalizedBook = normalizeBookName(bookName);
-
-        // Direct lookup for specific verse
-        const { data: verseData, error } = await supabase
-          .from('bible_verses')
-          .select('book_name, chapter_number, verse_number, verse_text')
-          .ilike('book_name', `${normalizedBook}%`)
-          .eq('chapter_number', parseInt(chapterNum))
-          .eq('verse_number', parseInt(verseNum))
-          .eq('translation', translation)
-          .limit(5);
-
-        if (error) {
-          console.error('[BibleSearch] Verse lookup error:', error);
-          setResults([]);
-          setLoading(false);
-          return;
-        }
-
-        if (verseData && verseData.length > 0) {
-          const resultsWithRefs = verseData.map((v: any) => ({
-            book_name: v.book_name,
-            chapter_number: v.chapter_number,
-            verse_number: v.verse_number,
-            verse_text: v.verse_text,
-            reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
-          }));
-          setResults(resultsWithRefs);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Try to parse as chapter reference (e.g., "John 3" or "Genesis 1")
-      const chapterMatch = query.match(/^(\d?\s*[A-Za-z]+)\s+(\d+)$/);
-      if (chapterMatch) {
-        const [, bookName, chapterNum] = chapterMatch;
-        const normalizedBook = normalizeBookName(bookName);
-
-        // Get all verses in the chapter
-        const { data: chapterData, error } = await supabase
-          .from('bible_verses')
-          .select('book_name, chapter_number, verse_number, verse_text')
-          .ilike('book_name', `${normalizedBook}%`)
-          .eq('chapter_number', parseInt(chapterNum))
-          .eq('translation', translation)
-          .order('verse_number', { ascending: true })
-          .limit(50);
-
-        if (error) {
-          console.error('[BibleSearch] Chapter lookup error:', error);
-          setResults([]);
-          setLoading(false);
-          return;
-        }
-
-        if (chapterData && chapterData.length > 0) {
-          const resultsWithRefs = chapterData.map((v: any) => ({
-            book_name: v.book_name,
-            chapter_number: v.chapter_number,
-            verse_number: v.verse_number,
-            verse_text: v.verse_text,
-            reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
-          }));
-          setResults(resultsWithRefs);
-          setLoading(false);
-          return;
+      // 1. Try flexible reference parsing
+      const parsed = parseReference(query);
+      if (parsed) {
+        if (parsed.verseStart === 0) {
+          // Chapter-only lookup (e.g., "John 3")
+          const { data, error } = await supabase
+            .from('bible_verses')
+            .select('book_name, chapter_number, verse_number, verse_text')
+            .ilike('book_name', `${parsed.book}%`)
+            .eq('chapter_number', parsed.chapter)
+            .eq('translation', translation)
+            .order('verse_number', { ascending: true })
+            .limit(200);
+          if (!error && data && data.length > 0) {
+            setResults(data.map(toResult));
+            return;
+          }
+        } else {
+          // Verse or range lookup
+          let q = supabase
+            .from('bible_verses')
+            .select('book_name, chapter_number, verse_number, verse_text')
+            .ilike('book_name', `${parsed.book}%`)
+            .eq('chapter_number', parsed.chapter)
+            .gte('verse_number', parsed.verseStart)
+            .lte('verse_number', parsed.verseEnd ?? parsed.verseStart)
+            .eq('translation', translation)
+            .order('verse_number', { ascending: true });
+          const { data, error } = await q;
+          if (!error && data && data.length > 0) {
+            setResults(data.map(toResult));
+            return;
+          }
         }
       }
 
-      // Otherwise, do a text search
-      const { data, error } = await supabase
-        .from('bible_verses')
-        .select('book_name, chapter_number, verse_number, verse_text')
-        .textSearch('verse_text', query)
-        .eq('translation', translation)
-        .limit(50);
-
-      if (error) {
-        console.error('[BibleSearch] Text search error:', error);
-        setResults([]);
-        setLoading(false);
-        return;
-      }
-
-      const resultsWithRefs = (data || []).map((v: any) => ({
-        book_name: v.book_name,
-        chapter_number: v.chapter_number,
-        verse_number: v.verse_number,
-        verse_text: v.verse_text,
-        reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
-      }));
-
-      setResults(resultsWithRefs);
+      // 2. Fall back to full-text / keyword search
+      await keywordSearch(query);
     } catch (err) {
-      console.error('[BibleSearch] Text search failed:', err);
+      console.error('[BibleSearch] search failed:', err);
       setResults([]);
     } finally {
       setLoading(false);
     }
   }, [translation]);
 
+  const keywordSearch = async (query: string) => {
+    const keywords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    if (keywords.length === 0) { setResults([]); return; }
+
+    // Try Supabase full-text search first
+    const { data: ftsData, error: ftsErr } = await supabase
+      .from('bible_verses')
+      .select('book_name, chapter_number, verse_number, verse_text')
+      .textSearch('verse_text', query)
+      .eq('translation', translation)
+      .limit(100);
+
+    if (!ftsErr && ftsData && ftsData.length > 0) {
+      const ranked = rankResults(ftsData, keywords, query);
+      setResults(ranked.map(toResult));
+      return;
+    }
+
+    // Fallback: ILIKE with first keyword
+    const { data, error } = await supabase
+      .from('bible_verses')
+      .select('book_name, chapter_number, verse_number, verse_text')
+      .ilike('verse_text', `%${keywords[0]}%`)
+      .eq('translation', translation)
+      .limit(100);
+
+    if (error) { setResults([]); return; }
+    const ranked = rankResults(data || [], keywords, query);
+    setResults(ranked.map(toResult));
+  };
+
   const handleThemeSearch = useCallback(async (theme: string) => {
     setLoading(true);
+    setSelectedKeys(new Set());
+    setThemeChapterResults([]);
+    setResults([]);
     try {
-      // Search for verses containing the theme keyword
-      const { data, error } = await supabase
-        .from('bible_verses')
-        .select('book_name, chapter_number, verse_number, verse_text')
-        .ilike('verse_text', `%${theme}%`)
-        .eq('translation', translation)
-        .limit(50);
-
-      if (error) {
-        console.error('[BibleSearch] Theme search error:', error);
-        setResults([]);
-        setLoading(false);
-        return;
-      }
-
-      const resultsWithRefs = (data || []).map((v: any) => ({
-        book_name: v.book_name,
-        chapter_number: v.chapter_number,
-        verse_number: v.verse_number,
-        verse_text: v.verse_text,
-        reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
-      }));
-
-      setResults(resultsWithRefs);
+      const { themeChapters, verseMatches } = await hybridThemeSearch(theme, translation);
+      setThemeChapterResults(themeChapters);
+      setResults(verseMatches.map(toResult));
     } catch (err) {
-      console.error('[BibleSearch] Theme search failed:', err);
+      console.error('[BibleSearch] theme search failed:', err);
+      setThemeChapterResults([]);
       setResults([]);
     } finally {
       setLoading(false);
@@ -199,287 +186,926 @@ export default function BibleSearchScreen() {
   const handleSearch = useCallback(() => {
     if (searchMode === 'lookup') {
       handleTextSearch(searchQuery);
-    } else if (searchMode === 'theme') {
-      if (themeInput) {
-        handleThemeSearch(themeInput);
-        setSelectedTheme(null);
-      } else if (selectedTheme) {
-        handleThemeSearch(selectedTheme);
-      }
+    } else {
+      if (themeInput) { handleThemeSearch(themeInput); setSelectedTheme(null); }
+      else if (selectedTheme) { handleThemeSearch(selectedTheme); }
     }
   }, [searchMode, searchQuery, themeInput, selectedTheme, handleTextSearch, handleThemeSearch]);
 
+  // ------------------------------------------------------------------
+  // Selection & batch save
+  // ------------------------------------------------------------------
+
+  const toggleSelect = (key: string) => {
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedKeys.size === results.length) {
+      setSelectedKeys(new Set());
+    } else {
+      setSelectedKeys(new Set(results.map(verseKey)));
+    }
+  };
+
+  const handleBatchSave = async () => {
+    if (selectedKeys.size === 0) return;
+    setSaving(true);
+    try {
+      const versesToSave = results.filter(r => selectedKeys.has(verseKey(r)));
+      const count = await saveBattleVersesBatch(
+        versesToSave.map(v => ({
+          book_name: v.book_name,
+          chapter_number: v.chapter_number,
+          verse_number: v.verse_number,
+          verse_text: v.verse_text,
+        })),
+      );
+      Alert.alert(
+        'Saved to Battle Verses',
+        count > 0
+          ? `Added ${count} verse${count > 1 ? 's' : ''} to your arsenal.`
+          : 'These verses are already in your arsenal.',
+      );
+      setSelectedKeys(new Set());
+    } catch (err) {
+      console.error('[BibleSearch] batch save error:', err);
+      Alert.alert('Error', 'Could not save verses. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearThemeSearch = () => {
+    setThemeInput('');
+    setResults([]);
+    setThemeChapterResults([]);
+    setSelectedKeys(new Set());
+    setSelectedTheme(null);
+  };
+
+  // ------------------------------------------------------------------
+  // Word Study handlers
+  // ------------------------------------------------------------------
+
+  const handleResultPress = (result: SearchResult) => {
+    setActionMenuResult(result);
+    setActionMenuOpen(true);
+  };
+
+  const handleWordStudyMode = async () => {
+    if (!actionMenuResult) return;
+    const key = verseKey(actionMenuResult);
+    setActionMenuOpen(false);
+
+    // Fetch word mappings for this verse
+    try {
+      const { data } = await supabase
+        .from('verse_strongs_words')
+        .select('verse_number, word_position, english_word, original_word, strongs_number, transliteration')
+        .eq('book_name', actionMenuResult.book_name)
+        .eq('chapter_number', actionMenuResult.chapter_number)
+        .eq('verse_number', actionMenuResult.verse_number)
+        .order('word_position');
+      setWordMappings(data ?? []);
+    } catch { setWordMappings([]); }
+
+    setWordStudyKey(key);
+  };
+
+  const handleSearchResultReviewQueue = async () => {
+    if (!actionMenuResult) return;
+    setActionMenuOpen(false);
+    try {
+      const added = await addToReviewQueue(
+        actionMenuResult.book_name, actionMenuResult.chapter_number,
+        actionMenuResult.verse_number, actionMenuResult.verse_text,
+      );
+      if (added) Alert.alert('Added!', `${actionMenuResult.reference} added to Review Queue`);
+      else Alert.alert('Already Queued', 'This verse is already in your Review Queue');
+    } catch { Alert.alert('Error', 'Could not add verse to queue'); }
+  };
+
+  const handleGoToChapter = () => {
+    if (!actionMenuResult) return;
+    setActionMenuOpen(false);
+    navigation.navigate('Chapter', {
+      bookName: actionMenuResult.book_name,
+      chapter: actionMenuResult.chapter_number,
+      translation,
+    });
+  };
+
+  const handleSearchCommentary = () => {
+    if (!actionMenuResult) return;
+    setActionMenuOpen(false);
+    setCommentaryOpen(true);
+  };
+
+  const openSearchWordStudy = (strongsNumber: string, englishWord: string) => {
+    if (!wordStudyKey) return;
+    const result = results.find(r => verseKey(r) === wordStudyKey);
+    if (!result) return;
+    setWordStudyStrongs(strongsNumber);
+    setWordStudyEnglish(englishWord);
+    setWordStudyContext({
+      book: result.book_name, chapter: result.chapter_number,
+      verse: result.verse_number, text: result.verse_text,
+    });
+    setWordStudyOpen(true);
+  };
+
+  // ------------------------------------------------------------------
+  // Render
+  // ------------------------------------------------------------------
+
+  const hasQuery = searchQuery.trim() || themeInput.trim() || selectedTheme;
+  const hasAnyResults = results.length > 0 || themeChapterResults.length > 0;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+    <SafeAreaView style={s.safe}>
       <View style={{ flex: 1 }}>
-        {/* Translation Selector */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text.secondary, marginBottom: 8 }}>
-            Translation:
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-            {TRANSLATIONS.map((trans) => (
+        {/* Translation selector */}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>Translation:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {TRANSLATIONS.map(t => (
               <Pressable
-                key={trans}
-                onPress={() => setTranslation(trans)}
-                style={{
-                  marginRight: 8,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  backgroundColor: translation === trans ? colors.accent.primary : colors.background.secondary,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: translation === trans ? colors.accent.primary : colors.border.default,
-                }}
+                key={t}
+                onPress={() => setTranslation(t)}
+                style={[s.chip, translation === t && s.chipActive]}
               >
-                <Text style={{
-                  fontWeight: '600',
-                  fontSize: 13,
-                  color: translation === trans ? colors.text.primary : colors.text.secondary,
-                }}>
-                  {trans}
-                </Text>
+                <Text style={[s.chipText, translation === t && s.chipTextActive]}>{t}</Text>
               </Pressable>
             ))}
           </ScrollView>
         </View>
 
-        {/* Search Mode Toggle */}
-        <View style={{ flexDirection: 'row', padding: 16, paddingTop: 8, gap: 8 }}>
+        {/* Mode toggle */}
+        <View style={s.modeRow}>
           <Pressable
-            onPress={() => {
-              setSearchMode('lookup');
-              setResults([]);
-              setSelectedTheme(null);
-              setThemeInput('');
-            }}
-            style={{
-              flex: 1,
-              padding: 12,
-              backgroundColor: searchMode === 'lookup' ? colors.accent.primary : colors.background.secondary,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: searchMode === 'lookup' ? colors.accent.primary : colors.border.default,
-            }}
+            onPress={() => { setSearchMode('lookup'); setResults([]); setThemeChapterResults([]); setSelectedTheme(null); setThemeInput(''); setSelectedKeys(new Set()); }}
+            style={[s.modeBtn, searchMode === 'lookup' && s.modeBtnActive]}
           >
-            <Text style={{
-              textAlign: 'center',
-              fontWeight: '700',
-              fontSize: 13,
-              color: searchMode === 'lookup' ? colors.text.primary : colors.text.secondary,
-            }}>
-              📖 Verse/Chapter Lookup
+            <Text style={[s.modeBtnText, searchMode === 'lookup' && s.modeBtnTextActive]}>
+              Verse / Chapter
             </Text>
           </Pressable>
-
           <Pressable
-            onPress={() => {
-              setSearchMode('theme');
-              setResults([]);
-              setSearchQuery('');
-            }}
-            style={{
-              flex: 1,
-              padding: 12,
-              backgroundColor: searchMode === 'theme' ? colors.accent.primary : colors.background.secondary,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: searchMode === 'theme' ? colors.accent.primary : colors.border.default,
-            }}
+            onPress={() => { setSearchMode('theme'); setResults([]); setThemeChapterResults([]); setSearchQuery(''); setSelectedKeys(new Set()); }}
+            style={[s.modeBtn, searchMode === 'theme' && s.modeBtnActive]}
           >
-            <Text style={{
-              textAlign: 'center',
-              fontWeight: '700',
-              fontSize: 13,
-              color: searchMode === 'theme' ? colors.text.primary : colors.text.secondary,
-            }}>
-              🏷️ Theme Search
+            <Text style={[s.modeBtnText, searchMode === 'theme' && s.modeBtnTextActive]}>
+              Theme Search
             </Text>
           </Pressable>
         </View>
 
-        {/* Search Input (Lookup Mode) */}
+        {/* Search input — Lookup mode */}
         {searchMode === 'lookup' && (
-          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={s.inputRow}>
+            <View style={s.inputWrap}>
               <TextInput
-                placeholder={searchMode === 'lookup' ? "John 3:16, Genesis 1, etc." : "Search keywords..."}
+                placeholder={'John 3:16, John 3:16-18, jn 3 16...'}
                 placeholderTextColor={colors.text.tertiary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 onSubmitEditing={handleSearch}
                 returnKeyType="search"
-                style={{
-                  flex: 1,
-                  paddingHorizontal: 12,
-                  paddingVertical: 12,
-                  borderWidth: 1,
-                  borderColor: colors.border.default,
-                  borderRadius: 10,
-                  backgroundColor: colors.background.secondary,
-                  color: colors.text.primary,
-                  fontSize: 16,
-                }}
+                style={s.input}
               />
-              <Pressable
-                onPress={handleSearch}
-                disabled={!searchQuery.trim() || loading}
-                style={{
-                  paddingHorizontal: 20,
-                  paddingVertical: 12,
-                  backgroundColor: searchQuery.trim() && !loading ? colors.accent.primary : colors.text.tertiary,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ fontSize: 18 }}>🔍</Text>
-              </Pressable>
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => { setSearchQuery(''); setResults([]); setSelectedKeys(new Set()); }}
+                  style={s.clearBtn}
+                >
+                  <Text style={s.clearX}>{'\u00D7'}</Text>
+                </TouchableOpacity>
+              )}
             </View>
+            <Pressable
+              onPress={handleSearch}
+              disabled={!searchQuery.trim() || loading}
+              style={[s.searchBtn, (!searchQuery.trim() || loading) && s.searchBtnDisabled]}
+            >
+              <Text style={{ fontSize: 18 }}>{'\uD83D\uDD0D'}</Text>
+            </Pressable>
           </View>
         )}
 
-        {/* Theme Selection (Theme Mode) */}
+        {/* Search input — Theme mode */}
         {searchMode === 'theme' && (
-          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-            {/* Theme Input */}
-            <View style={{ marginBottom: 12 }}>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <View style={s.inputWrap}>
                 <TextInput
-                  placeholder="Type a theme..."
+                  placeholder="Search by theme..."
                   placeholderTextColor={colors.text.tertiary}
                   value={themeInput}
-                  onChangeText={(text) => {
-                    setThemeInput(text);
-                    setSelectedTheme(null);
-                  }}
+                  onChangeText={t => { setThemeInput(t); setSelectedTheme(null); }}
                   onSubmitEditing={handleSearch}
                   returnKeyType="search"
-                  style={{
-                    flex: 1,
-                    paddingHorizontal: 12,
-                    paddingVertical: 12,
-                    borderWidth: 1,
-                    borderColor: colors.border.default,
-                    borderRadius: 10,
-                    backgroundColor: colors.background.secondary,
-                    color: colors.text.primary,
-                    fontSize: 16,
-                  }}
+                  style={s.input}
                 />
-                <Pressable
-                  onPress={handleSearch}
-                  disabled={(!themeInput.trim() && !selectedTheme) || loading}
-                  style={{
-                    paddingHorizontal: 20,
-                    paddingVertical: 12,
-                    backgroundColor: (themeInput.trim() || selectedTheme) && !loading ? colors.accent.primary : colors.text.tertiary,
-                    borderRadius: 10,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontSize: 18 }}>🔍</Text>
-                </Pressable>
+                {themeInput.length > 0 && (
+                  <TouchableOpacity onPress={clearThemeSearch} style={s.clearBtn}>
+                    <Text style={s.clearX}>{'\u00D7'}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
+              <Pressable
+                onPress={handleSearch}
+                disabled={(!themeInput.trim() && !selectedTheme) || loading}
+                style={[s.searchBtn, ((!themeInput.trim() && !selectedTheme) || loading) && s.searchBtnDisabled]}
+              >
+                <Text style={{ fontSize: 18 }}>{'\uD83D\uDD0D'}</Text>
+              </Pressable>
             </View>
 
-            {/* Popular Themes */}
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.secondary, marginBottom: 12 }}>
-              Or select a popular theme:
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {POPULAR_THEMES.map((theme) => (
-                <Pressable
-                  key={theme.id}
-                  onPress={() => {
-                    setSelectedTheme(theme.id);
-                    setThemeInput('');
-                    handleThemeSearch(theme.id);
-                  }}
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    backgroundColor: selectedTheme === theme.id ? colors.accent.primary : colors.background.secondary,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: selectedTheme === theme.id ? colors.accent.primary : colors.border.default,
-                  }}
-                >
-                  <Text style={{
-                    fontWeight: '600',
-                    color: selectedTheme === theme.id ? colors.text.primary : colors.text.secondary,
-                  }}>
-                    {theme.emoji} {theme.label}
-                  </Text>
-                </Pressable>
-              ))}
+            {/* Core theme chips from database */}
+            <Text style={s.sectionLabel}>Core Themes:</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              {CORE_THEMES.map(theme => {
+                const themeColor = THEME_COLORS[theme];
+                const isActive = selectedTheme === theme;
+                const count = themeCounts[theme] || 0;
+                return (
+                  <Pressable
+                    key={theme}
+                    onPress={() => { setSelectedTheme(theme); setThemeInput(''); handleThemeSearch(theme); }}
+                    style={[
+                      s.themeChip,
+                      { borderColor: isActive ? themeColor.primary : colors.border.default },
+                      isActive && { backgroundColor: themeColor.light },
+                    ]}
+                  >
+                    <View style={[s.themeDot, { backgroundColor: themeColor.primary }]} />
+                    <Text style={[
+                      s.themeChipText,
+                      isActive && { color: themeColor.dark, fontWeight: '700' },
+                    ]}>
+                      {theme}
+                    </Text>
+                    {count > 0 && (
+                      <Text style={[s.themeChipCount, isActive && { color: themeColor.dark }]}>
+                        {count}
+                      </Text>
+                    )}
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
         )}
 
-        {/* Loading Indicator */}
+        {/* Loading */}
         {loading && (
-          <View style={{ padding: 24, alignItems: 'center' }}>
+          <View style={s.center}>
             <ActivityIndicator color={colors.accent.primary} size="large" />
             <Text style={{ marginTop: 12, color: colors.text.secondary }}>Searching...</Text>
           </View>
         )}
 
         {/* Results */}
-        {!loading && results.length > 0 && (
-          <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 0 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text.secondary, marginBottom: 12 }}>
-              {results.length} {results.length === 1 ? 'result' : 'results'} found ({translation})
-            </Text>
-            {results.map((result, index) => (
-              <View
-                key={`${result.reference}-${index}`}
-                style={{
-                  marginBottom: 12,
-                  padding: 16,
-                  backgroundColor: colors.background.secondary,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: colors.border.default,
-                }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent.primary, marginBottom: 8 }}>
-                  {result.reference}
+        {!loading && hasAnyResults && (
+          <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 0, paddingBottom: 100 }}>
+
+            {/* Theme chapter results */}
+            {themeChapterResults.length > 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={s.sectionHeader}>
+                  Theme Chapters ({themeChapterResults.length})
                 </Text>
-                <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary, flexWrap: 'wrap' }}>
-                  {result.verse_text}
-                </Text>
+                {themeChapterResults.map((ch) => {
+                  const themeColor = THEME_COLORS[ch.theme as keyof typeof THEME_COLORS];
+                  return (
+                    <TouchableOpacity
+                      key={ch.id}
+                      onPress={() => setModalChapter(ch)}
+                      activeOpacity={0.7}
+                      style={[
+                        s.themeCard,
+                        themeColor && { borderLeftColor: themeColor.primary },
+                      ]}
+                    >
+                      <View style={s.themeCardHeader}>
+                        <Text style={s.themeCardRef}>{ch.book} {ch.chapter}</Text>
+                        <View style={s.themeCardTags}>
+                          {themeColor && (
+                            <View style={[s.themeTag, { backgroundColor: themeColor.light }]}>
+                              <Text style={[s.themeTagText, { color: themeColor.dark }]}>{ch.theme}</Text>
+                            </View>
+                          )}
+                          {ch.sub_theme && (
+                            <View style={s.subThemeTag}>
+                              <Text style={s.subThemeTagText}>{ch.sub_theme}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+
+                      {ch.key_insight && (
+                        <Text style={s.themeCardInsight} numberOfLines={2}>{ch.key_insight}</Text>
+                      )}
+
+                      {ch.application && (
+                        <Text style={s.themeCardApp} numberOfLines={2}>{ch.application}</Text>
+                      )}
+
+                      {ch.action_step && (
+                        <View style={s.actionStepRow}>
+                          <Text style={s.actionStepLabel}>Action:</Text>
+                          <Text style={s.actionStepText} numberOfLines={1}>{ch.action_step}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            ))}
+            )}
+
+            {/* Verse results */}
+            {results.length > 0 && (
+              <View>
+                <View style={s.resultHeader}>
+                  <Text style={s.resultCount}>
+                    {themeChapterResults.length > 0 ? 'Related Verses' : 'Results'} ({results.length})
+                    {searchMode === 'lookup' ? ` \u2022 ${translation}` : ''}
+                  </Text>
+                  <TouchableOpacity onPress={selectAll}>
+                    <Text style={s.selectAllText}>
+                      {selectedKeys.size === results.length ? 'Deselect All' : 'Select All'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {results.map((result, index) => {
+                  const key = verseKey(result);
+                  const isSelected = selectedKeys.has(key);
+                  const isStudyActive = wordStudyKey === key;
+                  return (
+                    <View key={`${key}-${index}`}>
+                      {isStudyActive && (
+                        <View style={s.studyBar}>
+                          <TouchableOpacity onPress={() => { setWordStudyKey(null); setWordMappings([]); }}>
+                            <Text style={s.studyBarBack}>{'\u2190'} Back</Text>
+                          </TouchableOpacity>
+                          <Text style={s.studyBarTitle}>Word Study</Text>
+                        </View>
+                      )}
+                      <Pressable
+                        onPress={isStudyActive ? undefined : () => handleResultPress(result)}
+                        onLongPress={() => toggleSelect(key)}
+                        style={[s.card, isSelected && s.cardSelected, isStudyActive && s.cardStudyActive]}
+                      >
+                        <View style={s.cardRow}>
+                          <TouchableOpacity
+                            onPress={() => toggleSelect(key)}
+                            style={[s.checkbox, isSelected && s.checkboxActive]}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            {isSelected && <Text style={s.checkmark}>{'\u2713'}</Text>}
+                          </TouchableOpacity>
+                          <View style={{ flex: 1 }}>
+                            <Text style={s.cardRef}>{result.reference}</Text>
+                            {isStudyActive ? (
+                              <>
+                                <Text style={s.cardText}>
+                                  {renderSearchTappableWords(result.verse_text, wordMappings, openSearchWordStudy)}
+                                </Text>
+                                <Text style={s.studyHint}>Tap a blue word to study it</Text>
+                              </>
+                            ) : (
+                              <Text style={s.cardText}>{result.verse_text}</Text>
+                            )}
+                          </View>
+                        </View>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </ScrollView>
         )}
 
-        {/* Empty State */}
-        {!loading && results.length === 0 && (searchQuery.trim() || themeInput.trim() || selectedTheme) && (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>📖</Text>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: 8 }}>
-              No results found
-            </Text>
-            <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center' }}>
-              Try different keywords or select another theme
+        {/* Empty state */}
+        {!loading && !hasAnyResults && hasQuery && (
+          <View style={s.center}>
+            <Text style={{ fontSize: 48, marginBottom: 16 }}>{'\uD83D\uDCD6'}</Text>
+            <Text style={s.emptyTitle}>No results found</Text>
+            <Text style={s.emptySubtitle}>Try different keywords or a different reference</Text>
+          </View>
+        )}
+
+        {/* Initial state */}
+        {!loading && !hasAnyResults && !hasQuery && (
+          <View style={s.center}>
+            <Text style={{ fontSize: 64, marginBottom: 16 }}>{'\uD83D\uDD0D'}</Text>
+            <Text style={s.emptyTitle}>Search the Bible</Text>
+            <Text style={s.emptySubtitle}>
+              {searchMode === 'lookup'
+                ? 'Enter a reference like "John 3:16-18"\nor search by keywords'
+                : 'Select a core theme or search by keyword'}
             </Text>
           </View>
         )}
 
-        {/* Initial State */}
-        {!loading && results.length === 0 && !searchQuery.trim() && !themeInput.trim() && !selectedTheme && (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <Text style={{ fontSize: 64, marginBottom: 16 }}>🔍</Text>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary, marginBottom: 8 }}>
-              Search the Bible
-            </Text>
-            <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-              {searchMode === 'lookup' && 'Enter a reference like "John 3:16" or search by keywords'}
-              {searchMode === 'theme' && 'Type a theme or select from popular themes below'}
-            </Text>
+        {/* Floating save bar */}
+        {selectedKeys.size > 0 && (
+          <View style={s.floatingBar}>
+            <Text style={s.floatingText}>{selectedKeys.size} selected</Text>
+            <TouchableOpacity
+              onPress={handleBatchSave}
+              disabled={saving}
+              style={s.floatingSaveBtn}
+            >
+              {saving
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={s.floatingSaveBtnText}>Add to Battle Verses</Text>
+              }
+            </TouchableOpacity>
           </View>
         )}
+
+        {/* Verse Action Menu */}
+        <Modal visible={actionMenuOpen} transparent animationType="fade" onRequestClose={() => setActionMenuOpen(false)}>
+          <TouchableWithoutFeedback onPress={() => setActionMenuOpen(false)}>
+            <View style={s.actionOverlay}>
+              <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+                <View style={s.actionSheet}>
+                  <View style={s.actionHandle} />
+                  <Text style={s.actionTitle}>{actionMenuResult?.reference}</Text>
+
+                  <TouchableOpacity style={s.actionItem} onPress={handleWordStudyMode}>
+                    <Text style={s.actionIcon}>{'\uD83D\uDCD6'}</Text>
+                    <View style={s.actionTextWrap}>
+                      <Text style={s.actionText}>Word Study</Text>
+                      <Text style={s.actionSubtext}>Study Hebrew/Greek words</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={s.actionItem} onPress={handleSearchCommentary}>
+                    <Text style={s.actionIcon}>{'\uD83D\uDCDA'}</Text>
+                    <View style={s.actionTextWrap}>
+                      <Text style={s.actionText}>Commentary</Text>
+                      <Text style={s.actionSubtext}>Matthew Henry exposition</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={s.actionItem} onPress={handleGoToChapter}>
+                    <Text style={s.actionIcon}>{'\uD83D\uDCD6'}</Text>
+                    <View style={s.actionTextWrap}>
+                      <Text style={s.actionText}>View Full Chapter</Text>
+                      <Text style={s.actionSubtext}>Open in Bible reader</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={s.actionItem} onPress={handleSearchResultReviewQueue}>
+                    <Text style={s.actionIcon}>{'\uD83D\uDD0D'}</Text>
+                    <View style={s.actionTextWrap}>
+                      <Text style={s.actionText}>Add to Review Queue</Text>
+                      <Text style={s.actionSubtext}>Queue for deep study</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={[s.actionItem, s.cancelActionItem]} onPress={() => setActionMenuOpen(false)}>
+                    <Text style={s.cancelActionText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+
+        {/* Word Study Modal */}
+        <WordStudyModal
+          visible={wordStudyOpen}
+          onClose={() => setWordStudyOpen(false)}
+          strongsNumber={wordStudyStrongs}
+          englishWord={wordStudyEnglish}
+          bookName={wordStudyContext.book}
+          chapter={wordStudyContext.chapter}
+          verseNumber={wordStudyContext.verse}
+          verseText={wordStudyContext.text}
+        />
+
+        {/* Commentary Modal */}
+        <CommentaryModal
+          visible={commentaryOpen}
+          onClose={() => setCommentaryOpen(false)}
+          bookName={actionMenuResult?.book_name ?? null}
+          chapter={actionMenuResult?.chapter_number ?? 0}
+          verseNumber={actionMenuResult?.verse_number ?? 0}
+          verseText={actionMenuResult?.verse_text ?? ''}
+        />
+
+        {/* Theme Detail Modal */}
+        {modalChapter && (() => {
+          const mc = modalChapter;
+          const tc = THEME_COLORS[mc.theme as keyof typeof THEME_COLORS];
+          const accentColor = tc?.primary || colors.accent.primary;
+          return (
+            <Modal
+              visible={!!modalChapter}
+              animationType="slide"
+              transparent
+              onRequestClose={() => setModalChapter(null)}
+            >
+              <View style={s.modalOverlay}>
+                <Pressable style={{ flex: 1 }} onPress={() => setModalChapter(null)} />
+                <View style={[s.modalCard, { borderLeftColor: accentColor, borderLeftWidth: 4 }]}>
+                  {/* Header */}
+                  <View style={s.modalHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.modalRef}>{mc.book} {mc.chapter}</Text>
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                        {tc && (
+                          <View style={[s.themeTag, { backgroundColor: tc.light }]}>
+                            <Text style={[s.themeTagText, { color: tc.dark }]}>{mc.theme}</Text>
+                          </View>
+                        )}
+                        {mc.sub_theme && (
+                          <View style={s.subThemeTag}>
+                            <Text style={s.subThemeTagText}>{mc.sub_theme}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => setModalChapter(null)} style={s.modalClose}>
+                      <Text style={s.modalCloseText}>{'\u00D7'}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Content — flex: 1 + flexShrink lets ScrollView take remaining space */}
+                  <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ padding: 16 }}>
+                    {mc.key_insight && (
+                      <View style={s.modalSection}>
+                        <Text style={s.modalSectionLabel}>Key Insight</Text>
+                        <Text style={s.modalSectionText}>{mc.key_insight}</Text>
+                      </View>
+                    )}
+                    {mc.application && (
+                      <View style={s.modalSection}>
+                        <Text style={s.modalSectionLabel}>Application</Text>
+                        <Text style={s.modalSectionText}>{mc.application}</Text>
+                      </View>
+                    )}
+                    {mc.action_step && (
+                      <View style={s.modalSection}>
+                        <Text style={s.modalSectionLabel}>Action Step</Text>
+                        <Text style={s.modalSectionText}>{mc.action_step}</Text>
+                      </View>
+                    )}
+                  </ScrollView>
+
+                  {/* Actions */}
+                  <View style={s.modalActions}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalChapter(null);
+                        navigation.navigate('Chapter', {
+                          bookName: mc.book,
+                          chapter: mc.chapter,
+                          translation,
+                        });
+                      }}
+                      style={[s.modalActionBtn, { backgroundColor: accentColor }]}
+                    >
+                      <Text style={s.modalActionBtnText}>View Full Chapter</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Pressable style={{ flex: 0.3 }} onPress={() => setModalChapter(null)} />
+              </View>
+            </Modal>
+          );
+        })()}
       </View>
     </SafeAreaView>
   );
 }
+
+// ------------------------------------------------------------------
+// Tappable words for search results
+// ------------------------------------------------------------------
+
+function renderSearchTappableWords(
+  text: string,
+  mappings: WordMapping[],
+  onTap: (strongsNumber: string, englishWord: string) => void,
+): React.ReactNode {
+  if (!mappings || mappings.length === 0) return text;
+
+  const sorted = [...mappings].sort((a, b) => a.word_position - b.word_position);
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  let partKey = 0;
+
+  for (const mapping of sorted) {
+    const searchWord = mapping.english_word.trim();
+    if (!searchWord || searchWord.length < 2) continue;
+
+    const lowerText = text.toLowerCase();
+    const lowerSearch = searchWord.toLowerCase();
+    const idx = lowerText.indexOf(lowerSearch, lastIdx);
+    if (idx === -1) continue;
+
+    if (idx > lastIdx) {
+      parts.push(<Text key={`t-${partKey++}`}>{text.slice(lastIdx, idx)}</Text>);
+    }
+
+    const matchedText = text.slice(idx, idx + searchWord.length);
+    const sn = mapping.strongs_number;
+    const eng = mapping.english_word;
+    parts.push(
+      <Text
+        key={`w-${partKey++}`}
+        style={{ color: '#5b9bd5', textDecorationLine: 'underline' as const, textDecorationStyle: 'dotted' as const }}
+        onPress={() => onTap(sn, eng)}
+      >
+        {matchedText}
+      </Text>
+    );
+
+    lastIdx = idx + searchWord.length;
+  }
+
+  if (lastIdx < text.length) {
+    parts.push(<Text key={`t-${partKey++}`}>{text.slice(lastIdx)}</Text>);
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
+// ------------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------------
+
+function toResult(v: any): SearchResult {
+  return {
+    book_name: v.book_name,
+    chapter_number: v.chapter_number,
+    verse_number: v.verse_number,
+    verse_text: v.verse_text,
+    reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
+  };
+}
+
+function verseKey(v: SearchResult) {
+  return `${v.book_name}-${v.chapter_number}-${v.verse_number}`;
+}
+
+function rankResults(data: any[], keywords: string[], fullQuery: string): any[] {
+  const lowerQuery = fullQuery.toLowerCase();
+  return [...data]
+    .map(v => {
+      const text = (v.verse_text || '').toLowerCase();
+      let score = 0;
+      if (text.includes(lowerQuery)) score += 100;
+      if (keywords.every(kw => text.includes(kw))) score += 50;
+      for (const kw of keywords) {
+        const regex = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        score += ((v.verse_text || '').match(regex) || []).length * 10;
+      }
+      score -= (v.verse_text || '').length / 100;
+      return { ...v, _score: score };
+    })
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 50);
+}
+
+// ------------------------------------------------------------------
+// Styles
+// ------------------------------------------------------------------
+
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background.primary },
+  section: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+  sectionLabel: { fontSize: 12, fontWeight: '600', color: colors.text.secondary, marginBottom: 8 },
+  sectionHeader: { fontSize: 16, fontWeight: '700', color: colors.text.primary, marginBottom: 12 },
+  chip: {
+    marginRight: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  chipActive: { backgroundColor: colors.accent.primary, borderColor: colors.accent.primary },
+  chipText: { fontWeight: '600', fontSize: 13, color: colors.text.secondary },
+  chipTextActive: { color: colors.text.primary },
+  modeRow: { flexDirection: 'row', padding: 16, paddingTop: 8, gap: 8 },
+  modeBtn: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  modeBtnActive: { backgroundColor: colors.accent.primary, borderColor: colors.accent.primary },
+  modeBtnText: { textAlign: 'center', fontWeight: '700', fontSize: 13, color: colors.text.secondary },
+  modeBtnTextActive: { color: colors.text.primary },
+  inputRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 16, gap: 8 },
+  inputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border.default, borderRadius: 10, backgroundColor: colors.background.secondary },
+  input: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: colors.text.primary,
+    fontSize: 16,
+  },
+  clearBtn: { padding: 8, marginRight: 4 },
+  clearX: { fontSize: 20, color: colors.text.muted, fontWeight: '600' },
+  searchBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: colors.accent.primary,
+    borderRadius: 10,
+    justifyContent: 'center',
+  },
+  searchBtnDisabled: { backgroundColor: colors.text.tertiary },
+  // Theme chips
+  themeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    gap: 6,
+  },
+  themeDot: { width: 8, height: 8, borderRadius: 4 },
+  themeChipText: { fontWeight: '600', fontSize: 13, color: colors.text.secondary },
+  themeChipCount: { fontSize: 11, color: colors.text.muted },
+  // Theme chapter cards
+  themeCard: {
+    marginBottom: 12,
+    padding: 14,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.accent.primary,
+  },
+  themeCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  themeCardRef: { fontSize: 16, fontWeight: '700', color: colors.accent.primary },
+  themeCardTags: { flexDirection: 'row', gap: 6, flexShrink: 1 },
+  themeTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  themeTagText: { fontSize: 11, fontWeight: '700' },
+  subThemeTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: colors.background.primary,
+  },
+  subThemeTagText: { fontSize: 11, fontWeight: '600', color: colors.text.secondary },
+  themeCardInsight: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text.primary,
+    marginBottom: 6,
+  },
+  themeCardApp: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.text.secondary,
+    marginBottom: 6,
+  },
+  actionStepRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  actionStepLabel: { fontSize: 12, fontWeight: '700', color: colors.accent.primary },
+  actionStepText: { fontSize: 12, color: colors.text.secondary, flex: 1 },
+  // Verse results
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  resultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  resultCount: { fontSize: 14, fontWeight: '700', color: colors.text.secondary },
+  selectAllText: { fontSize: 13, fontWeight: '600', color: colors.accent.primary },
+  card: {
+    marginBottom: 10,
+    padding: 14,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  cardSelected: { borderColor: colors.accent.primary, backgroundColor: 'rgba(211, 84, 0, 0.08)' },
+  cardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxActive: { backgroundColor: colors.accent.primary, borderColor: colors.accent.primary },
+  checkmark: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  cardRef: { fontSize: 13, fontWeight: '700', color: colors.accent.primary, marginBottom: 6 },
+  cardText: { fontSize: 15, lineHeight: 22, color: colors.text.primary },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 },
+  floatingBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: colors.background.secondary,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.default,
+  },
+  floatingText: { fontSize: 14, fontWeight: '600', color: colors.text.primary },
+  floatingSaveBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: colors.accent.primary,
+    borderRadius: 8,
+  },
+  floatingSaveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  // Theme detail modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 14,
+    maxHeight: '70%',
+    flexShrink: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.default,
+  },
+  modalRef: { fontSize: 20, fontWeight: '700', color: colors.accent.primary },
+  modalClose: { padding: 4 },
+  modalCloseText: { fontSize: 28, color: colors.text.muted, lineHeight: 28 },
+  modalSection: { marginBottom: 20 },
+  modalSectionLabel: { fontSize: 13, fontWeight: '700', color: colors.text.secondary, marginBottom: 6 },
+  modalSectionText: { fontSize: 15, lineHeight: 22, color: colors.text.primary },
+  modalActions: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.default,
+  },
+  modalActionBtn: {
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalActionBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  // Word study action menu
+  actionOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' as const },
+  actionSheet: {
+    backgroundColor: colors.background.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingHorizontal: 16, paddingBottom: 30,
+  },
+  actionHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border.light, alignSelf: 'center' as const, marginTop: 10, marginBottom: 12 },
+  actionTitle: { fontSize: 18, fontWeight: '700' as const, color: colors.text.primary, textAlign: 'center' as const, marginBottom: 16 },
+  actionItem: { flexDirection: 'row' as const, alignItems: 'center' as const, padding: 14, backgroundColor: colors.background.tertiary, borderRadius: 12, marginBottom: 8 },
+  actionIcon: { fontSize: 22, marginRight: 12, width: 30, textAlign: 'center' as const },
+  actionTextWrap: { flex: 1 },
+  actionText: { fontSize: 16, fontWeight: '600' as const, color: colors.text.primary },
+  actionSubtext: { fontSize: 13, color: colors.text.muted, marginTop: 1 },
+  cancelActionItem: { backgroundColor: colors.background.secondary, justifyContent: 'center' as const, marginTop: 4 },
+  cancelActionText: { fontSize: 16, fontWeight: '600' as const, color: colors.text.secondary, textAlign: 'center' as const, flex: 1 },
+  // Word study mode on search result
+  cardStudyActive: { borderColor: colors.accent.primary, backgroundColor: colors.accent.primary + '15', borderLeftWidth: 3, borderLeftColor: colors.accent.primary },
+  studyBar: { flexDirection: 'row' as const, alignItems: 'center' as const, paddingVertical: 6, paddingHorizontal: 4, marginBottom: 4, gap: 10 },
+  studyBarBack: { color: colors.accent.primary, fontWeight: '700' as const, fontSize: 14 },
+  studyBarTitle: { color: colors.text.primary, fontWeight: '600' as const, fontSize: 14 },
+  studyHint: { fontSize: 12, color: colors.text.muted, fontStyle: 'italic' as const, marginTop: 4 },
+});

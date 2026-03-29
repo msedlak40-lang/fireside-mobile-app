@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theological Word Study Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+      min-height: 100vh;
+    }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 28px; font-weight: 800; color: #d35400; margin-bottom: 4px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+
+    /* Config Section */
+    .config-section {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .config-section summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #d35400;
+      font-size: 14px;
+    }
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .config-grid label { font-size: 12px; color: #888; display: block; margin-bottom: 4px; }
+    .config-grid input {
+      width: 100%;
+      padding: 8px 10px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #e5e5e5;
+      font-size: 13px;
+    }
+    .config-grid .full-width { grid-column: 1 / -1; }
+
+    /* Input Section */
+    .input-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 24px;
+    }
+    .input-group { flex: 1; }
+    .input-group label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; }
+    .input-group input, .input-group select {
+      width: 100%;
+      padding: 10px 14px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e5e5e5;
+      font-size: 16px;
+    }
+    .input-group input:focus, .input-group select:focus { outline: none; border-color: #d35400; }
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #d35400; color: #fff; }
+    .btn-primary:hover { background: #e05800; }
+    .btn-primary:disabled { background: #555; cursor: not-allowed; }
+    .btn-secondary { background: #333; color: #e5e5e5; }
+    .btn-secondary:hover { background: #444; }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-success:hover { background: #059669; }
+    .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+    /* Status */
+    .status-bar {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #888;
+    }
+    .status-bar.error { border-color: #dc2626; color: #f87171; }
+    .status-bar.success { border-color: #10b981; color: #34d399; }
+
+    /* Data Preview */
+    .data-panel {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .data-panel h3 { font-size: 14px; color: #d35400; font-weight: 700; margin-bottom: 10px; }
+    .strongs-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .strongs-header .original { font-size: 28px; color: #fff; }
+    .strongs-header .translit { font-size: 16px; color: #d35400; font-style: italic; }
+    .strongs-header .def { font-size: 14px; color: #aaa; }
+    .verse-list { list-style: none; max-height: 300px; overflow-y: auto; }
+    .verse-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #222;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .verse-list li:last-child { border-bottom: none; }
+    .verse-ref { color: #d35400; font-weight: 600; }
+    .verse-word { color: #60a5fa; font-weight: 600; }
+    .count-badge {
+      display: inline-block;
+      background: #333;
+      color: #d35400;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* Generated Entry */
+    .entry-panel {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .entry-panel h3 { font-size: 16px; color: #d35400; font-weight: 700; margin-bottom: 12px; }
+    .entry-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .entry-textarea {
+      width: 100%;
+      min-height: 280px;
+      padding: 16px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e5e5e5;
+      font-size: 15px;
+      line-height: 1.7;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .entry-textarea:focus { outline: none; border-color: #d35400; }
+    .action-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+    /* Prompt Preview (manual mode) */
+    .prompt-preview {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 12px;
+      color: #aaa;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    /* Saved entries */
+    .saved-list { margin-top: 32px; }
+    .saved-entry {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .saved-entry h4 { color: #d35400; font-size: 14px; margin-bottom: 6px; }
+    .saved-entry p { font-size: 14px; line-height: 1.6; color: #ccc; }
+    .saved-entry .meta { font-size: 11px; color: #666; margin-top: 8px; }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .mode-toggle .btn.active { background: #d35400; color: #fff; }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #555;
+      border-top-color: #d35400;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Theological Word Study Generator</h1>
+    <p class="subtitle">Generate AI-powered word studies from your concordance data</p>
+
+    <!-- Config -->
+    <details class="config-section" id="configSection">
+      <summary>Configuration</summary>
+      <div class="config-grid">
+        <div>
+          <label>Supabase URL</label>
+          <input type="text" id="supabaseUrl" value="https://ryzgtpexapmwugbdspjm.supabase.co">
+        </div>
+        <div>
+          <label>Supabase Anon Key</label>
+          <input type="text" id="supabaseKey" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5emd0cGV4YXBtd3VnYmRzcGptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNTU3NDgsImV4cCI6MjA3MDkzMTc0OH0.qmTlUMEhupcVd9LlHKzVuNh7cj3s5T0fhzwYOiv6Omk">
+        </div>
+        <div class="full-width">
+          <label>Anthropic API Key (for auto-generate mode)</label>
+          <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+        </div>
+        <div class="full-width">
+          <label>API Proxy URL (optional — if calling Anthropic from browser needs a CORS proxy)</label>
+          <input type="text" id="proxyUrl" placeholder="e.g. https://your-proxy.workers.dev/v1/messages  (leave blank to call api.anthropic.com directly)">
+        </div>
+      </div>
+    </details>
+
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="btn btn-sm active" id="btnModeAuto" onclick="setMode('auto')">Auto Generate (API)</button>
+      <button class="btn btn-sm btn-secondary" id="btnModeManual" onclick="setMode('manual')">Manual Mode (Copy Prompt)</button>
+    </div>
+
+    <!-- Input -->
+    <div class="input-row">
+      <div class="input-group" style="max-width: 200px;">
+        <label>Strong's Number</label>
+        <input type="text" id="strongsInput" placeholder="e.g. H8055" value="H8055">
+      </div>
+      <button class="btn btn-primary" id="btnGenerate" onclick="generate()">Generate Entry</button>
+      <button class="btn btn-secondary" id="btnLoadSaved" onclick="loadSavedEntries()">View Saved</button>
+    </div>
+
+    <!-- Status -->
+    <div class="status-bar" id="status">Ready. Enter a Strong's number and click Generate.</div>
+
+    <!-- Data Panel (shows fetched concordance data) -->
+    <div class="data-panel hidden" id="dataPanel">
+      <h3>Concordance Data</h3>
+      <div class="strongs-header" id="strongsHeader"></div>
+      <div id="usageCount"></div>
+      <ul class="verse-list" id="verseList"></ul>
+    </div>
+
+    <!-- Manual Mode: Prompt Preview -->
+    <div class="entry-panel hidden" id="promptPanel">
+      <h3>Generated Prompt (copy this into Claude)</h3>
+      <div class="prompt-preview" id="promptPreview"></div>
+      <div class="action-row">
+        <button class="btn btn-primary btn-sm" onclick="copyPrompt()">Copy Prompt</button>
+      </div>
+      <div style="margin-top: 16px;">
+        <h3>Paste Claude's Response Here</h3>
+        <textarea class="entry-textarea" id="manualPaste" placeholder="Paste the generated word study here..."></textarea>
+        <div class="action-row">
+          <button class="btn btn-success btn-sm" onclick="acceptManualEntry()">Accept Entry</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generated Entry -->
+    <div class="entry-panel hidden" id="entryPanel">
+      <h3>Generated Word Study</h3>
+      <div class="entry-meta" id="entryMeta"></div>
+      <textarea class="entry-textarea" id="entryText"></textarea>
+      <div class="action-row">
+        <button class="btn btn-success" onclick="saveToDatabase()">Save to Database</button>
+        <button class="btn btn-primary" onclick="regenerate()">Regenerate</button>
+        <button class="btn btn-secondary" onclick="copyEntry()">Copy Text</button>
+      </div>
+    </div>
+
+    <!-- Saved Entries -->
+    <div class="saved-list hidden" id="savedList">
+      <h3 style="color: #d35400; margin-bottom: 16px;">Saved Word Studies</h3>
+      <div id="savedEntries"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---- State ----
+    let supabase = null;
+    let mode = 'auto'; // 'auto' | 'manual'
+    let currentStrongs = '';
+    let currentStrongsData = null;
+    let currentVerseExamples = [];
+    let currentTotalCount = 0;
+    let currentPrompt = '';
+
+    // ---- Init Supabase ----
+    function initSupabase() {
+      const url = document.getElementById('supabaseUrl').value.trim();
+      const key = document.getElementById('supabaseKey').value.trim();
+      if (!url || !key) {
+        setStatus('Please configure Supabase URL and Key', 'error');
+        return false;
+      }
+      supabase = window.supabase.createClient(url, key);
+      return true;
+    }
+
+    // ---- Helpers ----
+    function setStatus(msg, type = '') {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status-bar' + (type ? ' ' + type : '');
+    }
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btnModeAuto').className = 'btn btn-sm ' + (m === 'auto' ? 'active' : 'btn-secondary');
+      document.getElementById('btnModeManual').className = 'btn btn-sm ' + (m === 'manual' ? 'active' : 'btn-secondary');
+      document.getElementById('promptPanel').classList.add('hidden');
+      document.getElementById('entryPanel').classList.add('hidden');
+    }
+
+    function show(id) { document.getElementById(id).classList.remove('hidden'); }
+    function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // ---- Data Fetching ----
+    async function fetchStrongsData(strongsNum) {
+      const { data, error } = await supabase
+        .from('strongs_lexicon')
+        .select('strongs_number, original_word, transliteration, short_definition, detailed_definition, usage_notes, language')
+        .eq('strongs_number', strongsNum)
+        .maybeSingle();
+
+      if (error) throw new Error('Failed to fetch Strong\'s entry: ' + error.message);
+      if (!data) throw new Error('Strong\'s number ' + strongsNum + ' not found in lexicon');
+      return data;
+    }
+
+    async function fetchVerseExamples(strongsNum, limit = 20) {
+      const { data: words, error } = await supabase
+        .from('verse_strongs_words')
+        .select('book_name, chapter_number, verse_number, english_word, original_word')
+        .eq('strongs_number', strongsNum)
+        .limit(limit);
+
+      if (error) throw new Error('Failed to fetch verse examples: ' + error.message);
+      if (!words || words.length === 0) return [];
+
+      // Fetch verse text for each
+      const versesWithText = await Promise.all(
+        words.map(async (v) => {
+          const { data: verse } = await supabase
+            .from('bible_verses')
+            .select('verse_text')
+            .eq('book_name', v.book_name)
+            .eq('chapter_number', v.chapter_number)
+            .eq('verse_number', v.verse_number)
+            .eq('translation', 'KJV')
+            .maybeSingle();
+
+          return {
+            reference: v.book_name + ' ' + v.chapter_number + ':' + v.verse_number,
+            text: verse ? verse.verse_text : '(text not found)',
+            englishWord: v.english_word,
+            originalWord: v.original_word
+          };
+        })
+      );
+
+      return versesWithText;
+    }
+
+    async function fetchUsageCount(strongsNum) {
+      const { count, error } = await supabase
+        .from('verse_strongs_words')
+        .select('*', { count: 'exact', head: true })
+        .eq('strongs_number', strongsNum);
+
+      if (error) return 0;
+      return count || 0;
+    }
+
+    // ---- Prompt Building ----
+    function buildPrompt(strongsData, verseExamples, totalCount) {
+      const lang = strongsData.language === 'hebrew' ? 'Hebrew' : 'Greek';
+      const verseLines = verseExamples.map((v, i) =>
+        (i + 1) + '. ' + v.reference + ' (translated "' + v.englishWord + '") - "' + v.text + '"'
+      ).join('\n');
+
+      return `You are a biblical ${lang} scholar creating theological word study entries for a Bible study app.
+
+STRONG'S NUMBER: ${strongsData.strongs_number}
+ORIGINAL WORD: ${strongsData.original_word}
+TRANSLITERATION: ${strongsData.transliteration}
+BASIC DEFINITION: ${strongsData.short_definition}
+${strongsData.detailed_definition ? 'DETAILED DEFINITION: ' + strongsData.detailed_definition + '\n' : ''}${strongsData.usage_notes ? 'USAGE NOTES: ' + strongsData.usage_notes + '\n' : ''}TOTAL OCCURRENCES: ${totalCount} verses
+
+SAMPLE VERSE USAGE (showing ${verseExamples.length} of ${totalCount}):
+${verseLines}
+
+TASK:
+Write a 180-220 word theological word study entry that explains:
+
+1. CORE MEANING: What does this word fundamentally mean? (1-2 sentences)
+
+2. THEOLOGICAL SIGNIFICANCE: What theological concepts does this word represent? Why did inspired writers choose THIS word? (3-4 sentences)
+
+3. TYPICAL CONTEXTS: Where does this word appear most often? (worship, covenant, judgment, salvation, etc.) Give specific patterns from the verses above. (2-3 sentences)
+
+4. RELATED WORDS: If this is a "joy" word, how is it different from other joy words? If a "love" word, how does it differ from other love words? What's unique about THIS word's nuance? (2-3 sentences)
+
+5. PRACTICAL INSIGHT: What does this word teach us about God's character or our relationship with Him? (1-2 sentences)
+
+GUIDELINES:
+- Use modern, accessible language (not academic jargon)
+- Cite specific verse references from the examples above
+- Be theologically sound and evangelical
+- Write 180-220 words total
+- Make it compelling and insightful for serious Bible students
+- Do NOT use markdown formatting - just plain text paragraphs
+
+Write the entry now:`;
+    }
+
+    // ---- Display Data ----
+    function displayData(strongsData, verseExamples, totalCount) {
+      // Header
+      document.getElementById('strongsHeader').innerHTML =
+        '<span class="original">' + strongsData.original_word + '</span>' +
+        '<span class="translit">' + strongsData.transliteration + '</span>' +
+        '<span class="def">' + strongsData.short_definition + '</span>';
+
+      // Count
+      document.getElementById('usageCount').innerHTML =
+        '<span class="count-badge">' + totalCount + ' occurrences</span>' +
+        ' <span style="font-size:12px;color:#666;">| Showing ' + verseExamples.length + ' examples</span>';
+
+      // Verses
+      const list = document.getElementById('verseList');
+      list.innerHTML = verseExamples.map(v =>
+        '<li><span class="verse-ref">' + v.reference + '</span> ' +
+        '(<span class="verse-word">' + v.englishWord + '</span>) — ' +
+        v.text + '</li>'
+      ).join('');
+
+      show('dataPanel');
+    }
+
+    // ---- Generate ----
+    async function generate() {
+      if (!initSupabase()) return;
+
+      const strongsNum = document.getElementById('strongsInput').value.trim().toUpperCase();
+      if (!strongsNum) {
+        setStatus('Please enter a Strong\'s number', 'error');
+        return;
+      }
+
+      currentStrongs = strongsNum;
+      document.getElementById('btnGenerate').disabled = true;
+      hide('entryPanel');
+      hide('promptPanel');
+      hide('savedList');
+
+      try {
+        // Step 1: Fetch data
+        setStatus('Fetching Strong\'s lexicon entry...');
+        currentStrongsData = await fetchStrongsData(strongsNum);
+
+        setStatus('Fetching verse examples (' + strongsNum + ')...');
+        currentVerseExamples = await fetchVerseExamples(strongsNum, 20);
+        if (currentVerseExamples.length === 0) {
+          throw new Error('No verse examples found for ' + strongsNum);
+        }
+
+        setStatus('Counting total occurrences...');
+        currentTotalCount = await fetchUsageCount(strongsNum);
+
+        // Display data
+        displayData(currentStrongsData, currentVerseExamples, currentTotalCount);
+
+        // Step 2: Build prompt
+        currentPrompt = buildPrompt(currentStrongsData, currentVerseExamples, currentTotalCount);
+
+        if (mode === 'manual') {
+          // Manual mode: show prompt for copying
+          document.getElementById('promptPreview').textContent = currentPrompt;
+          document.getElementById('manualPaste').value = '';
+          show('promptPanel');
+          setStatus('Prompt ready! Copy it and paste into Claude, then paste the response back.', 'success');
+        } else {
+          // Auto mode: call Claude API
+          await callClaudeAPI(currentPrompt);
+        }
+
+      } catch (err) {
+        setStatus('Error: ' + err.message, 'error');
+        console.error(err);
+      } finally {
+        document.getElementById('btnGenerate').disabled = false;
+      }
+    }
+
+    async function regenerate() {
+      if (!currentPrompt) return;
+      if (mode === 'auto') {
+        document.getElementById('btnGenerate').disabled = true;
+        try {
+          await callClaudeAPI(currentPrompt);
+        } finally {
+          document.getElementById('btnGenerate').disabled = false;
+        }
+      }
+    }
+
+    // ---- Claude API ----
+    async function callClaudeAPI(prompt) {
+      const apiKey = document.getElementById('anthropicKey').value.trim();
+      if (!apiKey) {
+        setStatus('Please enter your Anthropic API key in Configuration', 'error');
+        document.getElementById('configSection').open = true;
+        return;
+      }
+
+      setStatus('Calling Claude API...');
+
+      const proxyUrl = document.getElementById('proxyUrl').value.trim();
+      const apiUrl = proxyUrl || 'https://api.anthropic.com/v1/messages';
+
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        };
+        // Add dangerous-permissions header for browser CORS if calling directly
+        if (!proxyUrl) {
+          headers['anthropic-dangerous-direct-browser-access'] = 'true';
+        }
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1000,
+            messages: [
+              { role: 'user', content: prompt }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error('API error (' + response.status + '): ' + errText);
+        }
+
+        const data = await response.json();
+        const entryText = data.content[0].text;
+
+        displayEntry(entryText);
+        setStatus('Entry generated successfully! Review and edit before saving.', 'success');
+      } catch (err) {
+        if (err.message.includes('Failed to fetch') || err.message.includes('CORS')) {
+          setStatus('CORS blocked. Try: (1) Add a proxy URL in config, or (2) Switch to Manual Mode.', 'error');
+        } else {
+          setStatus('API Error: ' + err.message, 'error');
+        }
+        console.error(err);
+      }
+    }
+
+    // ---- Display Entry ----
+    function displayEntry(text) {
+      const wordCount = text.trim().split(/\s+/).length;
+      document.getElementById('entryMeta').innerHTML =
+        '<span>Strong\'s: <b>' + currentStrongs + '</b></span>' +
+        '<span>Word: <b>' + (currentStrongsData ? currentStrongsData.transliteration : '') + '</b></span>' +
+        '<span>Words: <b>' + wordCount + '</b></span>' +
+        (wordCount < 180 ? '<span style="color:#f59e0b">Under target (180-220)</span>' :
+         wordCount > 220 ? '<span style="color:#f59e0b">Over target (180-220)</span>' :
+         '<span style="color:#34d399">In range</span>');
+
+      document.getElementById('entryText').value = text;
+      show('entryPanel');
+    }
+
+    // ---- Manual Mode ----
+    function copyPrompt() {
+      navigator.clipboard.writeText(currentPrompt).then(() => {
+        setStatus('Prompt copied to clipboard!', 'success');
+      });
+    }
+
+    function acceptManualEntry() {
+      const text = document.getElementById('manualPaste').value.trim();
+      if (!text) {
+        setStatus('Please paste Claude\'s response first', 'error');
+        return;
+      }
+      displayEntry(text);
+      hide('promptPanel');
+      setStatus('Entry accepted! Review and edit before saving.', 'success');
+    }
+
+    // ---- Save ----
+    async function saveToDatabase() {
+      if (!initSupabase()) return;
+
+      const entryText = document.getElementById('entryText').value.trim();
+      if (!entryText) {
+        setStatus('No entry to save', 'error');
+        return;
+      }
+
+      const wordCount = entryText.trim().split(/\s+/).length;
+
+      // Parse key verse references from the entry text
+      const verseRefPattern = /(\d?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s+(\d+:\d+)/g;
+      const keyVerses = [];
+      let match;
+      while ((match = verseRefPattern.exec(entryText)) !== null) {
+        keyVerses.push(match[0]);
+      }
+
+      setStatus('Saving to database...');
+
+      try {
+        const { data, error } = await supabase
+          .from('theological_word_studies')
+          .upsert({
+            strongs_number: currentStrongs,
+            entry_text: entryText,
+            core_meaning: currentStrongsData ? currentStrongsData.short_definition : null,
+            word_count: wordCount,
+            key_verse_examples: keyVerses.length > 0 ? keyVerses.slice(0, 5) : null,
+            ai_generated: true,
+            human_reviewed: true,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'strongs_number' })
+          .select();
+
+        if (error) throw new Error('Save failed: ' + error.message);
+
+        setStatus('Saved ' + currentStrongs + ' to theological_word_studies!', 'success');
+      } catch (err) {
+        setStatus('Save error: ' + err.message, 'error');
+        console.error(err);
+      }
+    }
+
+    // ---- Copy Entry ----
+    function copyEntry() {
+      const text = document.getElementById('entryText').value;
+      navigator.clipboard.writeText(text).then(() => {
+        setStatus('Entry text copied to clipboard!', 'success');
+      });
+    }
+
+    // ---- Load Saved ----
+    async function loadSavedEntries() {
+      if (!initSupabase()) return;
+
+      setStatus('Loading saved entries...');
+
+      try {
+        const { data, error } = await supabase
+          .from('theological_word_studies')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error) throw new Error(error.message);
+
+        const container = document.getElementById('savedEntries');
+        if (!data || data.length === 0) {
+          container.innerHTML = '<p style="color:#888;">No saved entries yet.</p>';
+        } else {
+          container.innerHTML = data.map(entry =>
+            '<div class="saved-entry">' +
+            '<h4>' + entry.strongs_number +
+            (entry.core_meaning ? ' — ' + entry.core_meaning : '') + '</h4>' +
+            '<p>' + entry.entry_text + '</p>' +
+            '<div class="meta">' +
+            entry.word_count + ' words | ' +
+            (entry.human_reviewed ? 'Reviewed' : 'Unreviewed') + ' | ' +
+            new Date(entry.created_at).toLocaleDateString() +
+            '</div></div>'
+          ).join('');
+        }
+
+        show('savedList');
+        setStatus('Loaded ' + (data ? data.length : 0) + ' saved entries', 'success');
+      } catch (err) {
+        setStatus('Load error: ' + err.message, 'error');
+      }
+    }
+
+    // ---- Keyboard shortcut ----
+    document.getElementById('strongsInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') generate();
+    });
+  </script>
+</body>
+</html>
