@@ -1,5 +1,6 @@
 // src/services/progress.ts
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentCycle } from './readingCycle'
 
 function isInt(v: any): v is number {
   return Number.isInteger(v) && Number.isFinite(v)
@@ -17,10 +18,11 @@ async function _writeChapterCompletion(book_name: string, chapter_number: number
   if (!user_id) throw new Error('Not signed in')
   const nowIso = new Date().toISOString()
 
+  const cycle = await getCurrentCycle()
   const { data: existing, error: selErr } = await supabase
     .from('user_reading_progress')
     .select('user_id')
-    .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number)
+    .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number).eq('cycle', cycle)
     .limit(1)
   if (selErr) throw selErr
 
@@ -28,12 +30,12 @@ async function _writeChapterCompletion(book_name: string, chapter_number: number
     const { error: updErr } = await supabase
       .from('user_reading_progress')
       .update({ completed_at: nowIso })
-      .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number)
+      .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number).eq('cycle', cycle)
     if (updErr) throw updErr
   } else {
     const { error: insErr } = await supabase
       .from('user_reading_progress')
-      .insert([{ user_id, book_name, chapter_number, completed_at: nowIso }])
+      .insert([{ user_id, book_name, chapter_number, completed_at: nowIso, cycle }])
     if (insErr) throw insErr
   }
 }
@@ -132,10 +134,12 @@ export async function fetchUserDashboard(): Promise<UserDashboard> {
   // Count unique chapters read (distinct book_name + chapter_number combinations)
   let totalRead = 0
   {
+    const cycle = await getCurrentCycle()
     const { data: readChapters } = await supabase
       .from('user_reading_progress')
       .select('book_name, chapter_number')
       .eq('user_id', userId)
+      .eq('cycle', cycle)
 
     // Count unique (book_name, chapter_number) pairs regardless of translation
     const uniqueChapters = new Set(

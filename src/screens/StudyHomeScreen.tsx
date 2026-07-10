@@ -48,6 +48,7 @@ export default function StudyHomeScreen({ navigation }: any) {
             Explore Biblical stories through immersive experiences
           </Text>
         </TouchableOpacity>
+
       </View>
     </ScrollView>
   );
@@ -96,6 +97,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     marginBottom: 8,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  badge: {
+    backgroundColor: colors.accent.primary,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  badgeText: {
+    color: colors.text.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
   cardDescription: {
     fontSize: 14,

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentCycle } from './readingCycle'
 
 export type BookProgressRow = {
   book_name: string
@@ -12,11 +13,13 @@ export async function getPerBookProgress(): Promise<BookProgressRow[]> {
   const { data: auth } = await supabase.auth.getUser()
   const userId = auth?.user?.id ?? ''
 
-  // Chapters read
+  // Chapters read (scoped to the current reading cycle)
+  const cycle = await getCurrentCycle()
   const { data: chRows, error: chErr } = await supabase
     .from('user_reading_progress')
     .select('book_name,chapter_number')
     .eq('user_id', userId)
+    .eq('cycle', cycle)
     .not('completed_at', 'is', null)
 
   if (chErr) console.warn('[library] reading_progress error:', chErr)

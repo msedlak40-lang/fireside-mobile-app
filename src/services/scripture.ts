@@ -1,5 +1,6 @@
 // src/services/scripture.ts — COMPLETE FIXED VERSION
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentCycle } from './readingCycle'
 
 /** ------------ Types ------------ */
 export type Book = {
@@ -119,6 +120,49 @@ export async function fetchBooks(): Promise<Book[]> {
     .order('id', { ascending: true })
   if (error) throw error
   return data ?? []
+}
+
+/** Per-book count of distinct read chapters for the signed-in user (book_name → count). */
+export async function fetchReadChapterCounts(): Promise<Record<string, number>> {
+  const { data: auth } = await supabase.auth.getUser()
+  const userId = auth?.user?.id
+  if (!userId) return {}
+  const cycle = await getCurrentCycle()
+  const { data } = await supabase
+    .from('user_reading_progress')
+    .select('book_name,chapter_number')
+    .eq('user_id', userId)
+    .eq('cycle', cycle)
+  const byBook: Record<string, Set<number>> = {}
+  for (const r of data ?? []) {
+    const bn = (r as any).book_name
+    const cn = (r as any).chapter_number
+    if (bn == null || cn == null) continue
+    ;(byBook[bn] ??= new Set<number>()).add(cn)
+  }
+  const out: Record<string, number> = {}
+  for (const k in byBook) out[k] = byBook[k].size
+  return out
+}
+
+/** Distinct read chapter numbers for one book for the signed-in user. */
+export async function fetchReadChapters(bookName: string): Promise<Set<number>> {
+  const { data: auth } = await supabase.auth.getUser()
+  const userId = auth?.user?.id
+  if (!userId) return new Set<number>()
+  const cycle = await getCurrentCycle()
+  const { data } = await supabase
+    .from('user_reading_progress')
+    .select('chapter_number')
+    .eq('user_id', userId)
+    .eq('book_name', bookName)
+    .eq('cycle', cycle)
+  const out = new Set<number>()
+  for (const r of data ?? []) {
+    const cn = (r as any).chapter_number
+    if (cn != null) out.add(cn)
+  }
+  return out
 }
 
 export async function fetchChapterPage(bookId: number, chapter: number): Promise<ChapterPage> {
@@ -382,6 +426,50 @@ export async function fetchTermsInChapter(bookId: number, chapter: number): Prom
   }
 }
 
+/** ------------ Life Application (verse summary) & Deep Dive (chapter) ------------ */
+export type VerseLifeApplication = {
+  plain_truth: string
+  deeper_layer: string
+  reflection_question: string
+}
+
+export type ChapterDeepDive = {
+  short_summary: string
+  deep_dive: string
+}
+
+/** Verse summary card content. Null when the verse has no row. */
+export async function getVerseLifeApplication(
+  bookName: string,
+  chapter: number,
+  verse: number
+): Promise<VerseLifeApplication | null> {
+  const { data, error } = await supabase
+    .from('verse_life_application')
+    .select('plain_truth, deeper_layer, reflection_question')
+    .eq('book_name', bookName)
+    .eq('chapter_number', chapter)
+    .eq('verse_number', verse)
+    .maybeSingle()
+  if (error) { console.warn('[getVerseLifeApplication] error:', error); return null }
+  return (data as VerseLifeApplication | null) ?? null
+}
+
+/** Chapter Deep Dive content. Null when the chapter isn't authored yet (blank tab). */
+export async function getChapterDeepDive(
+  bookName: string,
+  chapter: number
+): Promise<ChapterDeepDive | null> {
+  const { data, error } = await supabase
+    .from('chapter_deep_dives')
+    .select('short_summary, deep_dive')
+    .eq('book_name', bookName)
+    .eq('chapter_number', chapter)
+    .maybeSingle()
+  if (error) { console.warn('[getChapterDeepDive] error:', error); return null }
+  return (data as ChapterDeepDive | null) ?? null
+}
+
 /** Fallback: fetch all terms for client-side matching */
 export async function fetchAllTerms(): Promise<SimpleTerm[]> {
   const { data, error } = await supabase
@@ -395,72 +483,4 @@ export async function fetchAllTerms(): Promise<SimpleTerm[]> {
     detailed_explanation: row.detailed_explanation ?? '',
     definition: row.definition ?? '',
   })).filter((t: SimpleTerm) => t.term.length > 0)
-}
-
-/** ------------ Verse of the Day ------------ */
-export type VerseOfTheDay = {
-  book_name: string
-  chapter_number: number
-  verse_number: number
-  verse_text: string
-  translation: string
-  reference: string // e.g. "John 3:16"
-}
-
-/**
- * Fetch verse of the day using a deterministic algorithm based on current date
- * This ensures all users see the same verse on the same day
- */
-export async function fetchVerseOfTheDay(preferredTranslation: string = 'KJV'): Promise<VerseOfTheDay | null> {
-  try {
-    // Get total count of verses to calculate offset
-    const { count, error: countError } = await supabase
-      .from('bible_verses')
-      .select('*', { count: 'exact', head: true })
-      .eq('translation', preferredTranslation)
-
-    if (countError || !count) {
-      console.warn('[fetchVerseOfTheDay] Could not get verse count:', countError)
-      return null
-    }
-
-    // Use current date to deterministically select a verse index
-    const today = new Date()
-    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
-    const year = today.getFullYear()
-
-    // Create a seed from year and day of year
-    const seed = (year * 1000 + dayOfYear) % count
-
-    // Fetch the verse at this offset
-    const { data, error } = await supabase
-      .from('bible_verses')
-      .select('book_name, chapter_number, verse_number, verse_text, translation')
-      .eq('translation', preferredTranslation)
-      .order('book_name', { ascending: true })
-      .order('chapter_number', { ascending: true })
-      .order('verse_number', { ascending: true })
-      .range(seed, seed)
-      .limit(1)
-      .maybeSingle()
-
-    if (error || !data) {
-      console.warn('[fetchVerseOfTheDay] Error fetching verse:', error)
-      return null
-    }
-
-    const reference = `${data.book_name} ${data.chapter_number}:${data.verse_number}`
-
-    return {
-      book_name: data.book_name,
-      chapter_number: data.chapter_number,
-      verse_number: data.verse_number,
-      verse_text: data.verse_text,
-      translation: data.translation,
-      reference
-    }
-  } catch (err) {
-    console.error('[fetchVerseOfTheDay] Unexpected error:', err)
-    return null
-  }
 }

@@ -109,6 +109,44 @@ export async function updateBattleVerseTag(verseId: string, tag: string): Promis
 }
 
 /**
+ * Save multiple verses to battle verses at once. Returns count of newly saved.
+ */
+export async function saveBattleVersesBatch(
+  verses: Array<{
+    book_name: string;
+    chapter_number: number;
+    verse_number: number;
+    verse_text: string;
+  }>,
+  battleTag?: string,
+): Promise<number> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Not authenticated');
+
+  const rows = verses.map(v => ({
+    user_id: session.user.id,
+    book_name: v.book_name,
+    chapter_number: v.chapter_number,
+    verse_number: v.verse_number,
+    verse_reference: `${v.book_name} ${v.chapter_number}:${v.verse_number}`,
+    verse_text: v.verse_text,
+    battle_tag: battleTag || null,
+    notes: null,
+  }));
+
+  const { data, error } = await supabase
+    .from('user_battle_verses')
+    .upsert(rows, {
+      onConflict: 'user_id,book_name,chapter_number,verse_number',
+      ignoreDuplicates: true,
+    })
+    .select('id');
+
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
+/**
  * Toggle favorite status.
  */
 export async function toggleBattleVerseFavorite(verseId: string): Promise<void> {

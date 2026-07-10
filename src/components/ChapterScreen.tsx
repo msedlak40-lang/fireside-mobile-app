@@ -9,10 +9,14 @@ import {
   fetchChapterPage,
   fetchChapterKeyVerses,
   fetchBooks,
+  getChapterDeepDive,
 } from '../services/scripture'
-import type { Book } from '../services/scripture'
+import type { Book, ChapterDeepDive } from '../services/scripture'
+import { getStudyDepth, setStudyDepth, setLastReadingPosition, type StudyDepth } from '../services/userPrefs'
+import { getCurrentCycle } from '../services/readingCycle'
 import ChapterText from './ChapterText'
-import OnePagerTab from './OnePagerTab'
+import DeepDiveTab from './DeepDiveTab'
+import BookChapterSheet from './BookChapterSheet'
 import CrossReferencesTab from './CrossReferencesTab'
 import DiscussionQuestionsTab from './DiscussionQuestionsTab'
 import KeyHebrewWordsTab from './KeyHebrewWordsTab'
@@ -22,7 +26,7 @@ import { colors } from '../theme/colors'
 
 type RouteParams = { bookId: number; chapter: number; bookName?: string; translation?: string }
 type Verse = { number: number; text: string }
-type TabType = 'read' | 'onepager' | 'mytheme' | 'crossrefs' | 'discussion'
+type TabType = 'read' | 'deepdive' | 'mytheme' | 'crossrefs' | 'discussion'
 
 export default function ChapterScreen() {
   const route = useRoute<any>() as { params?: Partial<RouteParams> }
@@ -39,13 +43,38 @@ export default function ChapterScreen() {
 
   const [tab, setTab] = useState<TabType>('read')
   const [books, setBooks] = useState<Book[]>([])
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   const [verses, setVerses] = useState<Verse[]>([])
   const [basic, setBasic] = useState<{ summary_title?: string; summary_content?: string } | null>(null)
   const [advRaw, setAdvRaw] = useState<any>(null)
   const [keyVerses, setKeyVerses] = useState<Array<{ verse_number: number; text: string }>>([])
 
-  const [verseInsightsByVerse, setVerseInsightsByVerse] = useState<Record<number, string>>({})
+  const [significantVerses, setSignificantVerses] = useState<Set<number>>(new Set())
+  const [deepDive, setDeepDive] = useState<ChapterDeepDive | null>(null)
+  const [depth, setDepthState] = useState<StudyDepth>('summary')
+
+  // Load the global sticky depth preference once.
+  useEffect(() => {
+    getStudyDepth().then(setDepthState).catch(() => {})
+  }, [])
+
+  // Change depth from the Deep Dive toggle — persist globally.
+  const changeDepth = useCallback((d: StudyDepth) => {
+    setDepthState(d)
+    setStudyDepth(d)
+  }, [])
+
+  // Persist last reading position whenever the reader opens or changes chapter.
+  // Both entry paths converge here: home navigate() mounts this screen with route
+  // params, and the header sheet's setParams flows through the sync effect into the
+  // same state (as do prev/next and cross-ref jumps). bookId may resolve async from
+  // bookName, so this refires once all three are set. Nothing reads it yet.
+  useEffect(() => {
+    if (bookId && bookNameResolved && chapter) {
+      setLastReadingPosition({ bookId, bookName: bookNameResolved, chapter })
+    }
+  }, [bookId, bookNameResolved, chapter])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -94,16 +123,21 @@ export default function ChapterScreen() {
   useEffect(() => {
     if (bookNameResolved) {
       navigation.setOptions({
-        headerTitle: `${bookNameResolved} ${chapter}`,
+        headerTitle: () => (
+          <TouchableOpacity
+            onPress={() => setSheetOpen(true)}
+            style={{ flexDirection: 'row', alignItems: 'center' }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text.primary }}>
+              {bookNameResolved} {chapter}
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 6 }}>{'▾'}</Text>
+          </TouchableOpacity>
+        ),
         headerLeft: () => (
           <TouchableOpacity
-            onPress={() => {
-              if (navigation.canGoBack()) {
-                navigation.goBack()
-              } else {
-                navigation.navigate('BibleHome')
-              }
-            }}
+            onPress={() => navigation.navigate('BibleHome')}
             style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }}
           >
             <Text style={{ fontSize: 28, color: colors.accent.primary, lineHeight: 28 }}>{'\u2039'}</Text>
@@ -149,10 +183,13 @@ export default function ChapterScreen() {
   }, [bookId, chapter, books, bookNameResolved])
 
   const navigateToChapter = useCallback((target: { bookId: number; chapter: number; bookName: string | null }) => {
-    navigation.push('Chapter', {
+    // Update the current reader in place (like the header sheet) — never push a new
+    // screen, so a long reading session stays at one reader, not a deep stack.
+    navigation.setParams({
       bookId: target.bookId,
       chapter: target.chapter,
       bookName: target.bookName,
+      book_name: target.bookName,
       translation,
     })
   }, [navigation, translation])
@@ -182,16 +219,6 @@ export default function ChapterScreen() {
     }
     return null
   }, [])
-
-  // Extract theological themes from basic summary_content
-  const extractTheologicalThemes = useCallback((summaryContent: string | null): string | null => {
-    return extractSection(summaryContent, 'Theological Themes')
-  }, [extractSection])
-
-  // Extract key verses from basic summary_content
-  const extractKeyVersesFromBasic = useCallback((summaryContent: string | null): string | null => {
-    return extractSection(summaryContent, 'Key Verses')
-  }, [extractSection])
 
   // Data load ---------------------------------------------------------------
   const loadAll = useCallback(async () => {
@@ -225,15 +252,17 @@ export default function ChapterScreen() {
       const nameFromText = (rawVerses?.book_name || rawVerses?.book || rawVerses?.name) ?? null
       if (!bookNameResolved && nameFromText) setBookNameResolved(String(nameFromText))
 
-      // Build verse insights map from page data
-      const mappedInsights: Record<number, string> = {}
+      // Significance flags: verses present in bible_verse_insights (content dropped — underline only)
+      const sig = new Set<number>()
       for (const it of pageRes?.insights ?? []) {
-        if ((it as any)?.verse_number == null) continue
-        const body = (it as any).insight_detail ?? (it as any).insight ?? ''
-        const title = (it as any).insight_title ?? ''
-        mappedInsights[(it as any).verse_number] = body || title || ''
+        const vn = (it as any)?.verse_number
+        if (vn != null) sig.add(vn)
       }
-      setVerseInsightsByVerse(mappedInsights)
+      setSignificantVerses(sig)
+
+      // Chapter Deep Dive (keyed on book_name; null → blank tab on unauthored chapters)
+      const effectiveName = bookNameResolved ?? (nameFromText ? String(nameFromText) : null)
+      setDeepDive(effectiveName ? await getChapterDeepDive(effectiveName, chapter) : null)
 
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load chapter.')
@@ -254,12 +283,14 @@ export default function ChapterScreen() {
       const { data: auth } = await supabase.auth.getUser()
       const userId = auth?.user?.id
       if (!userId) return
+      const cycle = await getCurrentCycle()
       const { data } = await supabase
         .from('user_reading_progress')
         .select('completed_at')
         .eq('user_id', userId)
         .eq('book_name', bookNameResolved)
         .eq('chapter_number', chapter)
+        .eq('cycle', cycle)
         .maybeSingle()
       setChapterReadDate(data?.completed_at ?? null)
     } catch {}
@@ -286,28 +317,6 @@ export default function ChapterScreen() {
     }
     return null
   }, [advRaw])
-
-  // One Pager data preparation - extract only specific sections
-  const onePagerData = useMemo(() => {
-    // Extract ONLY the "Original Summary" section from advanced (not the entire advanced)
-    const summaryText = extractSection(advancedSummaryString, 'Original Summary')
-
-    // Extract theological themes from basic
-    const theologicalThemes = extractTheologicalThemes(basic?.summary_content || null)
-
-    // Extract key verses from basic summary (already formatted as markdown)
-    const keyVersesText = extractKeyVersesFromBasic(basic?.summary_content || null)
-
-    // Extract practical applications from advanced summary markdown
-    const practicalApplications = extractSection(advancedSummaryString, 'Practical Applications')
-
-    return {
-      summary: summaryText,
-      theologicalThemes,
-      keyVersesText,
-      practicalApplications,
-    }
-  }, [advancedSummaryString, basic, extractTheologicalThemes, extractKeyVersesFromBasic, extractSection])
 
   // Extract data for other tabs from advanced summary sections
   const crossRefsData = useMemo(() => {
@@ -336,13 +345,16 @@ export default function ChapterScreen() {
         return
       }
 
-      // Check if row exists first
+      const cycle = await getCurrentCycle()
+
+      // Check if row exists first (scoped to the current cycle)
       const { data: existing } = await supabase
         .from('user_reading_progress')
         .select('user_id')
         .eq('user_id', userId)
         .eq('book_name', bookNameResolved)
         .eq('chapter_number', chapter)
+        .eq('cycle', cycle)
         .maybeSingle()
 
       if (existing) {
@@ -353,6 +365,7 @@ export default function ChapterScreen() {
           .eq('user_id', userId)
           .eq('book_name', bookNameResolved)
           .eq('chapter_number', chapter)
+          .eq('cycle', cycle)
 
         if (error) throw error
       } else {
@@ -364,6 +377,7 @@ export default function ChapterScreen() {
             book_name: bookNameResolved,
             chapter_number: chapter,
             completed_at: new Date().toISOString(),
+            cycle,
           })
 
         if (error) throw error
@@ -407,7 +421,7 @@ export default function ChapterScreen() {
         contentContainerStyle={styles.tabBar}
       >
         <TabButton tabKey="read" label="Read" />
-        <TabButton tabKey="onepager" label="One Pager" />
+        <TabButton tabKey="deepdive" label="Deep Dive" />
         <TabButton tabKey="mytheme" label="My Theme" />
         <TabButton tabKey="crossrefs" label="Cross-Refs" />
         <TabButton tabKey="discussion" label="Discussion" />
@@ -427,7 +441,7 @@ export default function ChapterScreen() {
               ) : (
                 <ChapterText
                   verses={verses}
-                  verseInsightsByVerse={verseInsightsByVerse}
+                  significantVerses={significantVerses}
                   bookName={bookNameResolved ?? undefined}
                   chapter={chapter}
                 />
@@ -440,12 +454,11 @@ export default function ChapterScreen() {
             </>
           )}
 
-          {tab === 'onepager' && (
-            <OnePagerTab
-              summary={onePagerData.summary}
-              theologicalThemes={onePagerData.theologicalThemes}
-              keyVersesText={onePagerData.keyVersesText}
-              practicalApplications={onePagerData.practicalApplications}
+          {tab === 'deepdive' && (
+            <DeepDiveTab
+              deepDive={deepDive}
+              depth={depth}
+              onChangeDepth={changeDepth}
               bookName={bookNameResolved}
               chapter={chapter}
             />
@@ -500,6 +513,21 @@ export default function ChapterScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+
+      <BookChapterSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        books={books}
+        currentBookName={bookNameResolved}
+        onSelect={(book, ch) => {
+          navigation.setParams({
+            bookId: book.id,
+            bookName: book.book_name,
+            book_name: book.book_name,
+            chapter: ch,
+          })
+        }}
+      />
     </View>
   )
 }

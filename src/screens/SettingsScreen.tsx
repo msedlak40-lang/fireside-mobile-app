@@ -20,10 +20,16 @@ import {
   isValidTheme,
   type CoreTheme,
 } from '../services/themes';
+import { getPreferredTranslation, setPreferredTranslation } from '../services/userPrefs';
+import { getCurrentCycle, startNextCycle } from '../services/readingCycle';
 import { colors } from '../theme/colors';
+
+const TRANSLATIONS = ['KJV', 'WEB'];
 
 export default function SettingsScreen() {
   const [currentTheme, setCurrentTheme] = useState<string | null>(null);
+  const [translation, setTranslation] = useState('KJV');
+  const [cycle, setCycle] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -33,7 +39,37 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     loadUserTheme();
+    getPreferredTranslation().then(t => { if (t) setTranslation(t.toUpperCase()); }).catch(() => {});
+    getCurrentCycle().then(setCycle).catch(() => {});
   }, []);
+
+  const handleTranslationSelect = (t: string) => {
+    setTranslation(t);
+    setPreferredTranslation(t);
+  };
+
+  const handleStartNextCycle = () => {
+    const next = cycle + 1;
+    Alert.alert(
+      `Start reading cycle ${next}?`,
+      'Your current progress is preserved. All chapters will show as unread, and this begins a new reading cycle.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: `Start cycle ${next}`,
+          onPress: async () => {
+            try {
+              const updated = await startNextCycle();
+              setCycle(updated);
+              Alert.alert('New Cycle Started', `You're now on reading cycle ${updated}. All chapters show as unread; your past cycles are preserved.`);
+            } catch (e: any) {
+              Alert.alert('Error', e?.message ?? 'Unable to start a new cycle.');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const loadUserTheme = useCallback(async () => {
     try {
@@ -236,6 +272,53 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Reading Translation Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reading Translation</Text>
+          <Text style={styles.sectionDescription}>
+            The translation used when you read and study Scripture.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+            {TRANSLATIONS.map((t) => {
+              const selected = translation === t;
+              return (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => handleTranslationSelect(t)}
+                  activeOpacity={0.7}
+                  style={{
+                    paddingHorizontal: 20,
+                    paddingVertical: 12,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: selected ? colors.accent.primary : colors.border.default,
+                    backgroundColor: selected ? colors.accent.primary : colors.background.tertiary,
+                  }}
+                >
+                  <Text style={{ fontWeight: '700', color: selected ? '#fff' : colors.text.primary }}>{t}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Reading Cycle Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reading Cycle</Text>
+          <Text style={styles.sectionDescription}>
+            {cycle > 1
+              ? `You're on reading cycle ${cycle}. Start a new cycle to read through again with a clean slate.`
+              : 'Finished reading through? Start a new cycle to read again with a clean slate.'}
+          </Text>
+          <TouchableOpacity
+            onPress={handleStartNextCycle}
+            activeOpacity={0.7}
+            style={styles.cycleButton}
+          >
+            <Text style={styles.cycleButtonText}>Start reading cycle {cycle + 1}</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
@@ -403,6 +486,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     lineHeight: 18,
+  },
+  cycleButton: {
+    marginTop: 4,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.accent.primary,
+  },
+  cycleButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
   },
   settingRow: {
     flexDirection: 'row',

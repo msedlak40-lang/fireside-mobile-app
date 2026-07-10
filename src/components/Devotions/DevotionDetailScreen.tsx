@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { colors } from '../../theme/colors';
 import { completeDevotionProgress } from '../../services/progress';
 import { saveDevotionHighlight, getDevotionHighlights, deleteDevotionHighlight } from '../../services/devotionHighlights';
+import { getDevotionInteraction, toggleDevotionStar, markDevotionRead } from '../../services/devotionInteractions';
 import type { Devotion } from '../../types/supabase-devotions';
 
 export default function DevotionDetailScreen() {
@@ -27,6 +28,8 @@ export default function DevotionDetailScreen() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [highlights, setHighlights] = useState<Array<{ id?: string; start_pos: number; length: number; selected_text: string; color: string }>>([]);
   const [showHighlights, setShowHighlights] = useState(false);
+  const [isStarred, setIsStarred] = useState(false);
+  const [isToggingStar, setIsToggingStar] = useState(false);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [selectedParagraph, setSelectedParagraph] = useState<{ start: number; length: number; text: string } | null>(null);
   const [selectionStart, setSelectionStart] = useState(0);
@@ -121,6 +124,11 @@ export default function DevotionDetailScreen() {
           // Load saved highlights for this devotion
           const highlightsData = await getDevotionHighlights(devotionId);
           setHighlights(highlightsData);
+
+          // Load star status and mark as read
+          const interaction = await getDevotionInteraction(devotionId);
+          if (interaction?.is_starred) setIsStarred(true);
+          markDevotionRead(devotionId).catch(() => {});
         }
       } catch (err) {
         console.error('[DevotionDetail] Load failed', err);
@@ -260,6 +268,19 @@ export default function DevotionDetailScreen() {
     }
   };
 
+  const handleToggleStar = async () => {
+    if (isToggingStar || devotionId == null) return;
+    try {
+      setIsToggingStar(true);
+      const newStarred = await toggleDevotionStar(devotionId);
+      setIsStarred(newStarred);
+    } catch (err) {
+      console.error('[DevotionDetail] Star toggle failed:', err);
+    } finally {
+      setIsToggingStar(false);
+    }
+  };
+
   if (loading || !devotion) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
@@ -276,20 +297,32 @@ export default function DevotionDetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28, backgroundColor: colors.background.primary }}>
-      {/* Title & Share button */}
+      {/* Title & action buttons */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Text style={{ fontSize: 22, fontWeight: '800', flex: 1, color: colors.text.primary }}>{devotion.title}</Text>
-        <TouchableOpacity
-          onPress={shareDevotion}
-          style={{
-            marginLeft: 12,
-            padding: 8,
-            backgroundColor: colors.background.secondary,
-            borderRadius: 8,
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>📤</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8, marginLeft: 12 }}>
+          <TouchableOpacity
+            onPress={handleToggleStar}
+            disabled={isToggingStar}
+            style={{
+              padding: 8,
+              backgroundColor: colors.background.secondary,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>{isStarred ? '\u2B50' : '\u2606'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={shareDevotion}
+            style={{
+              padding: 8,
+              backgroundColor: colors.background.secondary,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>📤</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Meta line */}
@@ -464,6 +497,24 @@ export default function DevotionDetailScreen() {
           </Text>
         </View>
       )}
+
+      {/* Archive link */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('DevotionArchive')}
+        style={{
+          marginTop: 16,
+          padding: 14,
+          backgroundColor: colors.background.secondary,
+          borderRadius: 10,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: colors.border.default,
+        }}
+      >
+        <Text style={{ color: colors.accent.primary, fontWeight: '600', fontSize: 15 }}>
+          View Past Devotions
+        </Text>
+      </TouchableOpacity>
 
       {/* Text Selection Modal */}
       <Modal

@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View, Text, Platform, TouchableOpacity } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as ExpoLinking from 'expo-linking';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,8 @@ import { getUserFires, getUnreadShareCount } from '../services/fire';
 
 // Screens
 import Auth from '../screens/Auth';
-import BibleHomeScreen from '../components/BibleHomeScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
+import BibleScreen from '../components/BibleScreen';
 import ChapterScreen from '../components/ChapterScreen';
 import VerseScreen from '../components/VerseScreen';
 import ReadingPlanDayScreen from '../screens/ReadingPlanDayScreen';
@@ -73,8 +74,7 @@ import JourneyDetailScreen from '../screens/JourneyDetailScreen';
 import JourneyExperienceScreen from '../screens/JourneyExperienceScreen';
 import JourneyLocationScreen from '../screens/JourneyLocationScreen';
 
-// Verse Review Queue
-import ReviewQueueScreen from '../screens/ReviewQueueScreen';
+// Deep Study (Strong's word study — the verse "Deeper" surface)
 import DeepStudyScreen from '../screens/DeepStudyScreen';
 
 // ---- Stacks ----
@@ -98,7 +98,7 @@ function BibleStackNavigator() {
     >
       <BibleStack.Screen
         name="BibleHome"
-        component={BibleHomeScreen}
+        component={BibleScreen}
         options={({ navigation }: any) => ({
           headerTitle: 'Bible',
           headerRight: () => (
@@ -125,6 +125,11 @@ function BibleStackNavigator() {
         name="BibleSearch"
         component={BibleSearchScreen}
         options={{ headerTitle: 'Search' }}
+      />
+      <BibleStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
       />
     </BibleStack.Navigator>
   );
@@ -221,17 +226,6 @@ function StudyStackNavigator() {
         name="JourneyLocation"
         component={JourneyLocationScreen}
         options={{ headerTitle: 'Location' }}
-      />
-      {/* Verse Review Queue */}
-      <StudyStack.Screen
-        name="ReviewQueue"
-        component={ReviewQueueScreen}
-        options={{ headerTitle: 'Review Queue' }}
-      />
-      <StudyStack.Screen
-        name="DeepStudy"
-        component={DeepStudyScreen}
-        options={{ headerTitle: 'Deep Study' }}
       />
     </StudyStack.Navigator>
   );
@@ -443,6 +437,7 @@ const linking = {
   config: {
     screens: {
       Auth: 'auth',
+      ResetPassword: 'auth/reset-password',
       MainTabs: {
         screens: {
           HomeTab: {
@@ -458,7 +453,8 @@ const linking = {
               BibleHome: 'bible',
               Chapter: 'bible/:bookId/:chapter',
               Verse: 'bible/:bookId/:chapter/:verse',
-              BibleSearch: 'search'
+              BibleSearch: 'search',
+              DeepStudy: 'bible/deep-study'
             }
           },
           ArsenalTab: {
@@ -478,9 +474,7 @@ const linking = {
               JourneyCatalog: 'study/journeys',
               JourneyDetail: 'study/journeys/:journeyId',
               JourneyExperience: 'study/journeys/:journeyId/experience',
-              JourneyLocation: 'study/journeys/:journeyId/location/:locationIndex',
-              ReviewQueue: 'study/review-queue',
-              DeepStudy: 'study/review-queue/:verseId'
+              JourneyLocation: 'study/journeys/:journeyId/location/:locationIndex'
             }
           },
           FireTab: {
@@ -505,6 +499,8 @@ const linking = {
 export default function AppNavigator() {
   const [ready, setReady] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const navigationRef = useNavigationContainerRef();
 
   // Keep screen awake while app is open
   useEffect(() => {
@@ -515,10 +511,53 @@ export default function AppNavigator() {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthed(!!session);
+      if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the reset link — show the reset password screen
+        setShowResetPassword(true);
+      }
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Handle deep link recovery tokens from Supabase password reset emails
+  useEffect(() => {
+    const handleUrl = async (url: string) => {
+      // Supabase recovery links contain hash fragments: #access_token=...&type=recovery
+      const hashIdx = url.indexOf('#');
+      if (hashIdx === -1) return;
+      const hash = url.slice(hashIdx + 1);
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+
+      if (type === 'recovery' && accessToken) {
+        console.log('[AppNavigator] Password recovery deep link detected');
+        try {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+          // onAuthStateChange will fire PASSWORD_RECOVERY and set showResetPassword
+        } catch (e) {
+          console.warn('[AppNavigator] Failed to set recovery session:', e);
+        }
+      }
+    };
+
+    // Check if app was opened via a deep link
+    ExpoLinking.getInitialURL().then((url) => {
+      if (url) handleUrl(url);
+    });
+
+    // Listen for deep links while app is open
+    const sub = ExpoLinking.addEventListener('url', (event) => {
+      handleUrl(event.url);
+    });
+
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
@@ -569,9 +608,16 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer linking={linking} theme={theme}>
+    <NavigationContainer ref={navigationRef} linking={linking} theme={theme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthed ? (
+        {showResetPassword ? (
+          <RootStack.Screen
+            name="ResetPassword"
+            options={{ headerShown: true, title: 'Reset Password', headerStyle: { backgroundColor: colors.background.secondary }, headerTintColor: colors.text.primary }}
+          >
+            {() => <ResetPasswordScreen onComplete={() => setShowResetPassword(false)} />}
+          </RootStack.Screen>
+        ) : isAuthed ? (
           <RootStack.Screen name="MainTabs" component={MainTabs} />
         ) : (
           <RootStack.Screen name="Auth" component={Auth} />

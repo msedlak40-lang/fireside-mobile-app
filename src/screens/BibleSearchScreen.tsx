@@ -12,28 +12,19 @@ import {
   Alert,
   Modal,
   StyleSheet,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabaseClient';
 import { parseReference } from '../utils/bibleReferenceParser';
-import { saveBattleVersesBatch } from '../services/battleVerses';
-import { addToReviewQueue } from '../services/verseReviewQueue';
+import { saveBattleVersesBatch, saveBattleVerse } from '../services/battleVerses';
 import { CORE_THEMES, THEME_DESCRIPTIONS, THEME_COLORS } from '../services/themes';
 import type { ChapterTheme } from '../services/themes';
 import { hybridThemeSearch, getThemeChapterCounts } from '../services/themeSearch';
-import WordStudyModal from '../components/Bible/WordStudyModal';
-import CommentaryModal from '../components/Bible/CommentaryModal';
-
-type WordMapping = {
-  verse_number: number;
-  word_position: number;
-  english_word: string;
-  original_word: string;
-  strongs_number: string;
-  transliteration: string;
-};
+import VerseSummaryCard, { type CrossRefItem } from '../components/VerseSummaryCard';
+import { getVerseLifeApplication, type VerseLifeApplication } from '../services/scripture';
+import { getCrossReferences, type CrossReference } from '../services/strongsStudy';
+import { setStudyDepth } from '../services/userPrefs';
 
 type SearchResult = {
   book_name: string;
@@ -60,18 +51,12 @@ export default function BibleSearchScreen() {
   const [themeCounts, setThemeCounts] = useState<Record<string, number>>({});
   const [modalChapter, setModalChapter] = useState<ChapterTheme | null>(null);
 
-  // Commentary state
-  const [commentaryOpen, setCommentaryOpen] = useState(false);
-
-  // Word study state
-  const [actionMenuOpen, setActionMenuOpen] = useState(false);
-  const [actionMenuResult, setActionMenuResult] = useState<SearchResult | null>(null);
-  const [wordStudyKey, setWordStudyKey] = useState<string | null>(null); // verseKey of active study
-  const [wordMappings, setWordMappings] = useState<WordMapping[]>([]);
-  const [wordStudyOpen, setWordStudyOpen] = useState(false);
-  const [wordStudyStrongs, setWordStudyStrongs] = useState<string | null>(null);
-  const [wordStudyEnglish, setWordStudyEnglish] = useState('');
-  const [wordStudyContext, setWordStudyContext] = useState<{ book: string; chapter: number; verse: number; text: string }>({ book: '', chapter: 0, verse: 0, text: '' });
+  // Verse summary card state
+  const [summaryResult, setSummaryResult] = useState<SearchResult | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryContent, setSummaryContent] = useState<VerseLifeApplication | null>(null);
+  const [summaryCrossRefs, setSummaryCrossRefs] = useState<CrossRefItem[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   // Load theme counts on mount
   useEffect(() => {
@@ -249,74 +234,71 @@ export default function BibleSearchScreen() {
   };
 
   // ------------------------------------------------------------------
-  // Word Study handlers
+  // Verse summary handlers
   // ------------------------------------------------------------------
 
-  const handleResultPress = (result: SearchResult) => {
-    setActionMenuResult(result);
-    setActionMenuOpen(true);
+  const handleResultPress = async (result: SearchResult) => {
+    setSummaryResult(result);
+    setSummaryContent(null);
+    setSummaryCrossRefs([]);
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    try {
+      const [content, refs] = await Promise.all([
+        getVerseLifeApplication(result.book_name, result.chapter_number, result.verse_number),
+        getCrossReferences(result.book_name, result.chapter_number, result.verse_number, 8),
+      ]);
+      setSummaryResult(cur => {
+        if (cur && verseKey(cur) === verseKey(result)) {
+          setSummaryContent(content);
+          setSummaryCrossRefs(refs.map(toCrossRefItem));
+        }
+        return cur;
+      });
+    } finally {
+      setSummaryLoading(false);
+    }
   };
 
-  const handleWordStudyMode = async () => {
-    if (!actionMenuResult) return;
-    const key = verseKey(actionMenuResult);
-    setActionMenuOpen(false);
-
-    // Fetch word mappings for this verse
-    try {
-      const { data } = await supabase
-        .from('verse_strongs_words')
-        .select('verse_number, word_position, english_word, original_word, strongs_number, transliteration')
-        .eq('book_name', actionMenuResult.book_name)
-        .eq('chapter_number', actionMenuResult.chapter_number)
-        .eq('verse_number', actionMenuResult.verse_number)
-        .order('word_position');
-      setWordMappings(data ?? []);
-    } catch { setWordMappings([]); }
-
-    setWordStudyKey(key);
+  const handleViewCrossRefChapter = (cr: CrossRefItem) => {
+    setSummaryOpen(false);
+    navigation.navigate('Chapter', { bookName: cr.book, chapter: cr.chapter, translation });
   };
 
-  const handleSearchResultReviewQueue = async () => {
-    if (!actionMenuResult) return;
-    setActionMenuOpen(false);
+  const handleResultDeeper = () => {
+    if (!summaryResult) return;
+    // A verse Deeper tap sets the global sticky depth (per spec: written from either surface).
+    setStudyDepth('deeper');
+    setSummaryOpen(false);
+    navigation.navigate('DeepStudy', {
+      bookName: summaryResult.book_name,
+      chapter: summaryResult.chapter_number,
+      verseNumber: summaryResult.verse_number,
+      verseText: summaryResult.verse_text,
+    });
+  };
+
+  const handleResultBattleVerse = async () => {
+    if (!summaryResult) return;
+    setSummaryOpen(false);
     try {
-      const added = await addToReviewQueue(
-        actionMenuResult.book_name, actionMenuResult.chapter_number,
-        actionMenuResult.verse_number, actionMenuResult.verse_text,
+      const saved = await saveBattleVerse(
+        summaryResult.book_name, summaryResult.chapter_number,
+        summaryResult.verse_number, summaryResult.verse_text,
       );
-      if (added) Alert.alert('Added!', `${actionMenuResult.reference} added to Review Queue`);
-      else Alert.alert('Already Queued', 'This verse is already in your Review Queue');
-    } catch { Alert.alert('Error', 'Could not add verse to queue'); }
+      if (saved) Alert.alert('Saved!', `${summaryResult.reference} added to Battle Verses`);
+      else Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
+    } catch { Alert.alert('Error', 'Could not save verse'); }
   };
 
   const handleGoToChapter = () => {
-    if (!actionMenuResult) return;
-    setActionMenuOpen(false);
+    if (!summaryResult) return;
+    setSummaryOpen(false);
     navigation.navigate('Chapter', {
-      bookName: actionMenuResult.book_name,
-      chapter: actionMenuResult.chapter_number,
+      bookName: summaryResult.book_name,
+      chapter: summaryResult.chapter_number,
       translation,
     });
-  };
-
-  const handleSearchCommentary = () => {
-    if (!actionMenuResult) return;
-    setActionMenuOpen(false);
-    setCommentaryOpen(true);
-  };
-
-  const openSearchWordStudy = (strongsNumber: string, englishWord: string) => {
-    if (!wordStudyKey) return;
-    const result = results.find(r => verseKey(r) === wordStudyKey);
-    if (!result) return;
-    setWordStudyStrongs(strongsNumber);
-    setWordStudyEnglish(englishWord);
-    setWordStudyContext({
-      book: result.book_name, chapter: result.chapter_number,
-      verse: result.verse_number, text: result.verse_text,
-    });
-    setWordStudyOpen(true);
   };
 
   // ------------------------------------------------------------------
@@ -546,46 +528,27 @@ export default function BibleSearchScreen() {
                 {results.map((result, index) => {
                   const key = verseKey(result);
                   const isSelected = selectedKeys.has(key);
-                  const isStudyActive = wordStudyKey === key;
                   return (
-                    <View key={`${key}-${index}`}>
-                      {isStudyActive && (
-                        <View style={s.studyBar}>
-                          <TouchableOpacity onPress={() => { setWordStudyKey(null); setWordMappings([]); }}>
-                            <Text style={s.studyBarBack}>{'\u2190'} Back</Text>
-                          </TouchableOpacity>
-                          <Text style={s.studyBarTitle}>Word Study</Text>
+                    <Pressable
+                      key={`${key}-${index}`}
+                      onPress={() => handleResultPress(result)}
+                      onLongPress={() => toggleSelect(key)}
+                      style={[s.card, isSelected && s.cardSelected]}
+                    >
+                      <View style={s.cardRow}>
+                        <TouchableOpacity
+                          onPress={() => toggleSelect(key)}
+                          style={[s.checkbox, isSelected && s.checkboxActive]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          {isSelected && <Text style={s.checkmark}>{'\u2713'}</Text>}
+                        </TouchableOpacity>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.cardRef}>{result.reference}</Text>
+                          <Text style={s.cardText}>{result.verse_text}</Text>
                         </View>
-                      )}
-                      <Pressable
-                        onPress={isStudyActive ? undefined : () => handleResultPress(result)}
-                        onLongPress={() => toggleSelect(key)}
-                        style={[s.card, isSelected && s.cardSelected, isStudyActive && s.cardStudyActive]}
-                      >
-                        <View style={s.cardRow}>
-                          <TouchableOpacity
-                            onPress={() => toggleSelect(key)}
-                            style={[s.checkbox, isSelected && s.checkboxActive]}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          >
-                            {isSelected && <Text style={s.checkmark}>{'\u2713'}</Text>}
-                          </TouchableOpacity>
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.cardRef}>{result.reference}</Text>
-                            {isStudyActive ? (
-                              <>
-                                <Text style={s.cardText}>
-                                  {renderSearchTappableWords(result.verse_text, wordMappings, openSearchWordStudy)}
-                                </Text>
-                                <Text style={s.studyHint}>Tap a blue word to study it</Text>
-                              </>
-                            ) : (
-                              <Text style={s.cardText}>{result.verse_text}</Text>
-                            )}
-                          </View>
-                        </View>
-                      </Pressable>
-                    </View>
+                      </View>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -632,76 +595,18 @@ export default function BibleSearchScreen() {
           </View>
         )}
 
-        {/* Verse Action Menu */}
-        <Modal visible={actionMenuOpen} transparent animationType="fade" onRequestClose={() => setActionMenuOpen(false)}>
-          <TouchableWithoutFeedback onPress={() => setActionMenuOpen(false)}>
-            <View style={s.actionOverlay}>
-              <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
-                <View style={s.actionSheet}>
-                  <View style={s.actionHandle} />
-                  <Text style={s.actionTitle}>{actionMenuResult?.reference}</Text>
-
-                  <TouchableOpacity style={s.actionItem} onPress={handleWordStudyMode}>
-                    <Text style={s.actionIcon}>{'\uD83D\uDCD6'}</Text>
-                    <View style={s.actionTextWrap}>
-                      <Text style={s.actionText}>Word Study</Text>
-                      <Text style={s.actionSubtext}>Study Hebrew/Greek words</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={s.actionItem} onPress={handleSearchCommentary}>
-                    <Text style={s.actionIcon}>{'\uD83D\uDCDA'}</Text>
-                    <View style={s.actionTextWrap}>
-                      <Text style={s.actionText}>Commentary</Text>
-                      <Text style={s.actionSubtext}>Matthew Henry exposition</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={s.actionItem} onPress={handleGoToChapter}>
-                    <Text style={s.actionIcon}>{'\uD83D\uDCD6'}</Text>
-                    <View style={s.actionTextWrap}>
-                      <Text style={s.actionText}>View Full Chapter</Text>
-                      <Text style={s.actionSubtext}>Open in Bible reader</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={s.actionItem} onPress={handleSearchResultReviewQueue}>
-                    <Text style={s.actionIcon}>{'\uD83D\uDD0D'}</Text>
-                    <View style={s.actionTextWrap}>
-                      <Text style={s.actionText}>Add to Review Queue</Text>
-                      <Text style={s.actionSubtext}>Queue for deep study</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[s.actionItem, s.cancelActionItem]} onPress={() => setActionMenuOpen(false)}>
-                    <Text style={s.cancelActionText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-
-        {/* Word Study Modal */}
-        <WordStudyModal
-          visible={wordStudyOpen}
-          onClose={() => setWordStudyOpen(false)}
-          strongsNumber={wordStudyStrongs}
-          englishWord={wordStudyEnglish}
-          bookName={wordStudyContext.book}
-          chapter={wordStudyContext.chapter}
-          verseNumber={wordStudyContext.verse}
-          verseText={wordStudyContext.text}
-        />
-
-        {/* Commentary Modal */}
-        <CommentaryModal
-          visible={commentaryOpen}
-          onClose={() => setCommentaryOpen(false)}
-          bookName={actionMenuResult?.book_name ?? null}
-          chapter={actionMenuResult?.chapter_number ?? 0}
-          verseNumber={actionMenuResult?.verse_number ?? 0}
-          verseText={actionMenuResult?.verse_text ?? ''}
+        {/* Verse Summary Card */}
+        <VerseSummaryCard
+          visible={summaryOpen}
+          onClose={() => setSummaryOpen(false)}
+          reference={summaryResult?.reference ?? ''}
+          loading={summaryLoading}
+          content={summaryContent}
+          crossRefs={summaryCrossRefs}
+          onViewCrossRefChapter={handleViewCrossRefChapter}
+          onDeeper={handleResultDeeper}
+          onBattleVerse={handleResultBattleVerse}
+          extraActions={[{ icon: '\uD83D\uDCD6', label: 'View Full Chapter', onPress: handleGoToChapter }]}
         />
 
         {/* Theme Detail Modal */}
@@ -791,58 +696,6 @@ export default function BibleSearchScreen() {
 }
 
 // ------------------------------------------------------------------
-// Tappable words for search results
-// ------------------------------------------------------------------
-
-function renderSearchTappableWords(
-  text: string,
-  mappings: WordMapping[],
-  onTap: (strongsNumber: string, englishWord: string) => void,
-): React.ReactNode {
-  if (!mappings || mappings.length === 0) return text;
-
-  const sorted = [...mappings].sort((a, b) => a.word_position - b.word_position);
-  const parts: React.ReactNode[] = [];
-  let lastIdx = 0;
-  let partKey = 0;
-
-  for (const mapping of sorted) {
-    const searchWord = mapping.english_word.trim();
-    if (!searchWord || searchWord.length < 2) continue;
-
-    const lowerText = text.toLowerCase();
-    const lowerSearch = searchWord.toLowerCase();
-    const idx = lowerText.indexOf(lowerSearch, lastIdx);
-    if (idx === -1) continue;
-
-    if (idx > lastIdx) {
-      parts.push(<Text key={`t-${partKey++}`}>{text.slice(lastIdx, idx)}</Text>);
-    }
-
-    const matchedText = text.slice(idx, idx + searchWord.length);
-    const sn = mapping.strongs_number;
-    const eng = mapping.english_word;
-    parts.push(
-      <Text
-        key={`w-${partKey++}`}
-        style={{ color: '#5b9bd5', textDecorationLine: 'underline' as const, textDecorationStyle: 'dotted' as const }}
-        onPress={() => onTap(sn, eng)}
-      >
-        {matchedText}
-      </Text>
-    );
-
-    lastIdx = idx + searchWord.length;
-  }
-
-  if (lastIdx < text.length) {
-    parts.push(<Text key={`t-${partKey++}`}>{text.slice(lastIdx)}</Text>);
-  }
-
-  return parts.length > 0 ? parts : text;
-}
-
-// ------------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------------
 
@@ -858,6 +711,20 @@ function toResult(v: any): SearchResult {
 
 function verseKey(v: SearchResult) {
   return `${v.book_name}-${v.chapter_number}-${v.verse_number}`;
+}
+
+function toCrossRefItem(ref: CrossReference): CrossRefItem {
+  const label = ref.target_verse_end
+    ? `${ref.target_book} ${ref.target_chapter}:${ref.target_verse_start}-${ref.target_verse_end}`
+    : `${ref.target_book} ${ref.target_chapter}:${ref.target_verse_start}`;
+  return {
+    id: ref.id,
+    label,
+    book: ref.target_book,
+    chapter: ref.target_chapter,
+    verseStart: ref.target_verse_start,
+    verseEnd: ref.target_verse_end,
+  };
 }
 
 function rankResults(data: any[], keywords: string[], fullQuery: string): any[] {

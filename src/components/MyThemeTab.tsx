@@ -12,10 +12,14 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabaseClient';
 import {
   getUserYearlyTheme,
-  getChapterTheme,
+  getAllChapterThemes,
   recordThemeDiscovery,
   getThemeColors,
   isValidTheme,
+  CORE_THEMES,
+  THEME_DESCRIPTIONS,
+  type ChapterTheme,
+  type CoreTheme,
 } from '../services/themes';
 import { saveApplication, isApplicationSaved } from '../services/arsenal';
 import { colors } from '../theme/colors';
@@ -28,19 +32,19 @@ interface Props {
 export default function MyThemeTab({ bookName, chapter }: Props) {
   const navigation = useNavigation<any>();
   const [userTheme, setUserTheme] = useState<string | null>(null);
-  const [themeApplication, setThemeApplication] = useState<any>(null);
+  const [chapterThemes, setChapterThemes] = useState<ChapterTheme[]>([]);
+  const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savingId, setSavingId] = useState<string | null>(null);
 
-  const loadThemeApplication = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Use getSession() instead of getUser() to avoid network call for auth
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -51,39 +55,43 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
       const user = session.user;
       setUserId(user.id);
 
-      const yearlyTheme = await getUserYearlyTheme(user.id);
-      if (!yearlyTheme) {
-        setError('no-theme');
-        return;
+      const [yearlyTheme, themes] = await Promise.all([
+        getUserYearlyTheme(user.id),
+        getAllChapterThemes(bookName, chapter),
+      ]);
+
+      setUserTheme(yearlyTheme?.theme ?? null);
+      setChapterThemes(themes);
+
+      // Record discovery for user's theme if it has a sub_theme
+      if (yearlyTheme?.theme) {
+        const userApp = themes.find(t => t.theme === yearlyTheme.theme);
+        if (userApp?.sub_theme) {
+          recordThemeDiscovery(
+            user.id,
+            yearlyTheme.theme,
+            userApp.sub_theme,
+            bookName,
+            chapter,
+          ).catch(() => {});
+        }
       }
 
-      setUserTheme(yearlyTheme.theme);
-
-      const application = await getChapterTheme(bookName, chapter, yearlyTheme.theme);
-
-      if (!application) {
-        setError('not-generated');
-        return;
-      }
-
-      setThemeApplication(application);
-
-      // Record sub-theme discovery if present (non-blocking)
-      if (application.sub_theme) {
-        recordThemeDiscovery(
-          user.id,
-          yearlyTheme.theme,
-          application.sub_theme,
-          bookName,
-          chapter
-        ).catch(() => {});
-      }
+      // Check saved status for all themes
+      const savedChecks = await Promise.all(
+        themes.map(t =>
+          isApplicationSaved(user.id, t.id)
+            .then(saved => (saved ? t.id : null))
+            .catch(() => null),
+        ),
+      );
+      setSavedIds(new Set(savedChecks.filter(Boolean) as string[]));
     } catch (err: any) {
-      console.error('[MyThemeTab] Error loading theme application:', err);
+      console.error('[MyThemeTab] Error loading data:', err);
       if (err?.message?.includes('Network request failed') || err?.message?.includes('fetch')) {
         setError('network-error');
       } else {
-        setError('Failed to load theme application');
+        setError('Failed to load theme applications');
       }
     } finally {
       setIsLoading(false);
@@ -91,69 +99,65 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
   }, [bookName, chapter]);
 
   useEffect(() => {
-    loadThemeApplication();
-  }, [loadThemeApplication]);
+    loadData();
+  }, [loadData]);
 
-  // Check if already saved to Arsenal
-  useEffect(() => {
-    if (themeApplication?.id && userId) {
-      isApplicationSaved(userId, themeApplication.id)
-        .then(setIsSaved)
-        .catch(() => {});
-    }
-  }, [themeApplication, userId]);
+  const toggleExpand = (theme: string) => {
+    setExpandedTheme(prev => (prev === theme ? null : theme));
+  };
 
-  const handleSaveToArsenal = useCallback(async () => {
-    if (!themeApplication || !userTheme || !userId) return;
+  const handleSaveToArsenal = useCallback(
+    async (app: ChapterTheme) => {
+      if (!userId) return;
+      try {
+        setSavingId(app.id);
+        await saveApplication({
+          userId,
+          chapterThemeId: app.id,
+          book: bookName,
+          chapter,
+          themeTag: app.theme,
+          subThemeTag: app.sub_theme,
+        });
+        setSavedIds(prev => new Set([...prev, app.id]));
+      } catch (err) {
+        console.error('[MyThemeTab] Error saving to arsenal:', err);
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [userId, bookName, chapter],
+  );
 
-    try {
-      setIsSaving(true);
-      await saveApplication({
-        userId,
-        chapterThemeId: themeApplication.id,
-        book: bookName,
-        chapter,
-        themeTag: userTheme,
-        subThemeTag: themeApplication.sub_theme,
-      });
-      setIsSaved(true);
-    } catch (err) {
-      console.error('[MyThemeTab] Error saving to arsenal:', err);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [themeApplication, userTheme, userId, bookName, chapter]);
-
-  const handleShare = useCallback(async () => {
-    if (!themeApplication || !userTheme) return;
-    try {
-      let message = `${userTheme}`;
-      if (themeApplication.sub_theme) message += ` - ${themeApplication.sub_theme}`;
-      message += `\n\n${bookName} ${chapter}`;
-      if (themeApplication.application) message += `\n\n${themeApplication.application}`;
-      if (themeApplication.key_insight) message += `\n\nKey Insight: ${themeApplication.key_insight}`;
-      if (themeApplication.action_step) message += `\n\nAction Step: ${themeApplication.action_step}`;
-      message += `\n\n- Shared from Fireside Fellowship`;
-      await Share.share({ message });
-    } catch (error) {
-      console.error('[MyThemeTab] Share error:', error);
-    }
-  }, [themeApplication, userTheme, bookName, chapter]);
-
-  const themeColors = userTheme && isValidTheme(userTheme) ? getThemeColors(userTheme) : null;
-  const accentColor = themeColors?.primary || colors.accent.primary;
+  const handleShare = useCallback(
+    async (app: ChapterTheme) => {
+      try {
+        let message = `${app.theme}`;
+        if (app.sub_theme) message += ` - ${app.sub_theme}`;
+        message += `\n\n${bookName} ${chapter}`;
+        if (app.application) message += `\n\n${app.application}`;
+        if (app.key_insight) message += `\n\nKey Insight: ${app.key_insight}`;
+        if (app.action_step) message += `\n\nAction Step: ${app.action_step}`;
+        message += `\n\n- Shared from Fireside Fellowship`;
+        await Share.share({ message });
+      } catch (error) {
+        console.error('[MyThemeTab] Share error:', error);
+      }
+    },
+    [bookName, chapter],
+  );
 
   // Loading state
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.accent.primary} />
-        <Text style={styles.loadingText}>Loading your theme...</Text>
+        <Text style={styles.loadingText}>Loading themes...</Text>
       </View>
     );
   }
 
-  // Network error - show retry
+  // Network error
   if (error === 'network-error') {
     return (
       <View style={styles.centerContainer}>
@@ -161,128 +165,177 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
         <Text style={styles.emptyDescription}>
           Could not load theme content. Please check your internet connection.
         </Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={loadThemeApplication}
-        >
-          <Text style={styles.buttonText}>Retry</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadData}>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // No theme selected
-  if (error === 'no-theme') {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.icon}>🎯</Text>
-        <Text style={styles.emptyTitle}>No Theme Selected</Text>
-        <Text style={styles.emptyDescription}>
-          Choose a yearly theme in Settings to see how each chapter speaks to your journey.
-        </Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate('HomeTab', { screen: 'Settings' })}
-        >
-          <Text style={styles.buttonText}>Go to Settings</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // Theme application not generated yet
-  if (error === 'not-generated') {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.icon}>⏳</Text>
-        <Text style={styles.emptyTitle}>Application Coming Soon</Text>
-        <Text style={styles.emptyDescription}>
-          We're still generating {userTheme} applications for this chapter. Check back soon!
-        </Text>
-      </View>
-    );
-  }
-
-  // Error state
+  // Generic error
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.icon}>⚠️</Text>
         <Text style={styles.errorText}>{error}</Text>
       </View>
     );
   }
 
-  // Success - show theme application
+  // Build a map of theme -> chapter application
+  const themeMap = new Map<string, ChapterTheme>();
+  for (const ct of chapterThemes) {
+    themeMap.set(ct.theme, ct);
+  }
+
   return (
     <View style={styles.container}>
-      {/* Theme Header */}
-      <View style={styles.header}>
-        <View style={[styles.themeBadge, { backgroundColor: accentColor }]}>
-          <Text style={styles.themeBadgeText}>{userTheme?.toUpperCase()}</Text>
-        </View>
-        {themeApplication.sub_theme && (
-          <View style={[styles.subThemeBadge, { borderColor: accentColor }]}>
-            <Text style={[styles.subThemeBadgeText, { color: accentColor }]}>
-              {themeApplication.sub_theme}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Chapter Reference */}
-      <Text style={styles.reference}>
-        {bookName} {chapter}
-      </Text>
-
-      {/* Application Text */}
-      {themeApplication.application?.split('\n\n').map((paragraph: string, index: number) => (
-        <Text key={index} selectable style={styles.application}>
-          {paragraph}
-        </Text>
-      ))}
-
-      {/* Key Insight */}
-      {themeApplication.key_insight && (
-        <View style={[styles.insightBox, { borderLeftColor: accentColor }]}>
-          <Text style={styles.insightLabel}>🎯 Key Insight</Text>
-          <Text selectable style={styles.insightText}>{themeApplication.key_insight}</Text>
-        </View>
-      )}
-
-      {/* Action Step */}
-      {themeApplication.action_step && (
-        <View style={styles.actionBox}>
-          <Text style={styles.actionLabel}>💪 Today's Challenge</Text>
-          <Text selectable style={styles.actionText}>{themeApplication.action_step}</Text>
-        </View>
-      )}
-
-      {/* Actions Row */}
-      <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Text style={styles.shareButtonText}>📤 Share</Text>
-        </TouchableOpacity>
+      {/* Prompt to set theme if none selected */}
+      {!userTheme && (
         <TouchableOpacity
-          style={[
-            styles.saveButton,
-            isSaved && styles.saveButtonSaved,
-          ]}
-          onPress={handleSaveToArsenal}
-          disabled={isSaved || isSaving}
+          style={styles.setThemeBanner}
+          onPress={() => navigation.navigate('HomeTab', { screen: 'Settings' })}
         >
-          <Text style={styles.saveButtonText}>
-            {isSaving ? 'Saving...' : isSaved ? '✓ Saved to Arsenal' : 'Save to Arsenal'}
+          <Text style={styles.setThemeBannerText}>
+            Set your yearly theme in Settings to highlight your focus
           </Text>
         </TouchableOpacity>
-      </View>
+      )}
+
+      <Text style={styles.sectionHeader}>
+        Themes in {bookName} {chapter}
+      </Text>
+
+      {/* Theme list */}
+      {CORE_THEMES.map(theme => {
+        const app = themeMap.get(theme);
+        const isUserTheme = userTheme === theme;
+        const isExpanded = expandedTheme === theme;
+        const themeColors = getThemeColors(theme);
+        const accentColor = themeColors?.primary || colors.accent.primary;
+        const isSaved = app ? savedIds.has(app.id) : false;
+        const isSaving = app ? savingId === app.id : false;
+
+        return (
+          <View
+            key={theme}
+            style={[
+              styles.themeCard,
+              isUserTheme && { borderColor: accentColor, borderWidth: 2 },
+            ]}
+          >
+            {/* Collapsed header */}
+            <TouchableOpacity
+              style={styles.themeHeader}
+              onPress={() => toggleExpand(theme)}
+              activeOpacity={0.7}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                {isUserTheme && (
+                  <Text style={[styles.checkmark, { color: accentColor }]}>{'\u2713'}</Text>
+                )}
+                <View style={[styles.themeDot, { backgroundColor: accentColor }]} />
+                <Text
+                  style={[
+                    styles.themeName,
+                    isUserTheme && { fontWeight: '700', color: accentColor },
+                  ]}
+                >
+                  {theme}
+                </Text>
+                {isUserTheme && (
+                  <View style={[styles.yourThemeBadge, { backgroundColor: accentColor }]}>
+                    <Text style={styles.yourThemeBadgeText}>YOUR THEME</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.expandIcon}>{isExpanded ? '\u25BC' : '\u25B6'}</Text>
+            </TouchableOpacity>
+
+            {/* One-line description when collapsed */}
+            {!isExpanded && (
+              <Text style={styles.themeDesc} numberOfLines={1}>
+                {THEME_DESCRIPTIONS[theme as CoreTheme]}
+              </Text>
+            )}
+
+            {/* Expanded content */}
+            {isExpanded && (
+              <View style={styles.themeContent}>
+                {app ? (
+                  <>
+                    {app.sub_theme && (
+                      <View style={[styles.subThemeBadge, { borderColor: accentColor }]}>
+                        <Text style={[styles.subThemeBadgeText, { color: accentColor }]}>
+                          {app.sub_theme}
+                        </Text>
+                      </View>
+                    )}
+
+                    {app.application?.split('\n\n').map((paragraph: string, index: number) => (
+                      <Text key={index} selectable style={styles.applicationText}>
+                        {paragraph}
+                      </Text>
+                    ))}
+
+                    {app.key_insight && (
+                      <View style={[styles.insightBox, { borderLeftColor: accentColor }]}>
+                        <Text style={styles.insightLabel}>Key Insight</Text>
+                        <Text selectable style={styles.insightText}>
+                          {app.key_insight}
+                        </Text>
+                      </View>
+                    )}
+
+                    {app.action_step && (
+                      <View style={styles.actionBox}>
+                        <Text style={styles.actionLabel}>Today's Challenge</Text>
+                        <Text selectable style={styles.actionText}>
+                          {app.action_step}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.actionsRow}>
+                      <TouchableOpacity
+                        style={styles.shareButton}
+                        onPress={() => handleShare(app)}
+                      >
+                        <Text style={styles.shareButtonText}>Share</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.saveButton, isSaved && styles.saveButtonSaved]}
+                        onPress={() => handleSaveToArsenal(app)}
+                        disabled={isSaved || isSaving}
+                      >
+                        <Text style={styles.saveButtonText}>
+                          {isSaving
+                            ? 'Saving...'
+                            : isSaved
+                              ? '\u2713 Saved'
+                              : 'Save to Arsenal'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.notGenerated}>
+                    <Text style={styles.notGeneratedText}>
+                      Application for this theme hasn't been generated for this chapter yet.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    padding: 16,
   },
   centerContainer: {
     flex: 1,
@@ -295,10 +348,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: colors.text.secondary,
-  },
-  icon: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
@@ -319,122 +368,187 @@ const styles = StyleSheet.create({
     color: colors.error,
     textAlign: 'center',
   },
-  button: {
+  retryButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     backgroundColor: colors.accent.primary,
     borderRadius: 8,
   },
-  buttonText: {
-    color: colors.text.primary,
+  retryButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  header: {
+
+  setThemeBanner: {
+    backgroundColor: colors.background.elevated,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  setThemeBannerText: {
+    color: colors.accent.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 12,
+  },
+
+  themeCard: {
+    backgroundColor: colors.background.elevated,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    overflow: 'hidden',
+  },
+  themeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
+    padding: 14,
+    paddingBottom: 8,
   },
-  themeBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+  checkmark: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginRight: 6,
   },
-  themeBadgeText: {
+  themeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  themeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    flex: 1,
+  },
+  yourThemeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  yourThemeBadgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  expandIcon: {
+    fontSize: 12,
+    color: colors.text.muted,
+    marginLeft: 8,
+  },
+  themeDesc: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    lineHeight: 18,
+  },
+
+  themeContent: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.default,
+    paddingTop: 12,
+  },
+
   subThemeBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     backgroundColor: colors.background.tertiary,
     borderRadius: 6,
     borderWidth: 1,
+    marginBottom: 12,
   },
   subThemeBadgeText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  reference: {
-    fontSize: 16,
-    color: colors.text.muted,
-    marginBottom: 20,
-  },
-  application: {
-    fontSize: 17,
-    lineHeight: 28,
+  applicationText: {
+    fontSize: 15,
+    lineHeight: 24,
     color: colors.text.primary,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   insightBox: {
     backgroundColor: colors.background.secondary,
-    padding: 16,
+    padding: 14,
     borderRadius: 8,
     borderLeftWidth: 4,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   insightLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.accent.tertiary,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   insightText: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.text.primary,
     fontWeight: '600',
   },
   actionBox: {
     backgroundColor: colors.background.secondary,
-    padding: 16,
+    padding: 14,
     borderRadius: 8,
     borderLeftWidth: 4,
     borderLeftColor: colors.success,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   actionLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.success,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   actionText: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.text.primary,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: 10,
+    marginTop: 4,
   },
   shareButton: {
     flex: 1,
     backgroundColor: colors.background.tertiary,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border.default,
   },
   shareButtonText: {
     color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   saveButton: {
     flex: 1,
     backgroundColor: colors.accent.primary,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   saveButtonSaved: {
     backgroundColor: '#95a5a6',
@@ -442,7 +556,17 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  notGenerated: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  notGeneratedText: {
+    color: colors.text.secondary,
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
