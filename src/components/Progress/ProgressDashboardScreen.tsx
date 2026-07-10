@@ -6,8 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
-import { fetchVerseOfTheDay, logVotdView, toggleVotdStar, isTodayVotdStarred, type VerseOfTheDay } from '../../services/verseOfTheDay';
-import { getUserBattleVerses, deleteBattleVerse, BATTLE_TAGS, type BattleVerse } from '../../services/battleVerses';
+import { fetchVerseOfTheDay, logVotdView, type VerseOfTheDay } from '../../services/verseOfTheDay';
+import { getUserBattleVerses, deleteBattleVerse, saveBattleVerse, BATTLE_TAGS, type BattleVerse } from '../../services/battleVerses';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import VerseSummaryCard from '../VerseSummaryCard';
@@ -78,7 +78,7 @@ export default function ProgressDashboardScreen() {
   const [battleVerses, setBattleVerses] = useState<BattleVerse[]>([]);
   const [battleVersesLoading, setBattleVersesLoading] = useState(false);
   const [battleTagFilter, setBattleTagFilter] = useState<string | null>(null);
-  const [votdStarred, setVotdStarred] = useState(false);
+  const [votdBattleState, setVotdBattleState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // VOTD tap → same summary surface as an in-chapter verse tap (verse_life_application).
   const openVotdSummary = useCallback(async () => {
@@ -99,6 +99,31 @@ export default function ProgressDashboardScreen() {
       setSummaryLoading(false);
     }
   }, [verseOfTheDay]);
+
+  // Save the VOTD to Battle Verses — shared state drives BOTH the corner control and the
+  // summary-card button. saveBattleVerse dedups via the unique constraint (false = already
+  // saved); both outcomes mean "in the list", so both collapse to 'saved'. No duplicate possible.
+  const saveVotdBattle = useCallback(async () => {
+    if (!verseOfTheDay || votdBattleState !== 'idle') return;
+    setVotdBattleState('saving');
+    try {
+      await saveBattleVerse(
+        verseOfTheDay.book_name,
+        verseOfTheDay.chapter_number,
+        verseOfTheDay.verse_number,
+        verseOfTheDay.verse_text,
+      );
+      setVotdBattleState('saved');
+    } catch {
+      setVotdBattleState('idle');
+      Alert.alert('Error', 'Could not save verse.');
+    }
+  }, [verseOfTheDay, votdBattleState]);
+
+  // Reset the shared Battle-save state when the verse changes (new day / refresh) — not on card close.
+  useEffect(() => {
+    setVotdBattleState('idle');
+  }, [verseOfTheDay?.book_name, verseOfTheDay?.chapter_number, verseOfTheDay?.verse_number]);
 
   // Deeper affordance → Strong's deep-study surface (registered in this ProgressStack).
   const handleVotdDeeper = useCallback(() => {
@@ -175,10 +200,9 @@ export default function ProgressDashboardScreen() {
       setTodayDevotion(freshData.todayDevotion);
       setVerseOfTheDay(freshData.verseOfTheDay);
 
-      // Log VOTD view + check starred state
+      // Log VOTD view
       if (verseData) {
         logVotdView(verseData).catch(() => {});
-        isTodayVotdStarred().then(setVotdStarred).catch(() => {});
       }
 
       // Save to cache
@@ -464,15 +488,20 @@ const openTodayDevotion = useCallback(() => {
                   </View>
                 ) : null}
               </View>
+              {/* Corner Battle-save \u2014 same action + shared state as the summary-card button */}
               <TouchableOpacity
-                onPress={async () => {
-                  const today = new Date().toISOString().split('T')[0];
-                  const newState = await toggleVotdStar(today);
-                  setVotdStarred(newState);
-                }}
+                onPress={saveVotdBattle}
+                disabled={votdBattleState !== 'idle'}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{
+                  flexDirection: 'row', alignItems: 'center',
+                  paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14,
+                  backgroundColor: votdBattleState === 'saved' ? 'rgba(39,174,96,0.15)' : '#bfdbfe',
+                }}
               >
-                <Text style={{ fontSize: 22 }}>{votdStarred ? '\u2B50' : '\u2606'}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: votdBattleState === 'saved' ? '#1b7a43' : '#1e40af' }}>
+                  {votdBattleState === 'saving' ? 'Saving\u2026' : votdBattleState === 'saved' ? '\u2713 Saved' : '\u2694\uFE0F Save'}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -497,7 +526,7 @@ const openTodayDevotion = useCallback(() => {
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Battle Verses</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>View Battle Verses</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -774,6 +803,8 @@ const openTodayDevotion = useCallback(() => {
         loading={summaryLoading}
         content={summaryContent}
         onDeeper={handleVotdDeeper}
+        onSaveBattleVerse={saveVotdBattle}
+        battleState={votdBattleState}
       />
 
       {/* Related Verse Modal */}

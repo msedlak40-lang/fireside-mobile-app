@@ -30,6 +30,10 @@ type Props = {
   /** Navigate to a cross-reference's full chapter (host owns navigation). */
   onViewCrossRefChapter?: (item: CrossRefItem) => void
   onDeeper: () => void
+  /** Deliberate primary-region "Save to Battle Verses" (distinct from the generic onBattleVerse action).
+   *  Controlled: the host owns the state so it can be shared with another control (e.g. a corner button). */
+  onSaveBattleVerse?: () => void
+  battleState?: 'idle' | 'saving' | 'saved'
   // Actions are optional so hosts supply only what fits their context.
   onNote?: () => void
   onBattleVerse?: () => void
@@ -42,7 +46,7 @@ type Props = {
 export default function VerseSummaryCard(props: Props) {
   const {
     visible, onClose, reference, loading, content, crossRefs, onViewCrossRefChapter, onDeeper,
-    onNote, onBattleVerse, onHighlight, isHighlighted, onRemoveHighlight, extraActions,
+    onSaveBattleVerse, battleState = 'idle', onNote, onBattleVerse, onHighlight, isHighlighted, onRemoveHighlight, extraActions,
   } = props
   const [actionsOpen, setActionsOpen] = useState(false)
   const hasActions = !!(onNote || onBattleVerse || onHighlight || (extraActions && extraActions.length > 0))
@@ -53,6 +57,7 @@ export default function VerseSummaryCard(props: Props) {
   const [crossRefLoading, setCrossRefLoading] = useState(false)
 
   // Reset transient state whenever the sheet closes.
+  // (Battle-save state is host-owned so it can be shared with the corner control — not reset here.)
   useEffect(() => {
     if (!visible) {
       setActionsOpen(false)
@@ -189,6 +194,21 @@ export default function VerseSummaryCard(props: Props) {
                 <Text style={styles.deeperText}>Study the Words {'→'}</Text>
               </TouchableOpacity>
 
+              {/* Deliberate primary-region Battle Verse save — controlled by the host (shared with the corner control) */}
+              {onSaveBattleVerse && (
+                <TouchableOpacity
+                  style={[styles.secondaryBtn, battleState !== 'idle' && styles.savedBtn]}
+                  onPress={onSaveBattleVerse}
+                  disabled={battleState !== 'idle'}
+                >
+                  <Text style={battleState !== 'idle' ? styles.savedText : styles.secondaryText}>
+                    {battleState === 'saving' ? 'Saving…'
+                      : battleState === 'saved' ? '✓ Saved to Battle Verses'
+                      : '⚔️ Save to Battle Verses'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
               {/* Single actions entry point */}
               {hasActions && (
                 <>
@@ -295,6 +315,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginTop: 8,
   },
   secondaryText: { color: colors.accent.primary, fontWeight: '700', fontSize: 15 },
+  savedBtn: { borderColor: colors.success, backgroundColor: 'rgba(39, 174, 96, 0.12)' },
+  savedText: { color: colors.success, fontWeight: '700', fontSize: 15 },
 
   actionsToggle: { alignItems: 'center', paddingVertical: 12 },
   actionsToggleText: { color: colors.text.secondary, fontWeight: '600', fontSize: 14 },

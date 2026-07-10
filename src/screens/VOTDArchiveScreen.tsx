@@ -81,6 +81,8 @@ export default function VOTDArchiveScreen() {
         </Text>
         <Text style={s.reference}>{item.verse_reference}</Text>
       </View>
+      {/* GUARDRAIL: this per-row star is the ONLY way to add/remove Favorites since the
+          dashboard VOTD star was retired. Don't remove it without retiring the Favorites tab. */}
       <TouchableOpacity
         onPress={() => handleToggleStar(item.date)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
