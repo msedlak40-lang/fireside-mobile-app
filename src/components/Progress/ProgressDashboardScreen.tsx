@@ -1,15 +1,18 @@
 // src/components/Progress/ProgressDashboardScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
-import { fetchVerseOfTheDay, type VerseOfTheDay } from '../../services/verseOfTheDay';
+import { fetchVerseOfTheDay, logVotdView, toggleVotdStar, isTodayVotdStarred, type VerseOfTheDay } from '../../services/verseOfTheDay';
 import { getUserBattleVerses, deleteBattleVerse, BATTLE_TAGS, type BattleVerse } from '../../services/battleVerses';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
+import VerseSummaryCard from '../VerseSummaryCard';
+import { getVerseLifeApplication, type VerseLifeApplication } from '../../services/scripture';
+import { setStudyDepth } from '../../services/userPrefs';
 import { colors } from '../../theme/colors';
 
 interface HighlightWithDevotion {
@@ -62,7 +65,9 @@ export default function ProgressDashboardScreen() {
   const [verseOfTheDay, setVerseOfTheDay] = useState<VerseOfTheDay | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showInsightModal, setShowInsightModal] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryContent, setSummaryContent] = useState<VerseLifeApplication | null>(null);
   const [showRelatedVerseModal, setShowRelatedVerseModal] = useState(false);
   const [selectedRelatedVerse, setSelectedRelatedVerse] = useState<string | null>(null);
   const [relatedVerseText, setRelatedVerseText] = useState<string>('');
@@ -73,13 +78,40 @@ export default function ProgressDashboardScreen() {
   const [battleVerses, setBattleVerses] = useState<BattleVerse[]>([]);
   const [battleVersesLoading, setBattleVersesLoading] = useState(false);
   const [battleTagFilter, setBattleTagFilter] = useState<string | null>(null);
+  const [votdStarred, setVotdStarred] = useState(false);
 
-  // Close modal with a delay to let React Native clean up touch handlers
-  const closeInsightModal = () => {
-    setTimeout(() => {
-      setShowInsightModal(false);
-    }, 100);
-  };
+  // VOTD tap → same summary surface as an in-chapter verse tap (verse_life_application).
+  const openVotdSummary = useCallback(async () => {
+    if (!verseOfTheDay) return;
+    setSummaryContent(null);
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    try {
+      const content = await getVerseLifeApplication(
+        verseOfTheDay.book_name,
+        verseOfTheDay.chapter_number,
+        verseOfTheDay.verse_number,
+      );
+      setSummaryContent(content);
+    } catch {
+      setSummaryContent(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [verseOfTheDay]);
+
+  // Deeper affordance → Strong's deep-study surface (registered in this ProgressStack).
+  const handleVotdDeeper = useCallback(() => {
+    if (!verseOfTheDay) return;
+    setStudyDepth('deeper');
+    setSummaryOpen(false);
+    navigation.navigate('DeepStudy', {
+      bookName: verseOfTheDay.book_name,
+      chapter: verseOfTheDay.chapter_number,
+      verseNumber: verseOfTheDay.verse_number,
+      verseText: verseOfTheDay.verse_text,
+    });
+  }, [verseOfTheDay, navigation]);
 
   // Load cached data from AsyncStorage
   const loadFromCache = async (): Promise<CachedData | null> => {
@@ -142,6 +174,12 @@ export default function ProgressDashboardScreen() {
       setActiveCharacterStudy(freshData.activeCharacterStudy);
       setTodayDevotion(freshData.todayDevotion);
       setVerseOfTheDay(freshData.verseOfTheDay);
+
+      // Log VOTD view + check starred state
+      if (verseData) {
+        logVotdView(verseData).catch(() => {});
+        isTodayVotdStarred().then(setVotdStarred).catch(() => {});
+      }
 
       // Save to cache
       await saveToCache(freshData);
@@ -352,7 +390,6 @@ const openTodayDevotion = useCallback(() => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <ScrollView
-        key={`scroll-${showInsightModal ? 'modal' : 'normal'}`}
         contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
         refreshControl={
           <RefreshControl
@@ -362,8 +399,6 @@ const openTodayDevotion = useCallback(() => {
             colors={[colors.accent.primary]}
           />
         }
-        scrollEnabled={!showInsightModal}
-        pointerEvents={showInsightModal ? 'none' : 'auto'}
       >
         <Text style={{ fontSize: 26, fontWeight: '800', marginBottom: 20, color: colors.text.primary }}>Your Progress</Text>
 
@@ -405,12 +440,7 @@ const openTodayDevotion = useCallback(() => {
         {/* Verse of the Day */}
         {verseOfTheDay && (
           <Pressable
-            onPress={() => {
-              if (verseOfTheDay.insight_title || verseOfTheDay.insight_detail) {
-                setShowInsightModal(true);
-              }
-            }}
-            disabled={!verseOfTheDay.insight_title && !verseOfTheDay.insight_detail}
+            onPress={openVotdSummary}
             style={{
               marginBottom: 16,
               padding: 18,
@@ -424,31 +454,59 @@ const openTodayDevotion = useCallback(() => {
               shadowRadius: 8,
               elevation: 4,
             }}>
-            <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
+            {/* Header row: label + theme + star */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
+                {verseOfTheDay.theme ? (
+                  <View style={{ backgroundColor: '#bfdbfe', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+                    <Text style={{ fontSize: 10, color: '#1e40af', fontWeight: '700' }}>{verseOfTheDay.theme.toUpperCase()}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                onPress={async () => {
+                  const today = new Date().toISOString().split('T')[0];
+                  const newState = await toggleVotdStar(today);
+                  setVotdStarred(newState);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={{ fontSize: 22 }}>{votdStarred ? '\u2B50' : '\u2606'}</Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={{ marginTop: 12, fontSize: 17, fontStyle: 'italic', lineHeight: 26, color: '#1e3a8a', fontWeight: '500' }}>
               "{verseOfTheDay.verse_text}"
             </Text>
             <Text style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
               — {verseOfTheDay.reference}
             </Text>
-            {(verseOfTheDay.insight_title || verseOfTheDay.insight_detail) && (
-              <Text style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
-                💡 Tap to view insight
-              </Text>
-            )}
-            <TouchableOpacity
-              onPress={openBattleVersesModal}
-              style={{
-                marginTop: 12,
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                backgroundColor: '#1e40af',
-                borderRadius: 8,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Battle Verses</Text>
-            </TouchableOpacity>
+            <Text style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
+              Tap for summary
+            </Text>
+
+            {/* Action buttons */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+              <TouchableOpacity
+                onPress={openBattleVersesModal}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  backgroundColor: '#1e40af',
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Battle Verses</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate('VOTDArchive')}
+                style={{ paddingVertical: 10 }}
+              >
+                <Text style={{ color: '#2563eb', fontWeight: '600', fontSize: 13 }}>View Archive</Text>
+              </TouchableOpacity>
+            </View>
           </Pressable>
         )}
 
@@ -707,88 +765,16 @@ const openTodayDevotion = useCallback(() => {
         )}
       </ScrollView>
 
-      {/* Insight Modal */}
-      {showInsightModal && (
-        <Modal
-          visible={true}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={closeInsightModal}
-        >
-          <Pressable
-            style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
-            onPress={closeInsightModal}
-          >
-            <View
-              style={{
-                backgroundColor: colors.background.primary,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                paddingTop: 20,
-                paddingBottom: 40,
-                maxHeight: '80%',
-              }}
-            >
-              {/* Header */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, flex: 1 }}>
-                  {verseOfTheDay?.insight_title || 'Verse Insight'}
-                </Text>
-                <TouchableOpacity onPress={closeInsightModal} style={{ padding: 8 }}>
-                  <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={{ paddingHorizontal: 20 }}>
-              {/* Verse Reference */}
-              <View style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 8 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
-                  {verseOfTheDay?.reference}
-                </Text>
-                <Text style={{ marginTop: 8, fontSize: 15, fontStyle: 'italic', color: '#1e3a8a' }}>
-                  "{verseOfTheDay?.verse_text}"
-                </Text>
-              </View>
-
-              {/* Insight Detail */}
-              {verseOfTheDay?.insight_detail && (
-                <View style={{ marginBottom: 20 }}>
-                  <Text style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary }}>
-                    {verseOfTheDay.insight_detail}
-                  </Text>
-                </View>
-              )}
-
-              {/* Related Verses */}
-              {verseOfTheDay?.related_verses && verseOfTheDay.related_verses.length > 0 && (
-                <View style={{ marginTop: 12 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary, marginBottom: 12 }}>
-                    Related Verses:
-                  </Text>
-                  {verseOfTheDay.related_verses.map((ref, index) => (
-                    <View
-                      key={index}
-                      style={{
-                        marginBottom: 8,
-                        padding: 12,
-                        backgroundColor: colors.background.secondary,
-                        borderRadius: 8,
-                        borderLeftWidth: 3,
-                        borderLeftColor: colors.accent.primary,
-                      }}
-                    >
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent.primary }}>
-                        📖 {ref}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-              </ScrollView>
-            </View>
-          </Pressable>
-        </Modal>
-      )}
+      {/* VOTD verse summary — same card as an in-chapter verse tap (content only).
+          Primary-action region intentionally left open for the upcoming Battle Verses feature. */}
+      <VerseSummaryCard
+        visible={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        reference={verseOfTheDay?.reference ?? ''}
+        loading={summaryLoading}
+        content={summaryContent}
+        onDeeper={handleVotdDeeper}
+      />
 
       {/* Related Verse Modal */}
       <Modal

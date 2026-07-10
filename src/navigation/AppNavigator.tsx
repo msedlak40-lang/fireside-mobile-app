@@ -276,6 +276,11 @@ function ProgressStackNavigator() {
         component={SettingsScreen}
         options={{ headerTitle: 'Settings' }}
       />
+      <ProgressStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
+      />
     </ProgressStack.Navigator>
   );
 }
