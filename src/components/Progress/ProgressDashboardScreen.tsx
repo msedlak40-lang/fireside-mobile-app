@@ -79,10 +79,23 @@ export default function ProgressDashboardScreen() {
   const [battleVersesLoading, setBattleVersesLoading] = useState(false);
   const [battleTagFilter, setBattleTagFilter] = useState<string | null>(null);
   const [votdBattleState, setVotdBattleState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  // Generalized source for the shared VerseSummaryCard (VOTD tap or a Battle Verse row tap).
+  const [summaryVerse, setSummaryVerse] = useState<{
+    bookName: string; chapter: number; verseNumber: number; verseText: string; reference: string;
+  } | null>(null);
+  const [summaryIsVotd, setSummaryIsVotd] = useState(false);
 
   // VOTD tap → same summary surface as an in-chapter verse tap (verse_life_application).
   const openVotdSummary = useCallback(async () => {
     if (!verseOfTheDay) return;
+    setSummaryVerse({
+      bookName: verseOfTheDay.book_name,
+      chapter: verseOfTheDay.chapter_number,
+      verseNumber: verseOfTheDay.verse_number,
+      verseText: verseOfTheDay.verse_text,
+      reference: verseOfTheDay.reference,
+    });
+    setSummaryIsVotd(true);
     setSummaryContent(null);
     setSummaryLoading(true);
     setSummaryOpen(true);
@@ -99,6 +112,34 @@ export default function ProgressDashboardScreen() {
       setSummaryLoading(false);
     }
   }, [verseOfTheDay]);
+
+  // Battle verse row tap → same summary card, fed from the row's structured refs.
+  // No battle-save button (it's already saved); summaryIsVotd stays false.
+  const openBattleVerseSummary = useCallback(async (v: BattleVerse) => {
+    // Option B: close the Battle Verses modal first so the card (a native Modal) isn't
+    // occluded by a second stacked native modal. Trade-off: closing the card returns to
+    // the dashboard, not the list. See fire/battle-verses ledger for the browse-in-place path.
+    setShowBattleVersesModal(false);
+    setSummaryVerse({
+      bookName: v.book_name,
+      chapter: v.chapter_number,
+      verseNumber: v.verse_number,
+      verseText: v.verse_text,
+      reference: v.verse_reference,
+    });
+    setSummaryIsVotd(false);
+    setSummaryContent(null);
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    try {
+      const content = await getVerseLifeApplication(v.book_name, v.chapter_number, v.verse_number);
+      setSummaryContent(content);
+    } catch {
+      setSummaryContent(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, []);
 
   // Save the VOTD to Battle Verses — shared state drives BOTH the corner control and the
   // summary-card button. saveBattleVerse dedups via the unique constraint (false = already
@@ -126,17 +167,19 @@ export default function ProgressDashboardScreen() {
   }, [verseOfTheDay?.book_name, verseOfTheDay?.chapter_number, verseOfTheDay?.verse_number]);
 
   // Deeper affordance → Strong's deep-study surface (registered in this ProgressStack).
-  const handleVotdDeeper = useCallback(() => {
-    if (!verseOfTheDay) return;
+  // Drives off the generalized summaryVerse, so it works for VOTD and Battle Verse alike.
+  // Closes the summary card before navigating so DeepStudy isn't fighting an open modal.
+  const handleDeeper = useCallback(() => {
+    if (!summaryVerse) return;
     setStudyDepth('deeper');
     setSummaryOpen(false);
     navigation.navigate('DeepStudy', {
-      bookName: verseOfTheDay.book_name,
-      chapter: verseOfTheDay.chapter_number,
-      verseNumber: verseOfTheDay.verse_number,
-      verseText: verseOfTheDay.verse_text,
+      bookName: summaryVerse.bookName,
+      chapter: summaryVerse.chapter,
+      verseNumber: summaryVerse.verseNumber,
+      verseText: summaryVerse.verseText,
     });
-  }, [verseOfTheDay, navigation]);
+  }, [summaryVerse, navigation]);
 
   // Load cached data from AsyncStorage
   const loadFromCache = async (): Promise<CachedData | null> => {
@@ -799,12 +842,12 @@ const openTodayDevotion = useCallback(() => {
       <VerseSummaryCard
         visible={summaryOpen}
         onClose={() => setSummaryOpen(false)}
-        reference={verseOfTheDay?.reference ?? ''}
+        reference={summaryVerse?.reference ?? ''}
         loading={summaryLoading}
         content={summaryContent}
-        onDeeper={handleVotdDeeper}
-        onSaveBattleVerse={saveVotdBattle}
-        battleState={votdBattleState}
+        onDeeper={handleDeeper}
+        onSaveBattleVerse={summaryIsVotd ? saveVotdBattle : undefined}
+        battleState={summaryIsVotd ? votdBattleState : undefined}
       />
 
       {/* Related Verse Modal */}
@@ -1037,8 +1080,10 @@ const openTodayDevotion = useCallback(() => {
                   </View>
                 ) : (
                   battleVerses.map((verse) => (
-                    <View
+                    <TouchableOpacity
                       key={verse.id}
+                      activeOpacity={0.7}
+                      onPress={() => openBattleVerseSummary(verse)}
                       style={{
                         marginBottom: 16,
                         padding: 14,
@@ -1085,7 +1130,7 @@ const openTodayDevotion = useCallback(() => {
                           </Text>
                         </View>
                       )}
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
               </ScrollView>
