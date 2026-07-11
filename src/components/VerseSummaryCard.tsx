@@ -37,6 +37,7 @@ type Props = {
   // Actions are optional so hosts supply only what fits their context.
   onNote?: () => void
   onBattleVerse?: () => void
+  onShareToFire?: () => void
   onHighlight?: (color: HighlightColor) => void
   isHighlighted?: boolean
   onRemoveHighlight?: () => void
@@ -46,10 +47,10 @@ type Props = {
 export default function VerseSummaryCard(props: Props) {
   const {
     visible, onClose, reference, loading, content, crossRefs, onViewCrossRefChapter, onDeeper,
-    onSaveBattleVerse, battleState = 'idle', onNote, onBattleVerse, onHighlight, isHighlighted, onRemoveHighlight, extraActions,
+    onSaveBattleVerse, battleState = 'idle', onNote, onBattleVerse, onShareToFire, onHighlight, isHighlighted, onRemoveHighlight, extraActions,
   } = props
   const [actionsOpen, setActionsOpen] = useState(false)
-  const hasActions = !!(onNote || onBattleVerse || onHighlight || (extraActions && extraActions.length > 0))
+  const hasActions = !!(onNote || onBattleVerse || onShareToFire || onHighlight || (extraActions && extraActions.length > 0))
 
   // Cross-reference detail view (in-sheet, no nested modal)
   const [crossRefDetail, setCrossRefDetail] = useState<CrossRefItem | null>(null)
@@ -230,6 +231,12 @@ export default function VerseSummaryCard(props: Props) {
                         <TouchableOpacity style={styles.actionItem} onPress={onBattleVerse}>
                           <Text style={styles.actionIcon}>{'⚔️'}</Text>
                           <Text style={styles.actionText}>Battle Verse</Text>
+                        </TouchableOpacity>
+                      )}
+                      {onShareToFire && (
+                        <TouchableOpacity style={styles.actionItem} onPress={onShareToFire}>
+                          <Text style={styles.actionIcon}>{'🔥'}</Text>
+                          <Text style={styles.actionText}>Share to Fire</Text>
                         </TouchableOpacity>
                       )}
                       {(extraActions ?? []).map((a) => (

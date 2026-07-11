@@ -11,20 +11,24 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { getUserFires, shareToFire, type Fire } from '../services/fire';
+import { getUserFires, shareToFire, shareVerseToFire, type Fire } from '../services/fire';
 import type { SavedApplication } from '../services/arsenal';
 import { colors } from '../theme/colors';
 
+export type ShareTarget =
+  | { kind: 'arsenal'; savedApplication: SavedApplication }
+  | { kind: 'verse'; book: string; chapter: number; verseNumber: number; reference: string; text: string };
+
 interface ShareToFireModalProps {
   visible: boolean;
-  savedApplication: SavedApplication | null;
+  target: ShareTarget | null;
   onClose: () => void;
   onShared: () => void;
 }
 
 export default function ShareToFireModal({
   visible,
-  savedApplication,
+  target,
   onClose,
   onShared,
 }: ShareToFireModalProps) {
@@ -66,14 +70,33 @@ export default function ShareToFireModal({
       return;
     }
 
-    if (!savedApplication) return;
+    if (!target) return;
 
     try {
       setIsSharing(true);
 
-      await shareToFire(selectedFireId, savedApplication.id, message);
+      if (target.kind === 'verse') {
+        await shareVerseToFire(
+          selectedFireId,
+          {
+            book: target.book,
+            chapter: target.chapter,
+            verseNumber: target.verseNumber,
+            reference: target.reference,
+            text: target.text,
+          },
+          message,
+        );
+      } else {
+        await shareToFire(selectedFireId, target.savedApplication.id, message);
+      }
 
-      Alert.alert('Shared!', 'Your insight has been shared with your Fire');
+      Alert.alert(
+        'Shared!',
+        target.kind === 'verse'
+          ? 'Your verse has been shared with your Fire'
+          : 'Your insight has been shared with your Fire',
+      );
       onShared();
       onClose();
     } catch (error: any) {
@@ -84,7 +107,7 @@ export default function ShareToFireModal({
     }
   }
 
-  if (!savedApplication) return null;
+  if (!target) return null;
 
   return (
     <Modal
@@ -101,7 +124,9 @@ export default function ShareToFireModal({
               <View style={styles.header}>
                 <Text style={styles.headerTitle}>Share with Fire</Text>
                 <Text style={styles.headerSubtitle}>
-                  {savedApplication.book} {savedApplication.chapter} - {savedApplication.theme_tag}
+                  {target.kind === 'verse'
+                    ? target.reference
+                    : `${target.savedApplication.book} ${target.savedApplication.chapter} - ${target.savedApplication.theme_tag}`}
                 </Text>
               </View>
 
@@ -172,16 +197,27 @@ export default function ShareToFireModal({
                   <View style={styles.section}>
                     <Text style={styles.label}>Preview:</Text>
                     <View style={styles.previewCard}>
-                      <Text style={styles.previewReference}>
-                        {savedApplication.book} {savedApplication.chapter}
-                      </Text>
-                      <Text style={styles.previewTheme}>
-                        {savedApplication.theme_tag} {savedApplication.sub_theme_tag ? `• ${savedApplication.sub_theme_tag}` : ''}
-                      </Text>
-                      {savedApplication.key_insight && (
-                        <Text style={styles.previewInsight} numberOfLines={3}>
-                          {savedApplication.key_insight}
-                        </Text>
+                      {target.kind === 'verse' ? (
+                        <>
+                          <Text style={styles.previewReference}>{target.reference}</Text>
+                          <Text style={styles.previewInsight} numberOfLines={4}>
+                            "{target.text}"
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.previewReference}>
+                            {target.savedApplication.book} {target.savedApplication.chapter}
+                          </Text>
+                          <Text style={styles.previewTheme}>
+                            {target.savedApplication.theme_tag} {target.savedApplication.sub_theme_tag ? `• ${target.savedApplication.sub_theme_tag}` : ''}
+                          </Text>
+                          {target.savedApplication.key_insight && (
+                            <Text style={styles.previewInsight} numberOfLines={3}>
+                              {target.savedApplication.key_insight}
+                            </Text>
+                          )}
+                        </>
                       )}
                       {message.trim() ? (
                         <View style={styles.previewMessage}>
