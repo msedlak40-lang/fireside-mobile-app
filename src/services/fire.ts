@@ -49,6 +49,7 @@ export interface FireComment {
   created_at: string;
 
   user_email?: string;
+  user_name?: string;
 }
 
 export interface FireReaction {
@@ -71,14 +72,22 @@ export interface FireShare {
   id: string;
   fire_id: string;
   user_id: string;
-  share_type: 'arsenal' | 'theme_discovery' | 'prayer_request' | 'encouragement';
+  share_type: 'arsenal' | 'theme_discovery' | 'prayer_request' | 'encouragement' | 'verse';
   saved_application_id: string | null;
   message: string | null;
   created_at: string;
   updated_at: string;
 
+  // Verse-type shares carry the verse directly (saved_application_id is null).
+  verse_reference?: string | null;
+  verse_text?: string | null;
+  verse_book?: string | null;
+  verse_chapter?: number | null;
+  verse_number?: number | null;
+
   // Joined data
   user_email?: string;
+  user_name?: string;
   saved_application?: {
     book: string;
     chapter: number;
@@ -364,6 +373,103 @@ export async function shareToFire(
   return data;
 }
 
+/**
+ * Share a single verse (text + reference) to a Fire. Unlike shareToFire, the
+ * verse content lives directly on the fire_shares row; there is no saved
+ * application, so nothing on user_saved_applications is stamped.
+ */
+export async function shareVerseToFire(
+  fireId: string,
+  verse: { book: string; chapter: number; verseNumber: number; reference: string; text: string },
+  message?: string
+): Promise<FireShare> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Verify user is a member of this fire
+  const { data: membership } = await supabase
+    .from('fire_members')
+    .select('id')
+    .eq('fire_id', fireId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!membership) {
+    throw new Error('Not a member of this Fire');
+  }
+
+  const { data, error } = await supabase
+    .from('fire_shares')
+    .insert({
+      fire_id: fireId,
+      user_id: user.id,
+      share_type: 'verse',
+      saved_application_id: null,
+      verse_book: verse.book,
+      verse_chapter: verse.chapter,
+      verse_number: verse.verseNumber,
+      verse_reference: verse.reference,
+      verse_text: verse.text,
+      message: message?.trim() || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+// ============================================
+// AUTHOR NAMES (from profiles)
+// ============================================
+
+/**
+ * Resolve a best-effort author name from a profiles row.
+ * Fallback chain: first_name -> display_name -> full_name -> email local-part.
+ * Returns null when nothing usable exists (caller shows 'Brother').
+ */
+function resolveProfileName(p: any): string | null {
+  const first = (p?.first_name || '').trim();
+  if (first) return first;
+  const display = (p?.display_name || '').trim();
+  if (display) return display;
+  const full = (p?.full_name || '').trim();
+  if (full) return full;
+  const email = (p?.email || '').trim();
+  if (email.includes('@')) return email.split('@')[0];
+  return null;
+}
+
+/**
+ * Fetch author names for a set of user ids from the profiles table.
+ * NOTE: reading OTHER users' profiles requires profiles RLS to permit it
+ * (a co-member or public SELECT). If profiles RLS is owner-only, only the
+ * current user resolves and every other author falls back to 'Brother'.
+ * Failures are swallowed so the feed still renders (names just fall back).
+ */
+async function fetchProfileNames(userIds: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = Array.from(new Set(userIds)).filter(Boolean);
+  if (unique.length === 0) return names;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, first_name, last_name, full_name, email')
+    .in('id', unique);
+
+  if (error) {
+    console.error('[Fire] Error fetching profile names:', error);
+    return names;
+  }
+
+  for (const p of data || []) {
+    const name = resolveProfileName(p);
+    if (name) names.set(p.id, name);
+  }
+  return names;
+}
+
 // ============================================
 // GET FIRE SHARES
 // ============================================
@@ -383,6 +489,11 @@ export async function getFireShares(fireId: string): Promise<FireShare[]> {
       message,
       created_at,
       updated_at,
+      verse_reference,
+      verse_text,
+      verse_book,
+      verse_chapter,
+      verse_number,
       user_saved_applications (
         book,
         chapter,
@@ -400,8 +511,12 @@ export async function getFireShares(fireId: string): Promise<FireShare[]> {
 
   if (error) throw error;
 
-  return (data || []).map((share: any) => ({
+  const shares = data || [];
+  const nameMap = await fetchProfileNames(shares.map((s: any) => s.user_id));
+
+  return shares.map((share: any) => ({
     ...share,
+    user_name: nameMap.get(share.user_id),
     saved_application: share.user_saved_applications ? {
       book: share.user_saved_applications.book,
       chapter: share.user_saved_applications.chapter,
@@ -450,7 +565,10 @@ export async function getShareComments(shareId: string): Promise<FireComment[]> 
 
   if (error) throw error;
 
-  return data || [];
+  const comments = data || [];
+  const nameMap = await fetchProfileNames(comments.map((c: any) => c.user_id));
+
+  return comments.map((c: any) => ({ ...c, user_name: nameMap.get(c.user_id) }));
 }
 
 /**
@@ -642,13 +760,20 @@ export async function removeMember(
     throw new Error('Creator cannot remove themselves');
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('fire_members')
     .delete()
     .eq('fire_id', fireId)
-    .eq('user_id', memberUserId);
+    .eq('user_id', memberUserId)
+    .select('id');
 
   if (error) throw error;
+  if (!data || data.length === 0) {
+    // No row deleted — RLS denial (missing creator DELETE policy) or member not
+    // found. Surface instead of reporting a false "Member removed" success.
+    console.error('[Fire] removeMember deleted no rows (RLS denial or member not found)');
+    throw new Error('removeMember: no fire_members row deleted');
+  }
 }
 
 // ============================================
@@ -752,15 +877,30 @@ export async function getUnreadShareCount(fireId: string): Promise<number> {
 }
 
 /**
- * Mark Fire as viewed (update last_active_at)
+ * Mark Fire as viewed (update last_active_at).
+ * Inspects the result: an RLS-blocked UPDATE returns no error but updates zero
+ * rows, so we .select() the affected row and treat an empty result as a failure
+ * rather than letting it hide (this is exactly how the never-clearing badge bug
+ * went unnoticed).
  */
 export async function markFireViewed(fireId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  await supabase
+  const { data, error } = await supabase
     .from('fire_members')
     .update({ last_active_at: new Date().toISOString() })
     .eq('fire_id', fireId)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select('id');
+
+  if (error) {
+    console.error('[Fire] markFireViewed failed:', error);
+    throw error;
+  }
+  if (!data || data.length === 0) {
+    // No row updated — RLS denial or a missing membership row. Surface instead of hiding.
+    console.error('[Fire] markFireViewed updated no rows (RLS on fire_members UPDATE, or no membership row)');
+    throw new Error('markFireViewed: no fire_members row updated');
+  }
 }

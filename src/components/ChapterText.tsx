@@ -7,6 +7,7 @@ import {
 import { useNavigation } from '@react-navigation/native'
 import { supabase } from '../lib/supabaseClient'
 import VerseSummaryCard, { HighlightColor, type CrossRefItem } from './VerseSummaryCard'
+import ShareToFireModal from './ShareToFireModal'
 import { getVerseLifeApplication, type VerseLifeApplication } from '../services/scripture'
 import { getCrossReferences, type CrossReference } from '../services/strongsStudy'
 import { setStudyDepth } from '../services/userPrefs'
@@ -20,7 +21,8 @@ type Props = {
   book_name?: string
   chapter: number
   verses: RawVerse[]
-  /** Verse numbers flagged as significant (present in bible_verse_insights) — drives the underline. */
+  /** Verse numbers flagged as significant (present in bible_verse_insights) — drives the significance
+   *  marker (gold number tint + trailing lightbulb). Pure visual flag; no content behind it. */
   significantVerses?: Set<number>
 }
 
@@ -67,6 +69,8 @@ export default function ChapterText(props: Props) {
   const [summaryContent, setSummaryContent] = useState<VerseLifeApplication | null>(null)
   const [summaryCrossRefs, setSummaryCrossRefs] = useState<CrossRefItem[]>([])
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [shareFireOpen, setShareFireOpen] = useState(false)
+  const [shareVerse, setShareVerse] = useState<{ num: number; text: string } | null>(null)
 
   // Battle verse tag selection
   const [battleTagOpen, setBattleTagOpen] = useState(false)
@@ -165,6 +169,13 @@ export default function ChapterText(props: Props) {
     setBattleVerseData({ verseNum: summaryVerse.num, verseText: summaryVerse.text })
     setSummaryOpen(false)
     setBattleTagOpen(true)
+  }
+
+  function handleShareToFire() {
+    if (!summaryVerse || !book) return
+    setShareVerse({ num: summaryVerse.num, text: summaryVerse.text })
+    setSummaryOpen(false)
+    setShareFireOpen(true)
   }
 
   async function handleHighlight(color: HighlightColor) {
@@ -267,11 +278,11 @@ export default function ChapterText(props: Props) {
               style={[
                 styles.verseText,
                 highlighted && styles.verseTextHighlighted,
-                significant ? styles.keyVerseText : null,
               ]}
             >
               {verseText}
             </Text>
+            {significant && <Text style={styles.bulb}>💡</Text>}
           </TouchableOpacity>
         )
       })}
@@ -288,9 +299,25 @@ export default function ChapterText(props: Props) {
         onDeeper={handleDeeper}
         onNote={handleAddNote}
         onBattleVerse={handleBattleVerse}
+        onShareToFire={handleShareToFire}
         onHighlight={handleHighlight}
         isHighlighted={summaryIsHighlighted}
         onRemoveHighlight={handleRemoveHighlight}
+      />
+
+      {/* ===== SHARE TO FIRE ===== */}
+      <ShareToFireModal
+        visible={shareFireOpen}
+        target={shareVerse && book ? {
+          kind: 'verse',
+          book,
+          chapter,
+          verseNumber: shareVerse.num,
+          reference: `${book} ${chapter}:${shareVerse.num}`,
+          text: shareVerse.text,
+        } : null}
+        onClose={() => setShareFireOpen(false)}
+        onShared={() => setShareFireOpen(false)}
       />
 
       {/* ===== NOTE MODAL ===== */}
@@ -375,11 +402,11 @@ const styles = StyleSheet.create({
 
   verseNumWrap: { alignItems: 'center', marginRight: 6, minWidth: 28 },
   verseNum: { textAlign: 'right', color: colors.text.muted, fontWeight: '700', minWidth: 28 },
-  keyTint: { color: colors.accent.tertiary, textDecorationLine: 'underline' },
+  keyTint: { color: colors.accent.tertiary },
 
   verseText: { flex: 1, color: colors.text.primary, lineHeight: 22 },
   verseTextHighlighted: { fontWeight: '600' },
-  keyVerseText: { textDecorationLine: 'underline', textDecorationColor: colors.accent.tertiary },
+  bulb: { fontSize: 13, marginLeft: 6, marginTop: 2 },
 
   tapHint: {
     fontSize: 12,

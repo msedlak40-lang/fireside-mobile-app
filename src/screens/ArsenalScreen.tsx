@@ -24,6 +24,7 @@ import {
 } from '../services/arsenal';
 import { getAvailableThemes, getThemeColors, isValidTheme } from '../services/themes';
 import EditArsenalModal from '../components/EditArsenalModal';
+import ViewArsenalModal from '../components/ViewArsenalModal';
 import ShareToFireModal from '../components/ShareToFireModal';
 import { colors } from '../theme/colors';
 
@@ -44,6 +45,10 @@ export default function ArsenalScreen({ navigation }: any) {
   // Edit modal
   const [editingApp, setEditingApp] = useState<SavedApplication | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // View (read-only theme text) modal
+  const [viewingApp, setViewingApp] = useState<SavedApplication | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
 
   // Share modal
   const [sharingApp, setSharingApp] = useState<SavedApplication | null>(null);
@@ -139,14 +144,14 @@ export default function ArsenalScreen({ navigation }: any) {
     }
   }
 
-  function handleViewChapter(savedApp: SavedApplication) {
-    navigation.navigate('BibleTab', {
-      screen: 'Chapter',
-      params: {
-        bookName: savedApp.book,
-        chapter: savedApp.chapter,
-      },
-    });
+  function handleView(savedApp: SavedApplication) {
+    setViewingApp(savedApp);
+    setShowViewModal(true);
+  }
+
+  function handleViewClose() {
+    setShowViewModal(false);
+    setViewingApp(null);
   }
 
   function handleEdit(savedApp: SavedApplication) {
@@ -462,7 +467,7 @@ export default function ArsenalScreen({ navigation }: any) {
               <View style={styles.cardActions}>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: accent }]}
-                  onPress={() => handleViewChapter(app)}
+                  onPress={() => handleView(app)}
                 >
                   <Text style={styles.actionButtonText}>View</Text>
                 </TouchableOpacity>
@@ -493,6 +498,12 @@ export default function ArsenalScreen({ navigation }: any) {
       <View style={{ height: 40 }} />
     </ScrollView>
 
+    <ViewArsenalModal
+      visible={showViewModal}
+      savedApplication={viewingApp}
+      onClose={handleViewClose}
+    />
+
     <EditArsenalModal
       visible={showEditModal}
       savedApplication={editingApp}
@@ -502,7 +513,7 @@ export default function ArsenalScreen({ navigation }: any) {
 
     <ShareToFireModal
       visible={showShareModal}
-      savedApplication={sharingApp}
+      target={sharingApp ? { kind: 'arsenal', savedApplication: sharingApp } : null}
       onClose={handleShareClose}
       onShared={handleShareCompleted}
     />

@@ -17,6 +17,7 @@ import {
   type FireComment,
   type ReactionSummary,
 } from '../services/fire';
+import ViewArsenalModal from './ViewArsenalModal';
 import { colors } from '../theme/colors';
 
 interface FireShareCardProps {
@@ -47,6 +48,7 @@ export default function FireShareCard({
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
 
   useEffect(() => {
     loadInteractions();
@@ -123,7 +125,7 @@ export default function FireShareCard({
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.user}>
-          {isOwnShare ? 'You' : 'Brother'}
+          {isOwnShare ? 'You' : (share.user_name || 'Brother')}
         </Text>
         <Text style={styles.date}>
           {new Date(share.created_at).toLocaleDateString()}
@@ -137,9 +139,21 @@ export default function FireShareCard({
         </View>
       )}
 
-      {/* Shared Application */}
+      {/* Shared Verse (verse-type posts carry their own text; no saved_application) */}
+      {share.verse_reference && (
+        <View style={styles.verseBlock}>
+          <Text style={styles.verseRef}>{share.verse_reference}</Text>
+          <Text style={styles.verseQuote}>"{share.verse_text}"</Text>
+        </View>
+      )}
+
+      {/* Shared Application (tap to read the full theme) */}
       {share.saved_application && (
-        <View style={styles.application}>
+        <TouchableOpacity
+          style={styles.application}
+          onPress={() => setViewOpen(true)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.appReference}>
             {share.saved_application.book} {share.saved_application.chapter}
           </Text>
@@ -156,7 +170,8 @@ export default function FireShareCard({
               {share.saved_application.action_step}
             </Text>
           )}
-        </View>
+          <Text style={styles.appReadCue}>Tap to read →</Text>
+        </TouchableOpacity>
       )}
 
       {/* Reactions */}
@@ -201,7 +216,7 @@ export default function FireShareCard({
               <View key={comment.id} style={styles.comment}>
                 <View style={styles.commentHeader}>
                   <Text style={styles.commentUser}>
-                    {comment.user_id === currentUserId ? 'You' : 'Brother'}
+                    {comment.user_id === currentUserId ? 'You' : (comment.user_name || 'Brother')}
                   </Text>
                   <Text style={styles.commentDate}>
                     {new Date(comment.created_at).toLocaleDateString()}
@@ -253,6 +268,15 @@ export default function FireShareCard({
           <Text style={styles.deleteButtonText}>Delete Share</Text>
         </TouchableOpacity>
       )}
+
+      {/* Read-only full theme (reuses the Arsenal view modal) */}
+      {share.saved_application && (
+        <ViewArsenalModal
+          visible={viewOpen}
+          savedApplication={share.saved_application}
+          onClose={() => setViewOpen(false)}
+        />
+      )}
     </View>
   );
 }
@@ -300,6 +324,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  verseBlock: {
+    backgroundColor: colors.background.primary,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent.primary,
+  },
+  verseRef: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.accent.primary,
+    marginBottom: 6,
+  },
+  verseQuote: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text.primary,
+    fontStyle: 'italic',
+  },
   appReference: {
     fontSize: 13,
     fontWeight: '600',
@@ -321,6 +365,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.secondary,
     lineHeight: 20,
+  },
+  appReadCue: {
+    fontSize: 11,
+    color: colors.text.muted,
+    fontWeight: '600',
+    marginTop: 10,
+    textAlign: 'right',
   },
   reactionsContainer: {
     flexDirection: 'row',
