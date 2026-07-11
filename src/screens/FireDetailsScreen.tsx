@@ -89,8 +89,14 @@ export default function FireDetailsScreen({ route, navigation }: any) {
       setMembers(membersData);
       setStats(statsData);
 
-      // Mark as viewed
-      await markFireViewed(fireId);
+      // Mark as viewed — non-critical background stamp. Isolated so a failure
+      // (e.g. the fire_members UPDATE RLS gap) is logged, not surfaced as a
+      // misleading "could not load Fire data" alert.
+      try {
+        await markFireViewed(fireId);
+      } catch (markErr) {
+        console.error('[FireDetails] markFireViewed failed:', markErr);
+      }
     } catch (error) {
       console.error('Error loading fire data:', error);
       Alert.alert('Error', 'Could not load Fire data');
