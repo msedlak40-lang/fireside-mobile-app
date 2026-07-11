@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -33,6 +34,13 @@ export default function SettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  // Your Name
+  const [firstName, setFirstName] = useState('');
+  const [savedFirstName, setSavedFirstName] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
 
   const availableThemes = getAvailableThemes();
   const currentYear = new Date().getFullYear();
@@ -84,6 +92,23 @@ export default function SettingsScreen() {
       }
 
       setUserId(user.id);
+      setUserEmail(user.email ?? null);
+
+      // Prefill "Your Name" from the profile (isolated so a profiles read
+      // failure can't block theme loading).
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', user.id)
+          .maybeSingle();
+        const existing = (profile?.first_name || '').trim();
+        setFirstName(existing);
+        setSavedFirstName(existing);
+      } catch (e) {
+        console.error('[Settings] Error loading profile name:', e);
+      }
+
       const yearlyTheme = await getUserYearlyTheme(user.id);
       setCurrentTheme(yearlyTheme?.theme || null);
     } catch (error) {
@@ -92,6 +117,29 @@ export default function SettingsScreen() {
       setIsLoading(false);
     }
   }, []);
+
+  const handleSaveName = async () => {
+    if (!userId) return;
+    const trimmed = firstName.trim();
+    if (!trimmed || trimmed === savedFirstName) return;
+
+    try {
+      setNameSaving(true);
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({ id: userId, first_name: trimmed, email: userEmail }, { onConflict: 'id' });
+      if (error) throw error;
+
+      setSavedFirstName(trimmed);
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 2500);
+    } catch (e: any) {
+      console.error('[Settings] Error saving name:', e);
+      Alert.alert('Error', e?.message ?? 'Could not save your name. Please try again.');
+    } finally {
+      setNameSaving(false);
+    }
+  };
 
   const handleThemeSelect = useCallback(
     async (theme: string) => {
@@ -158,6 +206,47 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Your Name Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Your Name</Text>
+          <Text style={styles.sectionDescription}>
+            The name shown to your brothers on posts and comments in Fire.
+          </Text>
+          <TextInput
+            style={styles.nameInput}
+            value={firstName}
+            onChangeText={(t) => {
+              setFirstName(t);
+              if (nameSaved) setNameSaved(false);
+            }}
+            placeholder="Enter your name"
+            placeholderTextColor={colors.text.muted}
+            autoCapitalize="words"
+            maxLength={40}
+            returnKeyType="done"
+            editable={!nameSaving}
+          />
+          {(() => {
+            const disabled = nameSaving || !firstName.trim() || firstName.trim() === savedFirstName;
+            return (
+              <TouchableOpacity
+                onPress={handleSaveName}
+                activeOpacity={0.7}
+                disabled={disabled}
+                style={[
+                  styles.nameSaveButton,
+                  disabled && styles.nameSaveButtonDisabled,
+                  nameSaved && styles.nameSaveButtonSaved,
+                ]}
+              >
+                <Text style={styles.nameSaveButtonText}>
+                  {nameSaving ? 'Saving…' : nameSaved ? '✓ Saved' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })()}
+        </View>
+
         {/* Theme Selection Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -486,6 +575,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     lineHeight: 18,
+  },
+  nameInput: {
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.text.primary,
+    marginBottom: 12,
+  },
+  nameSaveButton: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.accent.primary,
+  },
+  nameSaveButtonDisabled: {
+    opacity: 0.5,
+  },
+  nameSaveButtonSaved: {
+    backgroundColor: colors.success,
+  },
+  nameSaveButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
   },
   cycleButton: {
     marginTop: 4,
