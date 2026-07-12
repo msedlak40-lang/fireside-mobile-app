@@ -14,6 +14,7 @@ import {
 import { getUserFires, shareToFire, shareVerseToFire, type Fire } from '../services/fire';
 import type { SavedApplication } from '../services/arsenal';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 export type ShareTarget =
   | { kind: 'arsenal'; savedApplication: SavedApplication }
@@ -122,8 +123,8 @@ export default function ShareToFireModal({
             <View style={styles.modalContent}>
               {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>Share with Fire</Text>
-                <Text style={styles.headerSubtitle}>
+                <Text style={styles.headerTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Share with Fire</Text>
+                <Text style={styles.headerSubtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {target.kind === 'verse'
                     ? target.reference
                     : `${target.savedApplication.book} ${target.savedApplication.chapter} - ${target.savedApplication.theme_tag}`}
@@ -133,12 +134,12 @@ export default function ShareToFireModal({
               {isLoading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={colors.accent.primary} />
-                  <Text style={styles.loadingText}>Loading your Fires...</Text>
+                  <Text style={styles.loadingText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Loading your Fires...</Text>
                 </View>
               ) : fires.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyTitle}>No Fires Yet</Text>
-                  <Text style={styles.emptyDescription}>
+                  <Text style={styles.emptyTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>No Fires Yet</Text>
+                  <Text style={styles.emptyDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     Create or join a Fire first to share insights
                   </Text>
                 </View>
@@ -146,7 +147,7 @@ export default function ShareToFireModal({
                 <ScrollView style={styles.scrollContent}>
                   {/* Select Fire */}
                   <View style={styles.section}>
-                    <Text style={styles.label}>Select Fire:</Text>
+                    <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Select Fire:</Text>
                     {fires.map(fire => (
                       <TouchableOpacity
                         key={fire.id}
@@ -160,14 +161,14 @@ export default function ShareToFireModal({
                           <Text style={[
                             styles.fireOptionName,
                             selectedFireId === fire.id && styles.fireOptionNameSelected
-                          ]}>
+                          ]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                             {fire.name}
                           </Text>
                           {selectedFireId === fire.id && (
-                            <Text style={styles.checkmark}>✓</Text>
+                            <Text style={styles.checkmark} maxFontSizeMultiplier={CHROME_MAX_SCALE}>✓</Text>
                           )}
                         </View>
-                        <Text style={styles.fireOptionMembers}>
+                        <Text style={styles.fireOptionMembers} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                           {fire.member_count} members
                         </Text>
                       </TouchableOpacity>
@@ -176,7 +177,7 @@ export default function ShareToFireModal({
 
                   {/* Add Message */}
                   <View style={styles.section}>
-                    <Text style={styles.label}>Add a message (optional):</Text>
+                    <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Add a message (optional):</Text>
                     <TextInput
                       style={styles.messageInput}
                       value={message}
@@ -188,28 +189,28 @@ export default function ShareToFireModal({
                       textAlignVertical="top"
                       maxLength={500}
                     />
-                    <Text style={styles.characterCount}>
+                    <Text style={styles.characterCount} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                       {message.length} / 500
                     </Text>
                   </View>
 
                   {/* Preview */}
                   <View style={styles.section}>
-                    <Text style={styles.label}>Preview:</Text>
+                    <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Preview:</Text>
                     <View style={styles.previewCard}>
                       {target.kind === 'verse' ? (
                         <>
-                          <Text style={styles.previewReference}>{target.reference}</Text>
+                          <Text style={styles.previewReference} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{target.reference}</Text>
                           <Text style={styles.previewInsight} numberOfLines={4}>
                             "{target.text}"
                           </Text>
                         </>
                       ) : (
                         <>
-                          <Text style={styles.previewReference}>
+                          <Text style={styles.previewReference} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                             {target.savedApplication.book} {target.savedApplication.chapter}
                           </Text>
-                          <Text style={styles.previewTheme}>
+                          <Text style={styles.previewTheme} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                             {target.savedApplication.theme_tag} {target.savedApplication.sub_theme_tag ? `• ${target.savedApplication.sub_theme_tag}` : ''}
                           </Text>
                           {target.savedApplication.key_insight && (
@@ -221,7 +222,7 @@ export default function ShareToFireModal({
                       )}
                       {message.trim() ? (
                         <View style={styles.previewMessage}>
-                          <Text style={styles.previewMessageLabel}>Your note:</Text>
+                          <Text style={styles.previewMessageLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Your note:</Text>
                           <Text style={styles.previewMessageText}>"{message}"</Text>
                         </View>
                       ) : null}
@@ -236,7 +237,7 @@ export default function ShareToFireModal({
                   style={[styles.button, styles.cancelButton]}
                   onPress={onClose}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -247,7 +248,7 @@ export default function ShareToFireModal({
                   onPress={handleShare}
                   disabled={isSharing || !selectedFireId || fires.length === 0}
                 >
-                  <Text style={styles.shareButtonText}>
+                  <Text style={styles.shareButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     {isSharing ? 'Sharing...' : 'Share'}
                   </Text>
                 </TouchableOpacity>

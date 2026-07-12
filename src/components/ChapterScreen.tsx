@@ -23,6 +23,7 @@ import KeyHebrewWordsTab from './KeyHebrewWordsTab'
 import MyThemeTab from './MyThemeTab'
 import { supabase } from '../lib/supabaseClient'
 import { colors } from '../theme/colors'
+import { CHROME_MAX_SCALE } from '../lib/textScaling'
 
 type RouteParams = { bookId: number; chapter: number; bookName?: string; translation?: string }
 type Verse = { number: number; text: string }
@@ -129,10 +130,10 @@ export default function ChapterScreen() {
             style={{ flexDirection: 'row', alignItems: 'center' }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text.primary }}>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 17, fontWeight: '700', color: colors.text.primary }}>
               {bookNameResolved} {chapter}
             </Text>
-            <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 6 }}>{'▾'}</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 6 }}>{'▾'}</Text>
           </TouchableOpacity>
         ),
         headerLeft: () => (
@@ -140,14 +141,14 @@ export default function ChapterScreen() {
             onPress={() => navigation.navigate('BibleHome')}
             style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }}
           >
-            <Text style={{ fontSize: 28, color: colors.accent.primary, lineHeight: 28 }}>{'\u2039'}</Text>
-            <Text style={{ fontSize: 16, color: colors.accent.primary, fontWeight: '600', marginLeft: 2 }}>Bible</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 28, color: colors.accent.primary, lineHeight: 28 }}>{'\u2039'}</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 16, color: colors.accent.primary, fontWeight: '600', marginLeft: 2 }}>Bible</Text>
           </TouchableOpacity>
         ),
         headerRight: chapterReadDate ? () => (
           <View style={styles.readBadge}>
-            <Text style={styles.readBadgeCheck}>{'\u2713'}</Text>
-            <Text style={styles.readBadgeText}>{formatReadDate(chapterReadDate)}</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.readBadgeCheck}>{'\u2713'}</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.readBadgeText}>{formatReadDate(chapterReadDate)}</Text>
           </View>
         ) : undefined,
       })
@@ -408,7 +409,7 @@ export default function ChapterScreen() {
   // Tab button helper
   const TabButton = ({ tabKey, label }: { tabKey: TabType; label: string }) => (
     <TouchableOpacity onPress={() => setTab(tabKey)} style={[styles.tab, tab === tabKey && styles.tabActive]}>
-      <Text style={[styles.tabText, tab === tabKey && styles.tabTextActive]}>{label}</Text>
+      <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={[styles.tabText, tab === tabKey && styles.tabTextActive]}>{label}</Text>
     </TouchableOpacity>
   )
 
@@ -449,7 +450,7 @@ export default function ChapterScreen() {
 
               <View style={{ height: 12 }} />
               <TouchableOpacity style={styles.completeBtn} onPress={markChapterRead}>
-                <Text style={styles.completeText}>✓ Mark Chapter Read</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.completeText}>✓ Mark Chapter Read</Text>
               </TouchableOpacity>
             </>
           )}
@@ -484,11 +485,11 @@ export default function ChapterScreen() {
                 onPress={() => previousChapter && navigateToChapter(previousChapter)}
                 disabled={!previousChapter}
               >
-                <Text style={[styles.navBtnText, !previousChapter && styles.navBtnTextDisabled]}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={[styles.navBtnText, !previousChapter && styles.navBtnTextDisabled]}>
                   Previous
                 </Text>
                 {previousChapter && (
-                  <Text style={styles.navBtnSub}>
+                  <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.navBtnSub}>
                     {previousChapter.bookName} {previousChapter.chapter}
                   </Text>
                 )}
@@ -498,11 +499,11 @@ export default function ChapterScreen() {
                 onPress={() => nextChapter && navigateToChapter(nextChapter)}
                 disabled={!nextChapter}
               >
-                <Text style={[styles.navBtnText, !nextChapter && styles.navBtnTextDisabled]}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={[styles.navBtnText, !nextChapter && styles.navBtnTextDisabled]}>
                   Next
                 </Text>
                 {nextChapter && (
-                  <Text style={styles.navBtnSub}>
+                  <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.navBtnSub}>
                     {nextChapter.bookName} {nextChapter.chapter}
                   </Text>
                 )}
@@ -555,7 +556,7 @@ const styles = StyleSheet.create({
   error: { color: colors.error, padding: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  completeBtn: { backgroundColor: colors.accent.primary, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginHorizontal: 12, marginTop: 12 },
+  completeBtn: { backgroundColor: colors.accent.primary, minHeight: 44, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginHorizontal: 12, marginTop: 12 },
   completeText: { color: colors.text.primary, fontWeight: '700' },
 
   chapterNav: { flexDirection: 'row', padding: 16, gap: 12, borderTopWidth: 1, borderTopColor: colors.border.default, marginTop: 16 },

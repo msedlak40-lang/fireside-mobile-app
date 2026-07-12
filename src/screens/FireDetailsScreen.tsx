@@ -26,6 +26,7 @@ import FireShareCard from '../components/FireShareCard';
 import FireSettingsModal from '../components/FireSettingsModal';
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 export default function FireDetailsScreen({ route, navigation }: any) {
   const { fireId } = route.params;
@@ -54,7 +55,7 @@ export default function FireDetailsScreen({ route, navigation }: any) {
             onPress={() => setShowSettings(true)}
             style={{ marginRight: 16 }}
           >
-            <Text style={{ fontSize: 24 }}>&#x2699;&#xFE0F;</Text>
+            <Text style={{ fontSize: 24 }} maxFontSizeMultiplier={CHROME_MAX_SCALE}>&#x2699;&#xFE0F;</Text>
           </TouchableOpacity>
         ),
       });
@@ -183,23 +184,23 @@ export default function FireDetailsScreen({ route, navigation }: any) {
         {/* Stats Section */}
         {stats && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activity</Text>
+            <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Activity</Text>
             <View style={styles.statsGrid}>
               <View style={styles.statBox}>
-                <Text style={styles.statNumber}>{stats.totalShares}</Text>
-                <Text style={styles.statLabel}>Total Shares</Text>
+                <Text style={styles.statNumber} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{stats.totalShares}</Text>
+                <Text style={styles.statLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Total Shares</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statNumber}>{stats.sharesThisWeek}</Text>
-                <Text style={styles.statLabel}>This Week</Text>
+                <Text style={styles.statNumber} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{stats.sharesThisWeek}</Text>
+                <Text style={styles.statLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>This Week</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statNumber}>{stats.totalComments}</Text>
-                <Text style={styles.statLabel}>Comments</Text>
+                <Text style={styles.statNumber} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{stats.totalComments}</Text>
+                <Text style={styles.statLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Comments</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statNumber}>{stats.totalReactions}</Text>
-                <Text style={styles.statLabel}>Reactions</Text>
+                <Text style={styles.statNumber} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{stats.totalReactions}</Text>
+                <Text style={styles.statLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reactions</Text>
               </View>
             </View>
           </View>
@@ -207,11 +208,11 @@ export default function FireDetailsScreen({ route, navigation }: any) {
 
         {/* Members Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Members ({members.length})</Text>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Members ({members.length})</Text>
           {members.map(member => (
             <View key={member.id} style={styles.memberRow}>
               <View style={styles.memberChip}>
-                <Text style={styles.memberText}>
+                <Text style={styles.memberText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {member.role === 'creator' ? '👑 ' : ''}
                   {member.user_id === currentUserId ? 'You' : (member.user_email || 'Brother')}
                 </Text>
@@ -221,7 +222,7 @@ export default function FireDetailsScreen({ route, navigation }: any) {
                   style={styles.removeMemberButton}
                   onPress={() => handleRemoveMember(member)}
                 >
-                  <Text style={styles.removeMemberText}>Remove</Text>
+                  <Text style={styles.removeMemberText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Remove</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -230,12 +231,12 @@ export default function FireDetailsScreen({ route, navigation }: any) {
 
         {/* Shares Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Shared Insights ({shares.length})</Text>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Shared Insights ({shares.length})</Text>
 
           {shares.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No shares yet</Text>
-              <Text style={styles.emptyDescription}>
+              <Text style={styles.emptyTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>No shares yet</Text>
+              <Text style={styles.emptyDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 Share insights from your Arsenal to encourage your Fire
               </Text>
             </View>

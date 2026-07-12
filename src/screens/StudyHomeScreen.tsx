@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 export default function StudyHomeScreen({ navigation }: any) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Study</Text>
-        <Text style={styles.headerSubtitle}>
+        <Text style={styles.headerTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Study</Text>
+        <Text style={styles.headerSubtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
           Deepen your understanding of Scripture
         </Text>
       </View>
@@ -18,9 +19,9 @@ export default function StudyHomeScreen({ navigation }: any) {
           style={styles.card}
           onPress={() => navigation.navigate('CharactersHome')}
         >
-          <Text style={styles.cardIcon}>👥</Text>
-          <Text style={styles.cardTitle}>Biblical Characters</Text>
-          <Text style={styles.cardDescription}>
+          <Text style={styles.cardIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>👥</Text>
+          <Text style={styles.cardTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Biblical Characters</Text>
+          <Text style={styles.cardDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             Explore the lives and lessons of people in Scripture
           </Text>
         </TouchableOpacity>
@@ -30,9 +31,9 @@ export default function StudyHomeScreen({ navigation }: any) {
           style={styles.card}
           onPress={() => navigation.navigate('ReadingPlansHome')}
         >
-          <Text style={styles.cardIcon}>📅</Text>
-          <Text style={styles.cardTitle}>Reading Plans</Text>
-          <Text style={styles.cardDescription}>
+          <Text style={styles.cardIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>📅</Text>
+          <Text style={styles.cardTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Plans</Text>
+          <Text style={styles.cardDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             Structured guides for spiritual growth
           </Text>
         </TouchableOpacity>
@@ -42,9 +43,9 @@ export default function StudyHomeScreen({ navigation }: any) {
           style={styles.card}
           onPress={() => navigation.navigate('JourneyCatalog')}
         >
-          <Text style={styles.cardIcon}>🗺️</Text>
-          <Text style={styles.cardTitle}>Interactive Journeys</Text>
-          <Text style={styles.cardDescription}>
+          <Text style={styles.cardIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>🗺️</Text>
+          <Text style={styles.cardTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Interactive Journeys</Text>
+          <Text style={styles.cardDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             Explore Biblical stories through immersive experiences
           </Text>
         </TouchableOpacity>

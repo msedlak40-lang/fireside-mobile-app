@@ -13,6 +13,7 @@ import { getCrossReferences, type CrossReference } from '../services/strongsStud
 import { setStudyDepth } from '../services/userPrefs'
 import { saveBattleVerse, BATTLE_TAGS } from '../services/battleVerses'
 import { colors } from '../theme/colors'
+import { CHROME_MAX_SCALE } from '../lib/textScaling'
 
 type RawVerse = any
 
@@ -253,7 +254,7 @@ export default function ChapterText(props: Props) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.tapHint}>Tap any verse for its summary, word study & more</Text>
+      <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.tapHint}>Tap any verse for its summary, word study & more</Text>
 
       {/* Verses */}
       {verses.map((raw, idx) => {
@@ -270,7 +271,7 @@ export default function ChapterText(props: Props) {
             onPress={() => onTapVerse(raw)}
           >
             <View style={styles.verseNumWrap}>
-              <Text style={[styles.verseNum, significant ? styles.keyTint : null]}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={[styles.verseNum, significant ? styles.keyTint : null]}>
                 {vNum ?? ''}
               </Text>
             </View>
@@ -282,7 +283,7 @@ export default function ChapterText(props: Props) {
             >
               {verseText}
             </Text>
-            {significant && <Text style={styles.bulb}>💡</Text>}
+            {significant && <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.bulb}>💡</Text>}
           </TouchableOpacity>
         )
       })}
@@ -324,7 +325,7 @@ export default function ChapterText(props: Props) {
       <Modal visible={noteOpen} transparent animationType="fade" onRequestClose={() => setNoteOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Note for v.{activeVerse ?? ''}</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.modalTitle}>Note for v.{activeVerse ?? ''}</Text>
             <TextInput
               style={styles.input}
               multiline
@@ -338,7 +339,7 @@ export default function ChapterText(props: Props) {
                 style={[styles.btn, styles.btnGhost]}
                 onPress={() => { setNoteOpen(false); setNoteText(''); setActiveVerse(null) }}
               >
-                <Text style={styles.btnGhostText}>Cancel</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.btnGhostText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.btn}
@@ -349,7 +350,7 @@ export default function ChapterText(props: Props) {
                   if (v && text) await insertNote(v, text)
                 }}
               >
-                <Text style={styles.btnText}>Save</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.btnText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -360,8 +361,8 @@ export default function ChapterText(props: Props) {
       <Modal visible={battleTagOpen} transparent animationType="fade" onRequestClose={() => { setBattleTagOpen(false); setBattleVerseData(null) }}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Save to Battle Verses</Text>
-            <Text style={{ color: colors.text.secondary, fontSize: 14, marginBottom: 12 }}>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.modalTitle}>Save to Battle Verses</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: colors.text.secondary, fontSize: 14, marginBottom: 12 }}>
               {book} {chapter}:{battleVerseData?.verseNum} — Choose a battle tag:
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -375,7 +376,7 @@ export default function ChapterText(props: Props) {
                   }}
                   onPress={() => handleSaveBattleVerse(tag)}
                 >
-                  <Text style={{ color: colors.text.primary, fontWeight: '600', fontSize: 14, textTransform: 'capitalize' }}>
+                  <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: colors.text.primary, fontWeight: '600', fontSize: 14, textTransform: 'capitalize' }}>
                     {tag}
                   </Text>
                 </TouchableOpacity>
@@ -385,7 +386,7 @@ export default function ChapterText(props: Props) {
               style={[styles.btn, styles.btnGhost, { marginTop: 12, alignSelf: 'flex-end' }]}
               onPress={() => { setBattleTagOpen(false); setBattleVerseData(null) }}
             >
-              <Text style={styles.btnGhostText}>Cancel</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.btnGhostText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

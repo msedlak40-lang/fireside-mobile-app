@@ -14,6 +14,7 @@ import VerseSummaryCard from '../VerseSummaryCard';
 import { getVerseLifeApplication, type VerseLifeApplication } from '../../services/scripture';
 import { setStudyDepth } from '../../services/userPrefs';
 import { colors } from '../../theme/colors';
+import { CHROME_MAX_SCALE } from '../../lib/textScaling';
 
 interface HighlightWithDevotion {
   id: string;
@@ -467,7 +468,7 @@ const openTodayDevotion = useCallback(() => {
           />
         }
       >
-        <Text style={{ fontSize: 26, fontWeight: '800', marginBottom: 20, color: colors.text.primary }}>Your Progress</Text>
+        <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 26, fontWeight: '800', marginBottom: 20, color: colors.text.primary }}>Your Progress</Text>
 
         {/* Streak Card */}
         <View
@@ -487,18 +488,18 @@ const openTodayDevotion = useCallback(() => {
             elevation: 4,
           }}
         >
-          <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '800', letterSpacing: 1.5 }}>STUDY STREAK</Text>
+          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, color: '#92400e', fontWeight: '800', letterSpacing: 1.5 }}>STUDY STREAK</Text>
           <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-            <Text style={{ fontSize: 52, fontWeight: '900', color: '#92400e', lineHeight: 52 }}>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 52, fontWeight: '900', color: '#92400e', lineHeight: 52 }}>
               {dashboard?.streak?.current || 0}
             </Text>
-            <Text style={{ fontSize: 36, marginBottom: 4 }}>🔥</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 36, marginBottom: 4 }}>🔥</Text>
           </View>
-          <Text style={{ marginTop: 8, fontSize: 15, color: '#92400e', fontWeight: '600' }}>
+          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 8, fontSize: 15, color: '#92400e', fontWeight: '600' }}>
             Longest streak: {dashboard?.streak?.longest || 0} days
           </Text>
           {dashboard?.streak?.last_read_date && (
-   <Text style={{ marginTop: 4, fontSize: 13, color: '#78350f', opacity: 0.8 }}>
+   <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 4, fontSize: 13, color: '#78350f', opacity: 0.8 }}>
      Last activity: {formatISODateYYYYMMDD(dashboard.streak.last_read_date)}
             </Text>
           )}
@@ -524,10 +525,10 @@ const openTodayDevotion = useCallback(() => {
             {/* Header row: label + theme + star */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, color: '#1e40af', fontWeight: '800', letterSpacing: 1.5 }}>VERSE OF THE DAY</Text>
                 {verseOfTheDay.theme ? (
                   <View style={{ backgroundColor: '#bfdbfe', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                    <Text style={{ fontSize: 10, color: '#1e40af', fontWeight: '700' }}>{verseOfTheDay.theme.toUpperCase()}</Text>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 10, color: '#1e40af', fontWeight: '700' }}>{verseOfTheDay.theme.toUpperCase()}</Text>
                   </View>
                 ) : null}
               </View>
@@ -542,7 +543,7 @@ const openTodayDevotion = useCallback(() => {
                   backgroundColor: votdBattleState === 'saved' ? 'rgba(39,174,96,0.15)' : '#bfdbfe',
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: votdBattleState === 'saved' ? '#1b7a43' : '#1e40af' }}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, fontWeight: '700', color: votdBattleState === 'saved' ? '#1b7a43' : '#1e40af' }}>
                   {votdBattleState === 'saving' ? 'Saving\u2026' : votdBattleState === 'saved' ? '\u2713 Saved' : '\u2694\uFE0F Save'}
                 </Text>
               </TouchableOpacity>
@@ -551,10 +552,10 @@ const openTodayDevotion = useCallback(() => {
             <Text style={{ marginTop: 12, fontSize: 17, fontStyle: 'italic', lineHeight: 26, color: '#1e3a8a', fontWeight: '500' }}>
               "{verseOfTheDay.verse_text}"
             </Text>
-            <Text style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 10, fontSize: 15, fontWeight: '700', color: '#1e40af' }}>
               — {verseOfTheDay.reference}
             </Text>
-            <Text style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 8, fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
               Tap for summary
             </Text>
 
@@ -569,14 +570,14 @@ const openTodayDevotion = useCallback(() => {
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>View Battle Verses</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>View Battle Verses</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => navigation.navigate('VOTDArchive')}
                 style={{ paddingVertical: 10 }}
               >
-                <Text style={{ color: '#2563eb', fontWeight: '600', fontSize: 13 }}>View Archive</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#2563eb', fontWeight: '600', fontSize: 13 }}>View Archive</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -597,7 +598,7 @@ const openTodayDevotion = useCallback(() => {
           elevation: 4,
         }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ fontSize: 11, color: '#6b21a8', fontWeight: '800', letterSpacing: 1.5 }}>TODAY'S DEVOTION</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, color: '#6b21a8', fontWeight: '800', letterSpacing: 1.5 }}>TODAY'S DEVOTION</Text>
             <TouchableOpacity
               onPress={openHighlightsModal}
               style={{
@@ -607,12 +608,12 @@ const openTodayDevotion = useCallback(() => {
                 borderRadius: 6,
               }}
             >
-              <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>📝 Highlights</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>📝 Highlights</Text>
             </TouchableOpacity>
           </View>
           {todayDevotion ? (
             <>
-              <Text style={{ fontSize: 19, fontWeight: '800', marginTop: 8, color: '#581c87' }}>{todayDevotion.title}</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 19, fontWeight: '800', marginTop: 8, color: '#581c87' }}>{todayDevotion.title}</Text>
               <TouchableOpacity
                 onPress={openTodayDevotion}
                 style={{
@@ -628,11 +629,11 @@ const openTodayDevotion = useCallback(() => {
                   elevation: 3,
                 }}
               >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Open Devotion →</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Open Devotion →</Text>
               </TouchableOpacity>
             </>
           ) : (
-            <Text style={{ fontSize: 14, color: '#7c2d92', marginTop: 6 }}>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: '#7c2d92', marginTop: 6 }}>
               No devotion scheduled for today.
             </Text>
           )}
@@ -652,11 +653,11 @@ const openTodayDevotion = useCallback(() => {
           shadowRadius: 8,
           elevation: 3,
         }}>
-          <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 12 }}>BIBLE READING</Text>
+          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 12 }}>BIBLE READING</Text>
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text style={{ fontSize: 14, color: colors.text.secondary }}>Chapters Read</Text>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text.primary }}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: colors.text.secondary }}>Chapters Read</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 15, fontWeight: '700', color: colors.text.primary }}>
                 {dashboard?.chapters?.total_read || 0} / {dashboard?.chapters?.total_available || 0}
               </Text>
             </View>
@@ -669,7 +670,7 @@ const openTodayDevotion = useCallback(() => {
                 }}
               />
             </View>
-            <Text style={{ marginTop: 6, fontSize: 13, color: colors.text.secondary, textAlign: 'right', fontWeight: '600' }}>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 6, fontSize: 13, color: colors.text.secondary, textAlign: 'right', fontWeight: '600' }}>
               {dashboard?.chapters?.percentage || 0}% complete
             </Text>
           </View>
@@ -693,11 +694,11 @@ const openTodayDevotion = useCallback(() => {
               elevation: 4,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#1e40af', marginBottom: 8 }}>ACTIVE READING PLAN</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#1e40af', marginBottom: 8 }}>ACTIVE READING PLAN</Text>
             <View style={{ marginTop: 4 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, color: '#374151' }}>Progress</Text>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1e3a8a' }}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: '#374151' }}>Progress</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 15, fontWeight: '700', color: '#1e3a8a' }}>
                   Day {activePlan.current_day} / {activePlan.total_days}
                 </Text>
               </View>
@@ -710,15 +711,15 @@ const openTodayDevotion = useCallback(() => {
                   }}
                 />
               </View>
-              <Text style={{ marginTop: 6, fontSize: 13, color: '#374151', textAlign: 'right', fontWeight: '600' }}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 6, fontSize: 13, color: '#374151', textAlign: 'right', fontWeight: '600' }}>
                 {Math.round(activePlan.percentage)}% complete
               </Text>
             </View>
             <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 13, color: activePlan.on_track ? '#059669' : '#dc2626', fontWeight: '700' }}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, color: activePlan.on_track ? '#059669' : '#dc2626', fontWeight: '700' }}>
                 {activePlan.on_track ? '✓ On track' : '⚠ Behind schedule'}
               </Text>
-              <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '700' }}>Tap to view →</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, color: '#2563eb', fontWeight: '700' }}>Tap to view →</Text>
             </View>
           </TouchableOpacity>
         ) : (
@@ -735,7 +736,7 @@ const openTodayDevotion = useCallback(() => {
             shadowRadius: 8,
             elevation: 2,
           }}>
-            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 8 }}>READING PLANS</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 8 }}>READING PLANS</Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 14, lineHeight: 20 }}>
               No active reading plan. Start one to track your daily Bible reading!
             </Text>
@@ -753,7 +754,7 @@ const openTodayDevotion = useCallback(() => {
                 elevation: 3,
               }}
             >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Browse Reading Plans</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Browse Reading Plans</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -776,11 +777,11 @@ const openTodayDevotion = useCallback(() => {
               elevation: 4,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#92400e', marginBottom: 8 }}>ACTIVE CHARACTER STUDY</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#92400e', marginBottom: 8 }}>ACTIVE CHARACTER STUDY</Text>
             <View style={{ marginTop: 4 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, color: '#78350f' }}>Progress</Text>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#92400e' }}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: '#78350f' }}>Progress</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 15, fontWeight: '700', color: '#92400e' }}>
                   {activeCharacterStudy.completed_lessons} / {activeCharacterStudy.total_lessons} lessons
                 </Text>
               </View>
@@ -793,11 +794,11 @@ const openTodayDevotion = useCallback(() => {
                   }}
                 />
               </View>
-              <Text style={{ marginTop: 6, fontSize: 13, color: '#78350f', textAlign: 'right', fontWeight: '600' }}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 6, fontSize: 13, color: '#78350f', textAlign: 'right', fontWeight: '600' }}>
                 {activeCharacterStudy.percentage}% complete
               </Text>
             </View>
-            <Text style={{ marginTop: 12, fontSize: 13, color: '#f59e0b', fontWeight: '700', textAlign: 'right' }}>Tap to view study →</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 12, fontSize: 13, color: '#f59e0b', fontWeight: '700', textAlign: 'right' }}>Tap to view study →</Text>
           </TouchableOpacity>
         ) : (
           <View style={{
@@ -813,7 +814,7 @@ const openTodayDevotion = useCallback(() => {
             shadowRadius: 8,
             elevation: 2,
           }}>
-            <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 8 }}>CHARACTER STUDIES</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: colors.text.secondary, marginBottom: 8 }}>CHARACTER STUDIES</Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 14, lineHeight: 20 }}>
               No active character study. Start one to learn from Biblical characters!
             </Text>
@@ -831,7 +832,7 @@ const openTodayDevotion = useCallback(() => {
                 elevation: 3,
               }}
             >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Browse Characters</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Browse Characters</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -873,11 +874,11 @@ const openTodayDevotion = useCallback(() => {
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, flex: 1 }}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, flex: 1 }}>
                 {selectedRelatedVerse}
               </Text>
               <TouchableOpacity onPress={() => setShowRelatedVerseModal(false)}>
-                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
               </TouchableOpacity>
             </View>
             <ScrollView>
@@ -906,11 +907,11 @@ const openTodayDevotion = useCallback(() => {
             maxHeight: '80%',
           }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
                 Devotion Highlights
               </Text>
               <TouchableOpacity onPress={() => setShowHighlightsModal(false)} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
               </TouchableOpacity>
             </View>
 
@@ -920,14 +921,14 @@ const openTodayDevotion = useCallback(() => {
               </View>
             ) : (
               <ScrollView style={{ paddingHorizontal: 20 }}>
-                <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 20 }}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 20 }}>
                   {highlights.length} highlight{highlights.length !== 1 ? 's' : ''} saved
                 </Text>
 
                 {highlights.length === 0 ? (
                   <View style={{ marginTop: 20, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 48, marginBottom: 16 }}>📝</Text>
-                    <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center' }}>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 48, marginBottom: 16 }}>📝</Text>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center' }}>
                       No highlights yet. Long-press paragraphs in devotions to save them!
                     </Text>
                   </View>
@@ -945,10 +946,10 @@ const openTodayDevotion = useCallback(() => {
                           borderLeftColor: colors.accent.primary,
                         }}
                       >
-                        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>
+                        <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>
                           {group.devotion_title}
                         </Text>
-                        <Text style={{ fontSize: 12, color: colors.text.secondary, marginTop: 4 }}>
+                        <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 12, color: colors.text.secondary, marginTop: 4 }}>
                           {formatDate(group.devotion_date)} • {group.highlights.length} highlight{group.highlights.length !== 1 ? 's' : ''}
                         </Text>
                       </TouchableOpacity>
@@ -980,7 +981,7 @@ const openTodayDevotion = useCallback(() => {
                               justifyContent: 'center',
                             }}
                           >
-                            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
+                            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
                           </TouchableOpacity>
                           <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', paddingRight: 32 }}>
                             {highlight.selected_text}
@@ -1014,11 +1015,11 @@ const openTodayDevotion = useCallback(() => {
           }}>
             {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
                 Battle Verses
               </Text>
               <TouchableOpacity onPress={() => setShowBattleVersesModal(false)} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
               </TouchableOpacity>
             </View>
 
@@ -1034,7 +1035,7 @@ const openTodayDevotion = useCallback(() => {
                   backgroundColor: battleTagFilter === null ? '#1e40af' : colors.background.tertiary,
                 }}
               >
-                <Text style={{ color: battleTagFilter === null ? '#fff' : colors.text.secondary, fontWeight: '600', fontSize: 13 }}>All</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: battleTagFilter === null ? '#fff' : colors.text.secondary, fontWeight: '600', fontSize: 13 }}>All</Text>
               </TouchableOpacity>
               {BATTLE_TAGS.map((tag) => (
                 <TouchableOpacity
@@ -1048,7 +1049,7 @@ const openTodayDevotion = useCallback(() => {
                     backgroundColor: battleTagFilter === tag ? '#1e40af' : colors.background.tertiary,
                   }}
                 >
-                  <Text style={{
+                  <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{
                     color: battleTagFilter === tag ? '#fff' : colors.text.secondary,
                     fontWeight: '600',
                     fontSize: 13,
@@ -1067,14 +1068,14 @@ const openTodayDevotion = useCallback(() => {
               </View>
             ) : (
               <ScrollView style={{ paddingHorizontal: 20 }}>
-                <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 16 }}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 16 }}>
                   {battleVerses.length} verse{battleVerses.length !== 1 ? 's' : ''} saved
                 </Text>
 
                 {battleVerses.length === 0 ? (
                   <View style={{ marginTop: 20, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 48, marginBottom: 16 }}>⚔️</Text>
-                    <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', lineHeight: 22 }}>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 48, marginBottom: 16 }}>⚔️</Text>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', lineHeight: 22 }}>
                       No battle verses yet. Long-press a verse while reading the Bible to save it here!
                     </Text>
                   </View>
@@ -1108,9 +1109,9 @@ const openTodayDevotion = useCallback(() => {
                           justifyContent: 'center',
                         }}
                       >
-                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
+                        <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
                       </TouchableOpacity>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1e40af', marginBottom: 6 }}>
+                      <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, fontWeight: '700', color: '#1e40af', marginBottom: 6 }}>
                         {verse.verse_reference}
                       </Text>
                       <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text.primary, paddingRight: 28, fontStyle: 'italic' }}>
@@ -1125,7 +1126,7 @@ const openTodayDevotion = useCallback(() => {
                           backgroundColor: '#1e40af',
                           borderRadius: 12,
                         }}>
-                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }}>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }}>
                             {verse.battle_tag}
                           </Text>
                         </View>

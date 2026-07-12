@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { getThemeColors, isValidTheme } from '../services/themes';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 /** Minimal shape the read-only theme modal renders. Both a full SavedApplication
  *  (Arsenal screen) and the Fire feed's embedded saved_application satisfy it. */
@@ -52,17 +53,17 @@ export default function ViewArsenalModal({
           <View style={styles.header}>
             <View style={styles.headerTags}>
               <View style={[styles.themeTag, { backgroundColor: accent }]}>
-                <Text style={styles.themeTagText}>{app.theme_tag.toUpperCase()}</Text>
+                <Text style={styles.themeTagText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{app.theme_tag.toUpperCase()}</Text>
               </View>
               {app.sub_theme_tag ? (
                 <View style={[styles.subThemeTag, { borderColor: accent }]}>
-                  <Text style={[styles.subThemeTagText, { color: accent }]}>
+                  <Text style={[styles.subThemeTagText, { color: accent }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     {app.sub_theme_tag}
                   </Text>
                 </View>
               ) : null}
             </View>
-            <Text style={styles.reference}>
+            <Text style={styles.reference} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               {app.book} {app.chapter}
               {app.character_tag ? ` • ${app.character_tag}` : ''}
             </Text>
@@ -72,7 +73,7 @@ export default function ViewArsenalModal({
             {/* Application */}
             {app.application ? (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Application</Text>
+                <Text style={styles.sectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Application</Text>
                 <Text style={styles.bodyText}>{app.application}</Text>
               </View>
             ) : null}
@@ -80,7 +81,7 @@ export default function ViewArsenalModal({
             {/* Key Insight */}
             {app.key_insight ? (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Key Insight</Text>
+                <Text style={styles.sectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Key Insight</Text>
                 <View style={[styles.insightBox, { borderLeftColor: accent }]}>
                   <Text style={styles.insightText}>{app.key_insight}</Text>
                 </View>
@@ -90,7 +91,7 @@ export default function ViewArsenalModal({
             {/* Action Step */}
             {app.action_step ? (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Action Step</Text>
+                <Text style={styles.sectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Action Step</Text>
                 <Text style={styles.bodyText}>{app.action_step}</Text>
               </View>
             ) : null}
@@ -98,7 +99,7 @@ export default function ViewArsenalModal({
             {/* User Note */}
             {app.user_note ? (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>My Note</Text>
+                <Text style={styles.sectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>My Note</Text>
                 <View style={styles.userNoteBox}>
                   <Text style={styles.userNoteText}>{app.user_note}</Text>
                 </View>
@@ -109,7 +110,7 @@ export default function ViewArsenalModal({
           {/* Close */}
           <View style={styles.actions}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={styles.closeButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>

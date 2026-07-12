@@ -4,6 +4,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native'
 import { colors } from '../theme/colors'
+import { CHROME_MAX_SCALE } from '../lib/textScaling'
 import type { BookSort } from '../services/userPrefs'
 
 export type SheetBook = { id: number; book_name: string; total_chapters: number }
@@ -107,17 +108,17 @@ export default function BookChapterTiles({
         <View style={styles.header}>
           {pickedBook ? (
             <TouchableOpacity onPress={() => setPickedBook(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.backText}>{'‹'} Books</Text>
+              <Text style={styles.backText} numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{'‹'} Books</Text>
             </TouchableOpacity>
           ) : (
             <View style={{ width: 60 }} />
           )}
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={styles.title} numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {pickedBook ? pickedBook.book_name : 'Choose a book'}
           </Text>
           {presentation === 'sheet' ? (
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.closeText}>Close</Text>
+              <Text style={styles.closeText} numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Close</Text>
             </TouchableOpacity>
           ) : (
             <View style={{ width: 60 }} />
@@ -170,8 +171,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4, paddingVertical: 8,
   },
   title: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '800', color: colors.text.primary, paddingHorizontal: 8 },
-  backText: { color: colors.accent.primary, fontWeight: '700', fontSize: 15, width: 60 },
-  closeText: { color: colors.text.secondary, fontWeight: '700', fontSize: 15, width: 60, textAlign: 'right' },
+  backText: { color: colors.accent.primary, fontWeight: '700', fontSize: 15, minWidth: 60 },
+  closeText: { color: colors.text.secondary, fontWeight: '700', fontSize: 15, minWidth: 60, textAlign: 'right' },
 
   grid: { paddingVertical: 8, paddingHorizontal: 4 },
   bookRow: { gap: 8, marginBottom: 8 },

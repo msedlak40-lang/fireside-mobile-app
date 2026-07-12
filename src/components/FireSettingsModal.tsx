@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { updateFire, type Fire } from '../services/fire';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 interface FireSettingsModalProps {
   visible: boolean;
@@ -79,12 +80,12 @@ export default function FireSettingsModal({
           <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalContent}>
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>Fire Settings</Text>
+                <Text style={styles.headerTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Fire Settings</Text>
               </View>
 
               <ScrollView style={styles.scrollContent}>
                 <View style={styles.section}>
-                  <Text style={styles.label}>Fire Name *</Text>
+                  <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Fire Name *</Text>
                   <TextInput
                     style={styles.input}
                     value={name}
@@ -96,7 +97,7 @@ export default function FireSettingsModal({
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.label}>Description</Text>
+                  <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Description</Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     value={description}
@@ -110,7 +111,7 @@ export default function FireSettingsModal({
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.label}>Invite Code</Text>
+                  <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Invite Code</Text>
                   <TouchableOpacity
                     style={styles.inviteCodeBox}
                     activeOpacity={0.7}
@@ -120,10 +121,10 @@ export default function FireSettingsModal({
                       });
                     }}
                   >
-                    <Text style={styles.inviteCode}>{fire.invite_code}</Text>
-                    <Text style={styles.copyHint}>Tap to share</Text>
+                    <Text style={styles.inviteCode} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{fire.invite_code}</Text>
+                    <Text style={styles.copyHint} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Tap to share</Text>
                   </TouchableOpacity>
-                  <Text style={styles.hint}>
+                  <Text style={styles.hint} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     Share this code with brothers to invite them
                   </Text>
                 </View>
@@ -134,7 +135,7 @@ export default function FireSettingsModal({
                   style={[styles.button, styles.cancelButton]}
                   onPress={onClose}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -145,7 +146,7 @@ export default function FireSettingsModal({
                   onPress={handleSave}
                   disabled={isSaving}
                 >
-                  <Text style={styles.saveButtonText}>
+                  <Text style={styles.saveButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     {isSaving ? 'Saving...' : 'Save Changes'}
                   </Text>
                 </TouchableOpacity>

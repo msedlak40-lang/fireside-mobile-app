@@ -373,6 +373,8 @@ function MainTabs() {
         },
         tabBarActiveTintColor: colors.tabBar.active,
         tabBarInactiveTintColor: colors.tabBar.inactive,
+        // Apple standard: tab bars do not grow with Dynamic Type.
+        tabBarAllowFontScaling: false,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',

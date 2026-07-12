@@ -24,6 +24,7 @@ import {
 import { getPreferredTranslation, setPreferredTranslation } from '../services/userPrefs';
 import { getCurrentCycle, startNextCycle } from '../services/readingCycle';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 const TRANSLATIONS = ['KJV', 'WEB'];
 
@@ -197,7 +198,7 @@ export default function SettingsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.accent.primary} size="large" />
-          <Text style={styles.loadingText}>Loading settings...</Text>
+          <Text style={styles.loadingText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Loading settings...</Text>
         </View>
       </SafeAreaView>
     );
@@ -208,8 +209,8 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Your Name Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Name</Text>
-          <Text style={styles.sectionDescription}>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Your Name</Text>
+          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             The name shown to your brothers on posts and comments in Fire.
           </Text>
           <TextInput
@@ -239,7 +240,7 @@ export default function SettingsScreen() {
                   nameSaved && styles.nameSaveButtonSaved,
                 ]}
               >
-                <Text style={styles.nameSaveButtonText}>
+                <Text style={styles.nameSaveButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {nameSaving ? 'Saving…' : nameSaved ? '✓ Saved' : 'Save'}
                 </Text>
               </TouchableOpacity>
@@ -250,7 +251,7 @@ export default function SettingsScreen() {
         {/* Theme Selection Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My {currentYear} Theme</Text>
+            <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>My {currentYear} Theme</Text>
             {currentTheme && (
               <View
                 style={[
@@ -266,6 +267,7 @@ export default function SettingsScreen() {
                     styles.currentBadgeText,
                     { color: getThemeColors(currentTheme)?.dark || colors.text.primary },
                   ]}
+                  maxFontSizeMultiplier={CHROME_MAX_SCALE}
                 >
                   Active
                 </Text>
@@ -273,7 +275,7 @@ export default function SettingsScreen() {
             )}
           </View>
 
-          <Text style={styles.sectionDescription}>
+          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             Choose a theme to guide your Bible reading this year. Your theme will surface relevant
             applications and help you discover sub-themes throughout Scripture.
           </Text>
@@ -311,6 +313,7 @@ export default function SettingsScreen() {
                           styles.themeText,
                           isSelected && themeColors && { color: themeColors.primary },
                         ]}
+                        maxFontSizeMultiplier={CHROME_MAX_SCALE}
                       >
                         {theme}
                       </Text>
@@ -323,7 +326,7 @@ export default function SettingsScreen() {
                           { backgroundColor: themeColors?.primary || colors.accent.primary },
                         ]}
                       >
-                        <Text style={styles.checkmark}>✓</Text>
+                        <Text style={styles.checkmark} maxFontSizeMultiplier={CHROME_MAX_SCALE}>✓</Text>
                       </View>
                     )}
                   </View>
@@ -334,6 +337,7 @@ export default function SettingsScreen() {
                       styles.themeDescription,
                       isSelected && { color: colors.text.primary },
                     ]}
+                    maxFontSizeMultiplier={CHROME_MAX_SCALE}
                   >
                     {description}
                   </Text>
@@ -344,8 +348,8 @@ export default function SettingsScreen() {
 
           {!currentTheme && (
             <View style={styles.hintContainer}>
-              <Text style={styles.hintIcon}>💡</Text>
-              <Text style={styles.hint}>
+              <Text style={styles.hintIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>💡</Text>
+              <Text style={styles.hint} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 Select a theme to begin your journey. You can change it anytime during the year.
               </Text>
             </View>
@@ -353,7 +357,7 @@ export default function SettingsScreen() {
 
           {currentTheme && (
             <View style={styles.infoContainer}>
-              <Text style={styles.infoText}>
+              <Text style={styles.infoText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 Your theme influences which applications appear when reading chapters and helps
                 track your growth throughout the year.
               </Text>
@@ -363,8 +367,8 @@ export default function SettingsScreen() {
 
         {/* Reading Translation Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Reading Translation</Text>
-          <Text style={styles.sectionDescription}>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Translation</Text>
+          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             The translation used when you read and study Scripture.
           </Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
@@ -384,7 +388,7 @@ export default function SettingsScreen() {
                     backgroundColor: selected ? colors.accent.primary : colors.background.tertiary,
                   }}
                 >
-                  <Text style={{ fontWeight: '700', color: selected ? '#fff' : colors.text.primary }}>{t}</Text>
+                  <Text style={{ fontWeight: '700', color: selected ? '#fff' : colors.text.primary }} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{t}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -393,8 +397,8 @@ export default function SettingsScreen() {
 
         {/* Reading Cycle Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Reading Cycle</Text>
-          <Text style={styles.sectionDescription}>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Cycle</Text>
+          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {cycle > 1
               ? `You're on reading cycle ${cycle}. Start a new cycle to read through again with a clean slate.`
               : 'Finished reading through? Start a new cycle to read again with a clean slate.'}
@@ -404,29 +408,29 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
             style={styles.cycleButton}
           >
-            <Text style={styles.cycleButtonText}>Start reading cycle {cycle + 1}</Text>
+            <Text style={styles.cycleButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Start reading cycle {cycle + 1}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Account Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Account</Text>
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Email</Text>
-            <Text style={styles.settingValue}>{userId ? 'Signed in' : 'Not signed in'}</Text>
+            <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Email</Text>
+            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{userId ? 'Signed in' : 'Not signed in'}</Text>
           </View>
         </View>
 
         {/* App Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>About</Text>
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Version</Text>
-            <Text style={styles.settingValue}>2.0.0</Text>
+            <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Version</Text>
+            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>2.0.0</Text>
           </View>
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Theme System</Text>
-            <Text style={styles.settingValue}>Active</Text>
+            <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Theme System</Text>
+            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Active</Text>
           </View>
         </View>
       </ScrollView>
@@ -435,7 +439,7 @@ export default function SettingsScreen() {
       {isSaving && (
         <View style={styles.savingOverlay}>
           <ActivityIndicator color={colors.accent.primary} size="large" />
-          <Text style={styles.savingText}>Saving theme...</Text>
+          <Text style={styles.savingText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Saving theme...</Text>
         </View>
       )}
     </SafeAreaView>

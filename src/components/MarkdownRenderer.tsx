@@ -2,6 +2,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, Linking, Platform } from 'react-native'
 import { colors } from '../theme/colors'
+import { CHROME_MAX_SCALE } from '../lib/textScaling'
 
 type Props = {
   /** Preferred prop */
@@ -58,7 +59,7 @@ export default function MarkdownRenderer({ content, markdown, selectable, paragr
       const t = item.replace(/^\s*([-*+]|\d+\.)\s+/, '')
       return (
         <View key={`li-${idx++}-${i}`} style={styles.listItem}>
-          <Text style={styles.bullet}>{listType === 'ul' ? '•' : `${i + 1}.`}</Text>
+          <Text style={styles.bullet} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{listType === 'ul' ? '•' : `${i + 1}.`}</Text>
           <Text selectable={selectable} style={styles.listText}>{renderInline(t)}</Text>
         </View>
       )
@@ -99,27 +100,27 @@ export default function MarkdownRenderer({ content, markdown, selectable, paragr
     // Headings
     if (/^#####\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h5-${idx++}`} selectable={selectable} style={styles.h5}>{renderInline(line.replace(/^#####\s+/, ''))}</Text>)
+      elements.push(<Text key={`h5-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h5}>{renderInline(line.replace(/^#####\s+/, ''))}</Text>)
       continue
     }
     if (/^####\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h4-${idx++}`} selectable={selectable} style={styles.h4}>{renderInline(line.replace(/^####\s+/, ''))}</Text>)
+      elements.push(<Text key={`h4-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h4}>{renderInline(line.replace(/^####\s+/, ''))}</Text>)
       continue
     }
     if (/^###\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h3-${idx++}`} selectable={selectable} style={styles.h3}>{renderInline(line.replace(/^###\s+/, ''))}</Text>)
+      elements.push(<Text key={`h3-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h3}>{renderInline(line.replace(/^###\s+/, ''))}</Text>)
       continue
     }
     if (/^##\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h2-${idx++}`} selectable={selectable} style={styles.h2}>{renderInline(line.replace(/^##\s+/, ''))}</Text>)
+      elements.push(<Text key={`h2-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h2}>{renderInline(line.replace(/^##\s+/, ''))}</Text>)
       continue
     }
     if (/^#\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h1-${idx++}`} selectable={selectable} style={styles.h1}>{renderInline(line.replace(/^#\s+/, ''))}</Text>)
+      elements.push(<Text key={`h1-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h1}>{renderInline(line.replace(/^#\s+/, ''))}</Text>)
       continue
     }
 

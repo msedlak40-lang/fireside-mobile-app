@@ -27,6 +27,7 @@ import EditArsenalModal from '../components/EditArsenalModal';
 import ViewArsenalModal from '../components/ViewArsenalModal';
 import ShareToFireModal from '../components/ShareToFireModal';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 export default function ArsenalScreen({ navigation }: any) {
   const [savedApps, setSavedApps] = useState<SavedApplication[]>([]);
@@ -212,7 +213,7 @@ export default function ArsenalScreen({ navigation }: any) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.accent.primary} />
-        <Text style={styles.loadingText}>Loading your Arsenal...</Text>
+        <Text style={styles.loadingText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Loading your Arsenal...</Text>
       </View>
     );
   }
@@ -221,8 +222,8 @@ export default function ArsenalScreen({ navigation }: any) {
   if (!isLoading && stats && stats.totalSaved === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.emptyIcon}>🗡️</Text>
-        <Text style={styles.emptyTitle}>Your Arsenal is Empty</Text>
+        <Text style={styles.emptyIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>🗡️</Text>
+        <Text style={styles.emptyTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Your Arsenal is Empty</Text>
         <Text style={styles.emptyDescription}>
           Save theme applications from the "My Theme" tab when reading chapters to build your
           personal library of insights.
@@ -231,7 +232,7 @@ export default function ArsenalScreen({ navigation }: any) {
           style={styles.emptyButton}
           onPress={() => navigation.navigate('BibleTab')}
         >
-          <Text style={styles.emptyButtonText}>Start Reading</Text>
+          <Text style={styles.emptyButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Start Reading</Text>
         </TouchableOpacity>
       </View>
     );
@@ -245,16 +246,16 @@ export default function ArsenalScreen({ navigation }: any) {
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{stats.totalSaved}</Text>
-              <Text style={styles.statLabel}>Saved</Text>
+              <Text style={styles.statNumber} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{stats.totalSaved}</Text>
+              <Text style={styles.statLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Saved</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{stats.favoriteCount}</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
+              <Text style={styles.statNumber} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{stats.favoriteCount}</Text>
+              <Text style={styles.statLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Favorites</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{stats.themeBreakdown.length}</Text>
-              <Text style={styles.statLabel}>Themes</Text>
+              <Text style={styles.statNumber} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{stats.themeBreakdown.length}</Text>
+              <Text style={styles.statLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Themes</Text>
             </View>
           </View>
         </View>
@@ -267,7 +268,7 @@ export default function ArsenalScreen({ navigation }: any) {
             style={[styles.filterChip, !selectedTheme && styles.filterChipActive]}
             onPress={() => setSelectedTheme(null)}
           >
-            <Text style={[styles.filterChipText, !selectedTheme && styles.filterChipTextActive]}>
+            <Text style={[styles.filterChipText, !selectedTheme && styles.filterChipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               All
             </Text>
           </TouchableOpacity>
@@ -283,7 +284,7 @@ export default function ArsenalScreen({ navigation }: any) {
                 ]}
                 onPress={() => setSelectedTheme(prev => prev === theme ? null : theme)}
               >
-                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {theme}
                 </Text>
               </TouchableOpacity>
@@ -298,7 +299,7 @@ export default function ArsenalScreen({ navigation }: any) {
               style={[styles.filterChip, !selectedSubTheme && styles.filterChipActive]}
               onPress={() => setSelectedSubTheme(null)}
             >
-              <Text style={[styles.filterChipText, !selectedSubTheme && styles.filterChipTextActive]}>
+              <Text style={[styles.filterChipText, !selectedSubTheme && styles.filterChipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 All {selectedTheme}
               </Text>
             </TouchableOpacity>
@@ -311,7 +312,7 @@ export default function ArsenalScreen({ navigation }: any) {
                 <Text style={[
                   styles.filterChipText,
                   selectedSubTheme === subTheme && styles.filterChipTextActive,
-                ]}>
+                ]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {subTheme}
                 </Text>
               </TouchableOpacity>
@@ -326,7 +327,7 @@ export default function ArsenalScreen({ navigation }: any) {
               style={[styles.filterChip, !selectedCharacter && styles.filterChipActive]}
               onPress={() => setSelectedCharacter(null)}
             >
-              <Text style={[styles.filterChipText, !selectedCharacter && styles.filterChipTextActive]}>
+              <Text style={[styles.filterChipText, !selectedCharacter && styles.filterChipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 All Characters
               </Text>
             </TouchableOpacity>
@@ -339,7 +340,7 @@ export default function ArsenalScreen({ navigation }: any) {
                 <Text style={[
                   styles.filterChipText,
                   selectedCharacter === character && styles.filterChipTextActive,
-                ]}>
+                ]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {character}
                 </Text>
               </TouchableOpacity>
@@ -356,14 +357,14 @@ export default function ArsenalScreen({ navigation }: any) {
             <Text style={[
               styles.favoritesToggleText,
               showFavoritesOnly && styles.favoritesToggleTextActive,
-            ]}>
+            ]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               {showFavoritesOnly ? '⭐ Favorites' : '☆ Favorites'}
             </Text>
           </TouchableOpacity>
 
           {hasActiveFilters && (
             <TouchableOpacity onPress={clearFilters} style={styles.clearFiltersButton}>
-              <Text style={styles.clearFiltersText}>Clear</Text>
+              <Text style={styles.clearFiltersText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Clear</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -380,13 +381,13 @@ export default function ArsenalScreen({ navigation }: any) {
       >
         {renderFiltersAndStats()}
         <View style={styles.centerContainerInline}>
-          <Text style={styles.emptyIcon}>🔍</Text>
-          <Text style={styles.emptyTitle}>No Results</Text>
+          <Text style={styles.emptyIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>🔍</Text>
+          <Text style={styles.emptyTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>No Results</Text>
           <Text style={styles.emptyDescription}>
             No saved applications match your filters.
           </Text>
           <TouchableOpacity onPress={clearFilters} style={styles.emptyButton}>
-            <Text style={styles.emptyButtonText}>Clear Filters</Text>
+            <Text style={styles.emptyButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Clear Filters</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -403,7 +404,7 @@ export default function ArsenalScreen({ navigation }: any) {
       {renderFiltersAndStats()}
 
       {/* Results Count */}
-      <Text style={styles.resultsCount}>
+      <Text style={styles.resultsCount} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
         {savedApps.length} {savedApps.length === 1 ? 'insight' : 'insights'}
       </Text>
 
@@ -417,23 +418,23 @@ export default function ArsenalScreen({ navigation }: any) {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTags}>
                   <View style={[styles.themeTag, { backgroundColor: accent }]}>
-                    <Text style={styles.themeTagText}>{app.theme_tag.toUpperCase()}</Text>
+                    <Text style={styles.themeTagText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{app.theme_tag.toUpperCase()}</Text>
                   </View>
                   {app.sub_theme_tag && (
                     <View style={[styles.subThemeTag, { borderColor: accent }]}>
-                      <Text style={[styles.subThemeTagText, { color: accent }]}>
+                      <Text style={[styles.subThemeTagText, { color: accent }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                         {app.sub_theme_tag}
                       </Text>
                     </View>
                   )}
                 </View>
                 <TouchableOpacity onPress={() => handleToggleFavorite(app)}>
-                  <Text style={styles.favoriteIcon}>{app.is_favorite ? '⭐' : '☆'}</Text>
+                  <Text style={styles.favoriteIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{app.is_favorite ? '⭐' : '☆'}</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Reference */}
-              <Text style={styles.cardReference}>
+              <Text style={styles.cardReference} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 {app.book} {app.chapter}
                 {app.character_tag ? ` • ${app.character_tag}` : ''}
               </Text>
@@ -453,13 +454,13 @@ export default function ArsenalScreen({ navigation }: any) {
               {/* User note */}
               {app.user_note && (
                 <View style={styles.userNoteContainer}>
-                  <Text style={styles.userNoteLabel}>My note:</Text>
+                  <Text style={styles.userNoteLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>My note:</Text>
                   <Text style={styles.userNoteText}>{app.user_note}</Text>
                 </View>
               )}
 
               {/* Saved date */}
-              <Text style={styles.cardDate}>
+              <Text style={styles.cardDate} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 Saved {new Date(app.saved_at).toLocaleDateString()}
               </Text>
 
@@ -469,25 +470,25 @@ export default function ArsenalScreen({ navigation }: any) {
                   style={[styles.actionButton, { backgroundColor: accent }]}
                   onPress={() => handleView(app)}
                 >
-                  <Text style={styles.actionButtonText}>View</Text>
+                  <Text style={styles.actionButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>View</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.shareActionButton}
                   onPress={() => handleShare(app)}
                 >
-                  <Text style={styles.shareActionButtonText}>Share</Text>
+                  <Text style={styles.shareActionButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Share</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.editButton}
                   onPress={() => handleEdit(app)}
                 >
-                  <Text style={styles.editButtonText}>Edit</Text>
+                  <Text style={styles.editButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => handleDelete(app)}
                 >
-                  <Text style={styles.deleteButtonText}>Remove</Text>
+                  <Text style={styles.deleteButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Remove</Text>
                 </TouchableOpacity>
               </View>
             </View>

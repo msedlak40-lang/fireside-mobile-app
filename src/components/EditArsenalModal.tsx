@@ -17,6 +17,7 @@ import {
   type SavedApplication,
 } from '../services/arsenal';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 interface EditArsenalModalProps {
   visible: boolean;
@@ -101,8 +102,8 @@ export default function EditArsenalModal({
             <View style={styles.modalContent}>
               {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>Edit Arsenal Entry</Text>
-                <Text style={styles.headerSubtitle}>
+                <Text style={styles.headerTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Edit Arsenal Entry</Text>
+                <Text style={styles.headerSubtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {savedApplication.book} {savedApplication.chapter}
                 </Text>
               </View>
@@ -110,7 +111,7 @@ export default function EditArsenalModal({
               <ScrollView style={styles.scrollContent}>
                 {/* User Note */}
                 <View style={styles.section}>
-                  <Text style={styles.label}>Personal Note</Text>
+                  <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Personal Note</Text>
                   <TextInput
                     style={styles.noteInput}
                     value={userNote}
@@ -125,7 +126,7 @@ export default function EditArsenalModal({
 
                 {/* Sub-Theme */}
                 <View style={styles.section}>
-                  <Text style={styles.label}>
+                  <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     Sub-Theme{savedApplication.sub_theme_tag ? ` (current: ${savedApplication.sub_theme_tag})` : ''}
                   </Text>
                   <ScrollView
@@ -137,7 +138,7 @@ export default function EditArsenalModal({
                       style={[styles.chip, !subThemeTag && styles.chipActive]}
                       onPress={() => setSubThemeTag('')}
                     >
-                      <Text style={[styles.chipText, !subThemeTag && styles.chipTextActive]}>
+                      <Text style={[styles.chipText, !subThemeTag && styles.chipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                         None
                       </Text>
                     </TouchableOpacity>
@@ -147,7 +148,7 @@ export default function EditArsenalModal({
                         style={[styles.chip, subThemeTag === theme && styles.chipActive]}
                         onPress={() => setSubThemeTag(theme)}
                       >
-                        <Text style={[styles.chipText, subThemeTag === theme && styles.chipTextActive]}>
+                        <Text style={[styles.chipText, subThemeTag === theme && styles.chipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                           {theme}
                         </Text>
                       </TouchableOpacity>
@@ -157,7 +158,7 @@ export default function EditArsenalModal({
 
                 {/* Character */}
                 <View style={styles.section}>
-                  <Text style={styles.label}>
+                  <Text style={styles.label} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     Biblical Character{savedApplication.character_tag ? ` (current: ${savedApplication.character_tag})` : ''}
                   </Text>
                   <TextInput
@@ -167,7 +168,7 @@ export default function EditArsenalModal({
                     placeholder="Type character name..."
                     placeholderTextColor={colors.text.muted}
                   />
-                  <Text style={styles.hint}>Or select from common characters:</Text>
+                  <Text style={styles.hint} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Or select from common characters:</Text>
                   <View style={styles.characterGrid}>
                     {COMMON_CHARACTERS.map(char => (
                       <TouchableOpacity
@@ -175,7 +176,7 @@ export default function EditArsenalModal({
                         style={[styles.characterChip, characterTag === char && styles.characterChipActive]}
                         onPress={() => setCharacterTag(prev => prev === char ? '' : char)}
                       >
-                        <Text style={[styles.characterChipText, characterTag === char && styles.characterChipTextActive]}>
+                        <Text style={[styles.characterChipText, characterTag === char && styles.characterChipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                           {char}
                         </Text>
                       </TouchableOpacity>
@@ -190,14 +191,14 @@ export default function EditArsenalModal({
                   style={[styles.button, styles.cancelButton]}
                   onPress={onClose}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.saveButton]}
                   onPress={handleSave}
                   disabled={isSaving}
                 >
-                  <Text style={styles.saveButtonText}>
+                  <Text style={styles.saveButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     {isSaving ? 'Saving...' : 'Save Changes'}
                   </Text>
                 </TouchableOpacity>

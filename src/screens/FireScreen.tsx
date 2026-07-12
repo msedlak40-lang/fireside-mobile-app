@@ -19,6 +19,7 @@ import {
   type Fire,
 } from '../services/fire';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 export default function FireScreen({ navigation }: any) {
   const [fires, setFires] = useState<Fire[]>([]);
@@ -131,7 +132,7 @@ export default function FireScreen({ navigation }: any) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.accent.primary} />
-        <Text style={styles.loadingText}>Loading your Fires...</Text>
+        <Text style={styles.loadingText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Loading your Fires...</Text>
       </View>
     );
   }
@@ -140,8 +141,8 @@ export default function FireScreen({ navigation }: any) {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Fire</Text>
-        <Text style={styles.headerSubtitle}>
+        <Text style={styles.headerTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Fire</Text>
+        <Text style={styles.headerSubtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
           Small groups for accountability & growth
         </Text>
       </View>
@@ -155,7 +156,7 @@ export default function FireScreen({ navigation }: any) {
             if (!showCreateForm) setShowJoinForm(false);
           }}
         >
-          <Text style={styles.actionButtonText}>
+          <Text style={styles.actionButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {showCreateForm ? 'Cancel' : '+ Create Fire'}
           </Text>
         </TouchableOpacity>
@@ -167,7 +168,7 @@ export default function FireScreen({ navigation }: any) {
             if (!showJoinForm) setShowCreateForm(false);
           }}
         >
-          <Text style={styles.actionButtonTextSecondary}>
+          <Text style={styles.actionButtonTextSecondary} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {showJoinForm ? 'Cancel' : 'Join Fire'}
           </Text>
         </TouchableOpacity>
@@ -176,7 +177,7 @@ export default function FireScreen({ navigation }: any) {
       {/* Create Form */}
       {showCreateForm && (
         <View style={styles.form}>
-          <Text style={styles.formTitle}>Create a New Fire</Text>
+          <Text style={styles.formTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Create a New Fire</Text>
 
           <TextInput
             style={styles.input}
@@ -203,7 +204,7 @@ export default function FireScreen({ navigation }: any) {
             onPress={handleCreateFire}
             disabled={isCreating}
           >
-            <Text style={styles.submitButtonText}>
+            <Text style={styles.submitButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               {isCreating ? 'Creating...' : 'Create Fire'}
             </Text>
           </TouchableOpacity>
@@ -213,7 +214,7 @@ export default function FireScreen({ navigation }: any) {
       {/* Join Form */}
       {showJoinForm && (
         <View style={styles.form}>
-          <Text style={styles.formTitle}>Join a Fire</Text>
+          <Text style={styles.formTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Join a Fire</Text>
 
           <TextInput
             style={styles.input}
@@ -230,7 +231,7 @@ export default function FireScreen({ navigation }: any) {
             onPress={handleJoinFire}
             disabled={isJoining}
           >
-            <Text style={styles.submitButtonText}>
+            <Text style={styles.submitButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               {isJoining ? 'Joining...' : 'Join Fire'}
             </Text>
           </TouchableOpacity>
@@ -239,12 +240,12 @@ export default function FireScreen({ navigation }: any) {
 
       {/* User's Fires */}
       <View style={styles.firesContainer}>
-        <Text style={styles.sectionTitle}>Your Fires ({fires.length})</Text>
+        <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Your Fires ({fires.length})</Text>
 
         {fires.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No Fires Yet</Text>
-            <Text style={styles.emptyDescription}>
+            <Text style={styles.emptyTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>No Fires Yet</Text>
+            <Text style={styles.emptyDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               Create a Fire to start an accountability group, or join one using an invite code.
             </Text>
           </View>
@@ -252,10 +253,10 @@ export default function FireScreen({ navigation }: any) {
           fires.map(fire => (
             <View key={fire.id} style={styles.fireCard}>
               <View style={styles.fireHeader}>
-                <Text style={styles.fireName}>{fire.name}</Text>
+                <Text style={styles.fireName} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{fire.name}</Text>
                 {fire.is_creator && (
                   <View style={styles.creatorBadge}>
-                    <Text style={styles.creatorBadgeText}>Creator</Text>
+                    <Text style={styles.creatorBadgeText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Creator</Text>
                   </View>
                 )}
               </View>
@@ -265,7 +266,7 @@ export default function FireScreen({ navigation }: any) {
               )}
 
               <View style={styles.fireStats}>
-                <Text style={styles.fireStat}>
+                <Text style={styles.fireStat} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {fire.member_count} {fire.member_count === 1 ? 'member' : 'members'}
                 </Text>
                 <TouchableOpacity
@@ -275,7 +276,7 @@ export default function FireScreen({ navigation }: any) {
                     });
                   }}
                 >
-                  <Text style={styles.fireStatCode}>
+                  <Text style={styles.fireStatCode} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     Code: {fire.invite_code} (tap to share)
                   </Text>
                 </TouchableOpacity>
@@ -286,14 +287,14 @@ export default function FireScreen({ navigation }: any) {
                   style={styles.fireActionButton}
                   onPress={() => navigation.navigate('FireDetails', { fireId: fire.id })}
                 >
-                  <Text style={styles.fireActionButtonText}>View Fire</Text>
+                  <Text style={styles.fireActionButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>View Fire</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.fireActionButton, styles.fireActionButtonDanger]}
                   onPress={() => handleLeaveFire(fire)}
                 >
-                  <Text style={[styles.fireActionButtonText, styles.fireActionButtonTextDanger]}>
+                  <Text style={[styles.fireActionButtonText, styles.fireActionButtonTextDanger]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     Leave
                   </Text>
                 </TouchableOpacity>

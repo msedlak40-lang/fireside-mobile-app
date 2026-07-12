@@ -8,6 +8,7 @@ import {
 import { colors } from '../theme/colors'
 import { supabase } from '../lib/supabaseClient'
 import { saveBattleVerse } from '../services/battleVerses'
+import { CHROME_MAX_SCALE } from '../lib/textScaling'
 import type { VerseLifeApplication } from '../services/scripture'
 
 export type HighlightColor = 'yellow' | 'green' | 'pink' | 'blue'
@@ -134,9 +135,9 @@ export default function VerseSummaryCard(props: Props) {
             <>
               <View style={styles.detailHeader}>
                 <TouchableOpacity onPress={() => setCrossRefDetail(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.backText}>{'‹'} Back</Text>
+                  <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.backText}>{'‹'} Back</Text>
                 </TouchableOpacity>
-                <Text style={styles.detailTitle}>{crossRefDetail.label}</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.detailTitle}>{crossRefDetail.label}</Text>
                 <View style={{ width: 50 }} />
               </View>
 
@@ -149,16 +150,16 @@ export default function VerseSummaryCard(props: Props) {
               </ScrollView>
 
               <TouchableOpacity style={styles.deeperBtn} onPress={addCrossRefToBattle}>
-                <Text style={styles.deeperText}>Add to Battle Verses</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.deeperText}>Add to Battle Verses</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={viewCrossRefChapter}>
-                <Text style={styles.secondaryText}>View Full Chapter</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.secondaryText}>View Full Chapter</Text>
               </TouchableOpacity>
             </>
           ) : (
             /* ===== Summary ===== */
             <>
-              <Text style={styles.title}>{reference}</Text>
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.title}>{reference}</Text>
 
               <ScrollView style={styles.scroll}>
                 {loading ? (
@@ -169,7 +170,7 @@ export default function VerseSummaryCard(props: Props) {
                     {!!content.deeper_layer && <Text style={styles.body}>{content.deeper_layer}</Text>}
                     {!!content.reflection_question && (
                       <View style={styles.reflectBox}>
-                        <Text style={styles.reflectLabel}>REFLECT</Text>
+                        <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.reflectLabel}>REFLECT</Text>
                         <Text style={styles.reflectText}>{content.reflection_question}</Text>
                       </View>
                     )}
@@ -180,10 +181,10 @@ export default function VerseSummaryCard(props: Props) {
 
                 {crossRefs && crossRefs.length > 0 && (
                   <View style={styles.crossRefsSection}>
-                    <Text style={styles.crossRefsLabel}>CROSS-REFERENCES</Text>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.crossRefsLabel}>CROSS-REFERENCES</Text>
                     {crossRefs.map((cr) => (
                       <TouchableOpacity key={cr.id} style={styles.crossRefRow} onPress={() => openCrossRef(cr)}>
-                        <Text style={styles.crossRefRowText}>{cr.label}</Text>
+                        <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.crossRefRowText}>{cr.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -192,7 +193,7 @@ export default function VerseSummaryCard(props: Props) {
 
               {/* Deeper affordance */}
               <TouchableOpacity style={styles.deeperBtn} onPress={onDeeper}>
-                <Text style={styles.deeperText}>Study the Words {'→'}</Text>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.deeperText}>Study the Words {'→'}</Text>
               </TouchableOpacity>
 
               {/* Deliberate primary-region Battle Verse save — controlled by the host (shared with the corner control) */}
@@ -202,7 +203,7 @@ export default function VerseSummaryCard(props: Props) {
                   onPress={onSaveBattleVerse}
                   disabled={battleState !== 'idle'}
                 >
-                  <Text style={battleState !== 'idle' ? styles.savedText : styles.secondaryText}>
+                  <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={battleState !== 'idle' ? styles.savedText : styles.secondaryText}>
                     {battleState === 'saving' ? 'Saving…'
                       : battleState === 'saved' ? '✓ Saved to Battle Verses'
                       : '⚔️ Save to Battle Verses'}
@@ -214,7 +215,7 @@ export default function VerseSummaryCard(props: Props) {
               {hasActions && (
                 <>
                   <TouchableOpacity style={styles.actionsToggle} onPress={() => setActionsOpen(o => !o)}>
-                    <Text style={styles.actionsToggleText}>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionsToggleText}>
                       {actionsOpen ? 'Hide actions' : 'More actions'} {actionsOpen ? '▴' : '▾'}
                     </Text>
                   </TouchableOpacity>
@@ -223,31 +224,31 @@ export default function VerseSummaryCard(props: Props) {
                     <View style={styles.actionsDrawer}>
                       {onNote && (
                         <TouchableOpacity style={styles.actionItem} onPress={onNote}>
-                          <Text style={styles.actionIcon}>{'📝'}</Text>
-                          <Text style={styles.actionText}>Add Note</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionIcon}>{'📝'}</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionText}>Add Note</Text>
                         </TouchableOpacity>
                       )}
                       {onBattleVerse && (
                         <TouchableOpacity style={styles.actionItem} onPress={onBattleVerse}>
-                          <Text style={styles.actionIcon}>{'⚔️'}</Text>
-                          <Text style={styles.actionText}>Battle Verse</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionIcon}>{'⚔️'}</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionText}>Battle Verse</Text>
                         </TouchableOpacity>
                       )}
                       {onShareToFire && (
                         <TouchableOpacity style={styles.actionItem} onPress={onShareToFire}>
-                          <Text style={styles.actionIcon}>{'🔥'}</Text>
-                          <Text style={styles.actionText}>Share to Fire</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionIcon}>{'🔥'}</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionText}>Share to Fire</Text>
                         </TouchableOpacity>
                       )}
                       {(extraActions ?? []).map((a) => (
                         <TouchableOpacity key={a.label} style={styles.actionItem} onPress={a.onPress}>
-                          <Text style={styles.actionIcon}>{a.icon ?? '•'}</Text>
-                          <Text style={styles.actionText}>{a.label}</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionIcon}>{a.icon ?? '•'}</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.actionText}>{a.label}</Text>
                         </TouchableOpacity>
                       ))}
                       {onHighlight && (
                         <View style={styles.highlightRow}>
-                          <Text style={styles.highlightLabel}>Highlight:</Text>
+                          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.highlightLabel}>Highlight:</Text>
                           {(['yellow', 'green', 'pink', 'blue'] as const).map((c) => (
                             <TouchableOpacity
                               key={c}
@@ -257,7 +258,7 @@ export default function VerseSummaryCard(props: Props) {
                           ))}
                           {isHighlighted && (
                             <TouchableOpacity style={styles.removeBtn} onPress={onRemoveHighlight}>
-                              <Text style={styles.removeText}>Remove</Text>
+                              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.removeText}>Remove</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -270,7 +271,7 @@ export default function VerseSummaryCard(props: Props) {
           )}
 
           <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
-            <Text style={styles.closeText}>Close</Text>
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.closeText}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -313,12 +314,12 @@ const styles = StyleSheet.create({
   muted: { color: colors.text.muted, textAlign: 'center', marginVertical: 24 },
 
   deeperBtn: {
-    height: 46, borderRadius: 10, backgroundColor: colors.accent.primary,
+    minHeight: 46, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.accent.primary,
     alignItems: 'center', justifyContent: 'center', marginTop: 8,
   },
   deeperText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   secondaryBtn: {
-    height: 46, borderRadius: 10, borderWidth: 1, borderColor: colors.accent.primary,
+    minHeight: 46, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.accent.primary,
     alignItems: 'center', justifyContent: 'center', marginTop: 8,
   },
   secondaryText: { color: colors.accent.primary, fontWeight: '700', fontSize: 15 },
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   removeText: { color: colors.error, fontWeight: '600', fontSize: 13 },
 
   closeBtn: {
-    height: 44, borderRadius: 10, backgroundColor: colors.background.secondary,
+    minHeight: 44, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.background.secondary,
     alignItems: 'center', justifyContent: 'center', marginTop: 12,
   },
   closeText: { color: colors.text.secondary, fontWeight: '700' },

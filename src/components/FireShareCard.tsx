@@ -19,6 +19,7 @@ import {
 } from '../services/fire';
 import ViewArsenalModal from './ViewArsenalModal';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
 interface FireShareCardProps {
   share: FireShare;
@@ -124,10 +125,10 @@ export default function FireShareCard({
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.user}>
+        <Text style={styles.user} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
           {isOwnShare ? 'You' : (share.user_name || 'Brother')}
         </Text>
-        <Text style={styles.date}>
+        <Text style={styles.date} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
           {new Date(share.created_at).toLocaleDateString()}
         </Text>
       </View>
@@ -142,7 +143,7 @@ export default function FireShareCard({
       {/* Shared Verse (verse-type posts carry their own text; no saved_application) */}
       {share.verse_reference && (
         <View style={styles.verseBlock}>
-          <Text style={styles.verseRef}>{share.verse_reference}</Text>
+          <Text style={styles.verseRef} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{share.verse_reference}</Text>
           <Text style={styles.verseQuote}>"{share.verse_text}"</Text>
         </View>
       )}
@@ -154,10 +155,10 @@ export default function FireShareCard({
           onPress={() => setViewOpen(true)}
           activeOpacity={0.7}
         >
-          <Text style={styles.appReference}>
+          <Text style={styles.appReference} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {share.saved_application.book} {share.saved_application.chapter}
           </Text>
-          <Text style={styles.appTheme}>
+          <Text style={styles.appTheme} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {share.saved_application.theme_tag} {share.saved_application.sub_theme_tag ? `• ${share.saved_application.sub_theme_tag}` : ''}
           </Text>
           {share.saved_application.key_insight && (
@@ -170,7 +171,7 @@ export default function FireShareCard({
               {share.saved_application.action_step}
             </Text>
           )}
-          <Text style={styles.appReadCue}>Tap to read →</Text>
+          <Text style={styles.appReadCue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Tap to read →</Text>
         </TouchableOpacity>
       )}
 
@@ -186,9 +187,9 @@ export default function FireShareCard({
               style={[styles.reactionButton, isActive && styles.reactionButtonActive]}
               onPress={() => handleReaction(type)}
             >
-              <Text style={styles.reactionEmoji}>{emoji}</Text>
+              <Text style={styles.reactionEmoji} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{emoji}</Text>
               {count > 0 && (
-                <Text style={[styles.reactionCount, isActive && styles.reactionCountActive]}>
+                <Text style={[styles.reactionCount, isActive && styles.reactionCountActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {count}
                 </Text>
               )}
@@ -203,7 +204,7 @@ export default function FireShareCard({
           style={styles.commentsToggle}
           onPress={() => setShowComments(!showComments)}
         >
-          <Text style={styles.commentsToggleText}>
+          <Text style={styles.commentsToggleText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
             {showComments ? ' ▼' : ' ▶'}
           </Text>
@@ -215,10 +216,10 @@ export default function FireShareCard({
             {comments.map(comment => (
               <View key={comment.id} style={styles.comment}>
                 <View style={styles.commentHeader}>
-                  <Text style={styles.commentUser}>
+                  <Text style={styles.commentUser} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     {comment.user_id === currentUserId ? 'You' : (comment.user_name || 'Brother')}
                   </Text>
-                  <Text style={styles.commentDate}>
+                  <Text style={styles.commentDate} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     {new Date(comment.created_at).toLocaleDateString()}
                   </Text>
                 </View>
@@ -228,7 +229,7 @@ export default function FireShareCard({
                     onPress={() => handleDeleteComment(comment)}
                     style={styles.deleteCommentButton}
                   >
-                    <Text style={styles.deleteCommentText}>Delete</Text>
+                    <Text style={styles.deleteCommentText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Delete</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -253,7 +254,7 @@ export default function FireShareCard({
                 onPress={handleAddComment}
                 disabled={!newComment.trim() || isAddingComment}
               >
-                <Text style={styles.addCommentButtonText}>
+                <Text style={styles.addCommentButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {isAddingComment ? '...' : 'Post'}
                 </Text>
               </TouchableOpacity>
@@ -265,7 +266,7 @@ export default function FireShareCard({
       {/* Delete Share (Own Only) */}
       {isOwnShare && onDelete && (
         <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-          <Text style={styles.deleteButtonText}>Delete Share</Text>
+          <Text style={styles.deleteButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Delete Share</Text>
         </TouchableOpacity>
       )}
 

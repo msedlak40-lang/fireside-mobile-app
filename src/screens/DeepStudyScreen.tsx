@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 import {
   getVerseStudyData,
   getStrongsEntries,
@@ -70,15 +71,15 @@ export default function DeepStudyScreen() {
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
           >
-            <Text style={styles.backArrow}>{'\u2039'}</Text>
-            <Text style={styles.backLabel}>Back</Text>
+            <Text style={styles.backArrow} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{'\u2039'}</Text>
+            <Text style={styles.backLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.headerBarTitle} numberOfLines={1}>{verseReference}</Text>
+          <Text style={styles.headerBarTitle} numberOfLines={2} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{verseReference}</Text>
           <View style={{ width: 80 }} />
         </View>
         <View style={styles.center}>
           <ActivityIndicator color={colors.accent.primary} size="large" />
-          <Text style={{ color: colors.text.secondary, marginTop: 12 }}>Loading study data...</Text>
+          <Text style={{ color: colors.text.secondary, marginTop: 12 }} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Loading study data...</Text>
         </View>
       </View>
     );
@@ -96,24 +97,24 @@ export default function DeepStudyScreen() {
         onPress={() => navigation.goBack()}
         style={styles.backBtn}
       >
-        <Text style={styles.backArrow}>{'\u2039'}</Text>
-        <Text style={styles.backLabel}>Back</Text>
+        <Text style={styles.backArrow} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{'\u2039'}</Text>
+        <Text style={styles.backLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Back</Text>
       </TouchableOpacity>
-      <Text style={styles.headerBarTitle} numberOfLines={1}>{verseReference}</Text>
+      <Text style={styles.headerBarTitle} numberOfLines={2} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{verseReference}</Text>
       <View style={{ width: 80 }} />
     </View>
 
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* Verse Header */}
       <View style={styles.verseHeader}>
-        <Text style={styles.verseReference}>{verseReference}</Text>
+        <Text style={styles.verseReference} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{verseReference}</Text>
         <Text style={styles.verseTextDisplay}>"{verseText}"</Text>
-        <Text style={styles.translationLabel}>KJV</Text>
+        <Text style={styles.translationLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>KJV</Text>
       </View>
 
       {/* Strong's Concordance Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Strong's Concordance</Text>
+        <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Strong's Concordance</Text>
         {words.length > 0 ? (
           <View style={styles.wordsGrid}>
             {words.map((word) => {
@@ -125,9 +126,9 @@ export default function DeepStudyScreen() {
                   onPress={() => setSelectedWord(word)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.wordEnglish}>{word.english_word}</Text>
+                  <Text style={styles.wordEnglish} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{word.english_word}</Text>
                   <Text style={styles.wordOriginal}>{word.original_word}</Text>
-                  <Text style={styles.wordStrongs}>{word.strongs_number}</Text>
+                  <Text style={styles.wordStrongs} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{word.strongs_number}</Text>
                   {entry && (
                     <Text style={styles.wordDef} numberOfLines={2}>
                       {entry.short_definition}
@@ -139,7 +140,7 @@ export default function DeepStudyScreen() {
           </View>
         ) : (
           <View style={styles.emptySection}>
-            <Text style={styles.emptySectionText}>
+            <Text style={styles.emptySectionText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               Strong's data not yet available for this verse.
             </Text>
           </View>
@@ -161,12 +162,12 @@ export default function DeepStudyScreen() {
                 const translit = selectedWord.transliteration || entry?.transliteration || '';
                 return (
                   <>
-                    <Text style={styles.modalTitle}>
+                    <Text style={styles.modalTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                       {selectedWord.english_word} ({selectedWord.strongs_number})
                     </Text>
                     <View style={styles.modalDivider} />
 
-                    <Text style={styles.modalLabel}>Original Word</Text>
+                    <Text style={styles.modalLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Original Word</Text>
                     <Text style={styles.modalValue}>
                       {selectedWord.original_word}
                       {translit ? ` (${translit})` : ''}
@@ -174,26 +175,26 @@ export default function DeepStudyScreen() {
 
                     {selectedWord.grammar_code && (
                       <>
-                        <Text style={styles.modalLabel}>Grammar</Text>
+                        <Text style={styles.modalLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Grammar</Text>
                         <Text style={styles.modalValue}>{selectedWord.grammar_code}</Text>
                       </>
                     )}
 
                     {entry && (
                       <>
-                        <Text style={styles.modalLabel}>Definition</Text>
+                        <Text style={styles.modalLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Definition</Text>
                         <Text style={styles.modalValue}>{entry.short_definition}</Text>
 
                         {entry.detailed_definition && (
                           <>
-                            <Text style={styles.modalLabel}>Detailed</Text>
+                            <Text style={styles.modalLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Detailed</Text>
                             <Text style={styles.modalValue}>{entry.detailed_definition}</Text>
                           </>
                         )}
 
                         {entry.usage_notes && (
                           <>
-                            <Text style={styles.modalLabel}>Usage / Derivation</Text>
+                            <Text style={styles.modalLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Usage / Derivation</Text>
                             <Text style={styles.modalValue}>{entry.usage_notes}</Text>
                           </>
                         )}
@@ -207,7 +208,7 @@ export default function DeepStudyScreen() {
                 style={styles.modalClose}
                 onPress={() => setSelectedWord(null)}
               >
-                <Text style={styles.modalCloseText}>Close</Text>
+                <Text style={styles.modalCloseText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Close</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
+import { CHROME_MAX_SCALE } from '../lib/textScaling';
 import { supabase } from '../lib/supabaseClient';
 import { parseReference } from '../utils/bibleReferenceParser';
 import { saveBattleVersesBatch, saveBattleVerse } from '../services/battleVerses';
@@ -313,7 +314,7 @@ export default function BibleSearchScreen() {
       <View style={{ flex: 1 }}>
         {/* Translation selector */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>Translation:</Text>
+          <Text style={s.sectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Translation:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {TRANSLATIONS.map(t => (
               <Pressable
@@ -321,7 +322,7 @@ export default function BibleSearchScreen() {
                 onPress={() => setTranslation(t)}
                 style={[s.chip, translation === t && s.chipActive]}
               >
-                <Text style={[s.chipText, translation === t && s.chipTextActive]}>{t}</Text>
+                <Text style={[s.chipText, translation === t && s.chipTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{t}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -333,7 +334,7 @@ export default function BibleSearchScreen() {
             onPress={() => { setSearchMode('lookup'); setResults([]); setThemeChapterResults([]); setSelectedTheme(null); setThemeInput(''); setSelectedKeys(new Set()); }}
             style={[s.modeBtn, searchMode === 'lookup' && s.modeBtnActive]}
           >
-            <Text style={[s.modeBtnText, searchMode === 'lookup' && s.modeBtnTextActive]}>
+            <Text style={[s.modeBtnText, searchMode === 'lookup' && s.modeBtnTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               Verse / Chapter
             </Text>
           </Pressable>
@@ -341,7 +342,7 @@ export default function BibleSearchScreen() {
             onPress={() => { setSearchMode('theme'); setResults([]); setThemeChapterResults([]); setSearchQuery(''); setSelectedKeys(new Set()); }}
             style={[s.modeBtn, searchMode === 'theme' && s.modeBtnActive]}
           >
-            <Text style={[s.modeBtnText, searchMode === 'theme' && s.modeBtnTextActive]}>
+            <Text style={[s.modeBtnText, searchMode === 'theme' && s.modeBtnTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               Theme Search
             </Text>
           </Pressable>
@@ -365,7 +366,7 @@ export default function BibleSearchScreen() {
                   onPress={() => { setSearchQuery(''); setResults([]); setSelectedKeys(new Set()); }}
                   style={s.clearBtn}
                 >
-                  <Text style={s.clearX}>{'\u00D7'}</Text>
+                  <Text style={s.clearX} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{'\u00D7'}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -395,7 +396,7 @@ export default function BibleSearchScreen() {
                 />
                 {themeInput.length > 0 && (
                   <TouchableOpacity onPress={clearThemeSearch} style={s.clearBtn}>
-                    <Text style={s.clearX}>{'\u00D7'}</Text>
+                    <Text style={s.clearX} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{'\u00D7'}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -409,7 +410,7 @@ export default function BibleSearchScreen() {
             </View>
 
             {/* Core theme chips from database */}
-            <Text style={s.sectionLabel}>Core Themes:</Text>
+            <Text style={s.sectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Core Themes:</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {CORE_THEMES.map(theme => {
                 const themeColor = THEME_COLORS[theme];
@@ -429,11 +430,11 @@ export default function BibleSearchScreen() {
                     <Text style={[
                       s.themeChipText,
                       isActive && { color: themeColor.dark, fontWeight: '700' },
-                    ]}>
+                    ]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                       {theme}
                     </Text>
                     {count > 0 && (
-                      <Text style={[s.themeChipCount, isActive && { color: themeColor.dark }]}>
+                      <Text style={[s.themeChipCount, isActive && { color: themeColor.dark }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                         {count}
                       </Text>
                     )}
@@ -448,7 +449,7 @@ export default function BibleSearchScreen() {
         {loading && (
           <View style={s.center}>
             <ActivityIndicator color={colors.accent.primary} size="large" />
-            <Text style={{ marginTop: 12, color: colors.text.secondary }}>Searching...</Text>
+            <Text style={{ marginTop: 12, color: colors.text.secondary }} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Searching...</Text>
           </View>
         )}
 
@@ -459,7 +460,7 @@ export default function BibleSearchScreen() {
             {/* Theme chapter results */}
             {themeChapterResults.length > 0 && (
               <View style={{ marginBottom: 16 }}>
-                <Text style={s.sectionHeader}>
+                <Text style={s.sectionHeader} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   Theme Chapters ({themeChapterResults.length})
                 </Text>
                 {themeChapterResults.map((ch) => {
@@ -475,16 +476,16 @@ export default function BibleSearchScreen() {
                       ]}
                     >
                       <View style={s.themeCardHeader}>
-                        <Text style={s.themeCardRef}>{ch.book} {ch.chapter}</Text>
+                        <Text style={s.themeCardRef} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{ch.book} {ch.chapter}</Text>
                         <View style={s.themeCardTags}>
                           {themeColor && (
                             <View style={[s.themeTag, { backgroundColor: themeColor.light }]}>
-                              <Text style={[s.themeTagText, { color: themeColor.dark }]}>{ch.theme}</Text>
+                              <Text style={[s.themeTagText, { color: themeColor.dark }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{ch.theme}</Text>
                             </View>
                           )}
                           {ch.sub_theme && (
                             <View style={s.subThemeTag}>
-                              <Text style={s.subThemeTagText}>{ch.sub_theme}</Text>
+                              <Text style={s.subThemeTagText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{ch.sub_theme}</Text>
                             </View>
                           )}
                         </View>
@@ -500,8 +501,8 @@ export default function BibleSearchScreen() {
 
                       {ch.action_step && (
                         <View style={s.actionStepRow}>
-                          <Text style={s.actionStepLabel}>Action:</Text>
-                          <Text style={s.actionStepText} numberOfLines={1}>{ch.action_step}</Text>
+                          <Text style={s.actionStepLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Action:</Text>
+                          <Text style={s.actionStepText} numberOfLines={2}>{ch.action_step}</Text>
                         </View>
                       )}
                     </TouchableOpacity>
@@ -514,12 +515,12 @@ export default function BibleSearchScreen() {
             {results.length > 0 && (
               <View>
                 <View style={s.resultHeader}>
-                  <Text style={s.resultCount}>
+                  <Text style={s.resultCount} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                     {themeChapterResults.length > 0 ? 'Related Verses' : 'Results'} ({results.length})
                     {searchMode === 'lookup' ? ` \u2022 ${translation}` : ''}
                   </Text>
                   <TouchableOpacity onPress={selectAll}>
-                    <Text style={s.selectAllText}>
+                    <Text style={s.selectAllText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                       {selectedKeys.size === results.length ? 'Deselect All' : 'Select All'}
                     </Text>
                   </TouchableOpacity>
@@ -541,10 +542,10 @@ export default function BibleSearchScreen() {
                           style={[s.checkbox, isSelected && s.checkboxActive]}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          {isSelected && <Text style={s.checkmark}>{'\u2713'}</Text>}
+                          {isSelected && <Text style={s.checkmark} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{'\u2713'}</Text>}
                         </TouchableOpacity>
                         <View style={{ flex: 1 }}>
-                          <Text style={s.cardRef}>{result.reference}</Text>
+                          <Text style={s.cardRef} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{result.reference}</Text>
                           <Text style={s.cardText}>{result.verse_text}</Text>
                         </View>
                       </View>
@@ -560,8 +561,8 @@ export default function BibleSearchScreen() {
         {!loading && !hasAnyResults && hasQuery && (
           <View style={s.center}>
             <Text style={{ fontSize: 48, marginBottom: 16 }}>{'\uD83D\uDCD6'}</Text>
-            <Text style={s.emptyTitle}>No results found</Text>
-            <Text style={s.emptySubtitle}>Try different keywords or a different reference</Text>
+            <Text style={s.emptyTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>No results found</Text>
+            <Text style={s.emptySubtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Try different keywords or a different reference</Text>
           </View>
         )}
 
@@ -569,8 +570,8 @@ export default function BibleSearchScreen() {
         {!loading && !hasAnyResults && !hasQuery && (
           <View style={s.center}>
             <Text style={{ fontSize: 64, marginBottom: 16 }}>{'\uD83D\uDD0D'}</Text>
-            <Text style={s.emptyTitle}>Search the Bible</Text>
-            <Text style={s.emptySubtitle}>
+            <Text style={s.emptyTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Search the Bible</Text>
+            <Text style={s.emptySubtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               {searchMode === 'lookup'
                 ? 'Enter a reference like "John 3:16-18"\nor search by keywords'
                 : 'Select a core theme or search by keyword'}
@@ -581,7 +582,7 @@ export default function BibleSearchScreen() {
         {/* Floating save bar */}
         {selectedKeys.size > 0 && (
           <View style={s.floatingBar}>
-            <Text style={s.floatingText}>{selectedKeys.size} selected</Text>
+            <Text style={s.floatingText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{selectedKeys.size} selected</Text>
             <TouchableOpacity
               onPress={handleBatchSave}
               disabled={saving}
@@ -589,7 +590,7 @@ export default function BibleSearchScreen() {
             >
               {saving
                 ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={s.floatingSaveBtnText}>Add to Battle Verses</Text>
+                : <Text style={s.floatingSaveBtnText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Add to Battle Verses</Text>
               }
             </TouchableOpacity>
           </View>
@@ -627,22 +628,22 @@ export default function BibleSearchScreen() {
                   {/* Header */}
                   <View style={s.modalHeader}>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.modalRef}>{mc.book} {mc.chapter}</Text>
+                      <Text style={s.modalRef} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{mc.book} {mc.chapter}</Text>
                       <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                         {tc && (
                           <View style={[s.themeTag, { backgroundColor: tc.light }]}>
-                            <Text style={[s.themeTagText, { color: tc.dark }]}>{mc.theme}</Text>
+                            <Text style={[s.themeTagText, { color: tc.dark }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{mc.theme}</Text>
                           </View>
                         )}
                         {mc.sub_theme && (
                           <View style={s.subThemeTag}>
-                            <Text style={s.subThemeTagText}>{mc.sub_theme}</Text>
+                            <Text style={s.subThemeTagText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{mc.sub_theme}</Text>
                           </View>
                         )}
                       </View>
                     </View>
                     <TouchableOpacity onPress={() => setModalChapter(null)} style={s.modalClose}>
-                      <Text style={s.modalCloseText}>{'\u00D7'}</Text>
+                      <Text style={s.modalCloseText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{'\u00D7'}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -650,19 +651,19 @@ export default function BibleSearchScreen() {
                   <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ padding: 16 }}>
                     {mc.key_insight && (
                       <View style={s.modalSection}>
-                        <Text style={s.modalSectionLabel}>Key Insight</Text>
+                        <Text style={s.modalSectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Key Insight</Text>
                         <Text style={s.modalSectionText}>{mc.key_insight}</Text>
                       </View>
                     )}
                     {mc.application && (
                       <View style={s.modalSection}>
-                        <Text style={s.modalSectionLabel}>Application</Text>
+                        <Text style={s.modalSectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Application</Text>
                         <Text style={s.modalSectionText}>{mc.application}</Text>
                       </View>
                     )}
                     {mc.action_step && (
                       <View style={s.modalSection}>
-                        <Text style={s.modalSectionLabel}>Action Step</Text>
+                        <Text style={s.modalSectionLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Action Step</Text>
                         <Text style={s.modalSectionText}>{mc.action_step}</Text>
                       </View>
                     )}
@@ -681,7 +682,7 @@ export default function BibleSearchScreen() {
                       }}
                       style={[s.modalActionBtn, { backgroundColor: accentColor }]}
                     >
-                      <Text style={s.modalActionBtnText}>View Full Chapter</Text>
+                      <Text style={s.modalActionBtnText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>View Full Chapter</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

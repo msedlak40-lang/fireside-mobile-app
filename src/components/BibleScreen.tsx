@@ -9,6 +9,7 @@ import { getPreferredTranslation, getLastReadingPosition, getBookSort, setBookSo
 import { getCurrentCycle } from '../services/readingCycle'
 import BookChapterTiles, { type SheetBook } from './BookChapterTiles'
 import { colors } from '../theme/colors'
+import { CHROME_MAX_SCALE } from '../lib/textScaling'
 
 export default function BibleScreen() {
   const navigation = useNavigation<any>()
@@ -88,12 +89,12 @@ export default function BibleScreen() {
     <>
       {cycle > 1 && (
         <View style={styles.cycleBanner}>
-          <Text style={styles.cycleBannerText}>Reading cycle {cycle}</Text>
+          <Text style={styles.cycleBannerText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading cycle {cycle}</Text>
         </View>
       )}
       {lastPos && (
         <TouchableOpacity style={styles.continueBtn} onPress={() => resume(lastPos)}>
-          <Text style={styles.continueBtnText}>Continue — {lastPos.bookName} {lastPos.chapter}</Text>
+          <Text style={styles.continueBtnText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Continue — {lastPos.bookName} {lastPos.chapter}</Text>
         </TouchableOpacity>
       )}
     </>
