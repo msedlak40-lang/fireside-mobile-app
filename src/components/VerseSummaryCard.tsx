@@ -9,6 +9,8 @@ import { colors } from '../theme/colors'
 import { supabase } from '../lib/supabaseClient'
 import { saveBattleVerse } from '../services/battleVerses'
 import { CHROME_MAX_SCALE } from '../lib/textScaling'
+import SelectableProse from './SelectableProse'
+import { useSentenceSelection } from '../hooks/useSentenceSelection'
 import type { VerseLifeApplication } from '../services/scripture'
 
 export type HighlightColor = 'yellow' | 'green' | 'pink' | 'blue'
@@ -53,6 +55,10 @@ export default function VerseSummaryCard(props: Props) {
   const [actionsOpen, setActionsOpen] = useState(false)
   const hasActions = !!(onNote || onBattleVerse || onShareToFire || onHighlight || (extraActions && extraActions.length > 0))
 
+  // Transient per-sentence tap selection, shared across both prose blocks so
+  // single-select spans plain_truth + deeper_layer. Cleared when the card closes.
+  const sentenceSel = useSentenceSelection()
+
   // Cross-reference detail view (in-sheet, no nested modal)
   const [crossRefDetail, setCrossRefDetail] = useState<CrossRefItem | null>(null)
   const [crossRefText, setCrossRefText] = useState<string | null>(null)
@@ -65,6 +71,7 @@ export default function VerseSummaryCard(props: Props) {
       setActionsOpen(false)
       setCrossRefDetail(null)
       setCrossRefText(null)
+      sentenceSel.clear()
     }
   }, [visible])
 
@@ -72,6 +79,7 @@ export default function VerseSummaryCard(props: Props) {
     setActionsOpen(false)
     setCrossRefDetail(null)
     setCrossRefText(null)
+    sentenceSel.clear()
     onClose()
   }
 
@@ -166,8 +174,24 @@ export default function VerseSummaryCard(props: Props) {
                   <ActivityIndicator color={colors.accent.primary} style={{ marginVertical: 24 }} />
                 ) : content ? (
                   <>
-                    {!!content.plain_truth && <Text style={styles.body}>{content.plain_truth}</Text>}
-                    {!!content.deeper_layer && <Text style={styles.body}>{content.deeper_layer}</Text>}
+                    {!!content.plain_truth && (
+                      <SelectableProse
+                        text={content.plain_truth}
+                        blockId="plain"
+                        selection={sentenceSel}
+                        style={styles.body}
+                        selectable
+                      />
+                    )}
+                    {!!content.deeper_layer && (
+                      <SelectableProse
+                        text={content.deeper_layer}
+                        blockId="deeper"
+                        selection={sentenceSel}
+                        style={styles.body}
+                        selectable
+                      />
+                    )}
                     {!!content.reflection_question && (
                       <View style={styles.reflectBox}>
                         <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.reflectLabel}>REFLECT</Text>
