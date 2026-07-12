@@ -33,6 +33,7 @@ export interface FireMember {
 
   // User profile data (if joined)
   user_email?: string;
+  user_name?: string;
 }
 
 export interface CreateFireParams {
@@ -276,7 +277,14 @@ export async function getFireMembers(fireId: string): Promise<FireMember[]> {
 
   if (error) throw error;
 
-  return data || [];
+  const members = data || [];
+
+  // Attach best-effort profile names (batched, one query for all member ids),
+  // same resolution chain as getFireShares/getShareComments. UI falls back to
+  // 'Brother' when a name doesn't resolve.
+  const nameMap = await fetchProfileNames(members.map((m: any) => m.user_id));
+
+  return members.map((m: any) => ({ ...m, user_name: nameMap.get(m.user_id) }));
 }
 
 // ============================================

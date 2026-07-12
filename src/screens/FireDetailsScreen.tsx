@@ -214,7 +214,7 @@ export default function FireDetailsScreen({ route, navigation }: any) {
               <View style={styles.memberChip}>
                 <Text style={styles.memberText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                   {member.role === 'creator' ? '👑 ' : ''}
-                  {member.user_id === currentUserId ? 'You' : (member.user_email || 'Brother')}
+                  {member.user_id === currentUserId ? 'You' : (member.user_name || member.user_email || 'Brother')}
                 </Text>
               </View>
               {isCreator && member.role !== 'creator' && (
