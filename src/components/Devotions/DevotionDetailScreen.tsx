@@ -239,9 +239,10 @@ export default function DevotionDetailScreen() {
     message += `"${devotion.key_verse_text}"\n`;
     message += `— ${devotion.key_verse_book} ${devotion.key_verse_chapter}:${keyRangeOrNum}\n\n`;
 
-    // Devotional text
+    // Devotional text — stored with literal "\n\n"; un-escape to real paragraph
+    // breaks (matches the on-screen render at getParagraphPositions).
     if (devotion.devotional_text) {
-      message += `${devotion.devotional_text}\n`;
+      message += `${devotion.devotional_text.replace(/\\n\\n/g, '\n\n')}\n`;
     }
 
     // Hard truth
