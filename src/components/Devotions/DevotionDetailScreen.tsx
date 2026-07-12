@@ -176,6 +176,15 @@ export default function DevotionDetailScreen() {
     return highlights.sort((a, b) => a.start_pos - b.start_pos);
   };
 
+  // Share a saved highlight's text to the OS share sheet (reuses selected_text).
+  const shareHighlight = async (highlight: { selected_text: string }) => {
+    try {
+      await Share.share({ message: highlight.selected_text });
+    } catch (err) {
+      console.error('[DevotionDetail] Failed to share highlight:', err);
+    }
+  };
+
   // Delete a highlight
   const deleteHighlight = async (highlight: { id?: string; start_pos: number; length: number }) => {
     if (devotionId == null) return;
@@ -639,8 +648,30 @@ export default function DevotionDetailScreen() {
                     position: 'relative',
                   }}
                 >
+                  <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', paddingRight: 80 }}>
+                    {highlight.selected_text}
+                  </Text>
+                  {/* Buttons render after the text so they paint on top and win hit-testing. */}
+                  <TouchableOpacity
+                    onPress={() => shareHighlight(highlight)}
+                    hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 44,
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      backgroundColor: colors.accent.primary,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 12 }}>📤</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => deleteHighlight(highlight)}
+                    hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                     style={{
                       position: 'absolute',
                       top: 8,
@@ -655,9 +686,6 @@ export default function DevotionDetailScreen() {
                   >
                     <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
                   </TouchableOpacity>
-                  <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', paddingRight: 32 }}>
-                    {highlight.selected_text}
-                  </Text>
                 </View>
               ))}
               {highlights.length === 0 && (
