@@ -354,6 +354,20 @@ export async function shareToFire(
     throw new Error('Not a member of this Fire');
   }
 
+  // Resolve the SAFE, shareable fields from the owner's own saved application
+  // (owner RLS lets them read their full row) + the public chapter_themes
+  // content, and stamp them onto the share. user_note is never read or copied.
+  const { data: savedApp } = await supabase
+    .from('user_saved_applications')
+    .select('book, chapter, theme_tag, sub_theme_tag, chapter_themes ( application, key_insight, action_step )')
+    .eq('id', savedApplicationId)
+    .single();
+
+  if (!savedApp) throw new Error('Saved application not found');
+
+  const sa: any = savedApp;
+  const ct: any = Array.isArray(sa.chapter_themes) ? sa.chapter_themes[0] : sa.chapter_themes;
+
   // Create share
   const { data, error } = await supabase
     .from('fire_shares')
@@ -363,6 +377,13 @@ export async function shareToFire(
       share_type: 'arsenal',
       saved_application_id: savedApplicationId,
       message: message?.trim() || null,
+      book: sa.book ?? null,
+      chapter: sa.chapter ?? null,
+      theme_tag: sa.theme_tag ?? null,
+      sub_theme_tag: sa.sub_theme_tag ?? null,
+      application: ct?.application ?? null,
+      key_insight: ct?.key_insight ?? null,
+      action_step: ct?.action_step ?? null,
     })
     .select()
     .single();
@@ -486,6 +507,9 @@ async function fetchProfileNames(userIds: string[]): Promise<Map<string, string>
  * Get all shares for a Fire
  */
 export async function getFireShares(fireId: string): Promise<FireShare[]> {
+  // Reads only fire_shares' own columns — arsenal theme content is denormalized
+  // onto the row at share time, so the feed never touches the private
+  // user_saved_applications table.
   const { data, error } = await supabase
     .from('fire_shares')
     .select(`
@@ -502,17 +526,13 @@ export async function getFireShares(fireId: string): Promise<FireShare[]> {
       verse_book,
       verse_chapter,
       verse_number,
-      user_saved_applications (
-        book,
-        chapter,
-        theme_tag,
-        sub_theme_tag,
-        chapter_themes (
-          application,
-          key_insight,
-          action_step
-        )
-      )
+      theme_tag,
+      sub_theme_tag,
+      book,
+      chapter,
+      application,
+      key_insight,
+      action_step
     `)
     .eq('fire_id', fireId)
     .order('created_at', { ascending: false });
@@ -525,14 +545,14 @@ export async function getFireShares(fireId: string): Promise<FireShare[]> {
   return shares.map((share: any) => ({
     ...share,
     user_name: nameMap.get(share.user_id),
-    saved_application: share.user_saved_applications ? {
-      book: share.user_saved_applications.book,
-      chapter: share.user_saved_applications.chapter,
-      theme_tag: share.user_saved_applications.theme_tag,
-      sub_theme_tag: share.user_saved_applications.sub_theme_tag,
-      application: share.user_saved_applications.chapter_themes?.application,
-      key_insight: share.user_saved_applications.chapter_themes?.key_insight,
-      action_step: share.user_saved_applications.chapter_themes?.action_step,
+    saved_application: share.share_type === 'arsenal' ? {
+      book: share.book,
+      chapter: share.chapter,
+      theme_tag: share.theme_tag,
+      sub_theme_tag: share.sub_theme_tag,
+      application: share.application,
+      key_insight: share.key_insight,
+      action_step: share.action_step,
     } : undefined,
   }));
 }
