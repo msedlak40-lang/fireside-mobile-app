@@ -160,6 +160,13 @@ function DevotionsStackNavigator() {
         component={DevotionArchiveScreen}
         options={{ headerTitle: 'Past Devotions' }}
       />
+      {/* Cross-stack fix (same as VOTD): the verse-summary card's Deeper button navigates
+          to DeepStudy. Registered here so it resolves if DevotionsStack is ever mounted. */}
+      <DevotionsStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
+      />
     </DevotionsStack.Navigator>
   );
 }

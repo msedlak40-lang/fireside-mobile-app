@@ -7,6 +7,9 @@ import { completeDevotionProgress } from '../../services/progress';
 import { saveDevotionHighlight, getDevotionHighlights, deleteDevotionHighlight } from '../../services/devotionHighlights';
 import { getDevotionInteraction, toggleDevotionStar, markDevotionRead } from '../../services/devotionInteractions';
 import type { Devotion } from '../../types/supabase-devotions';
+import VerseSummaryCard from '../VerseSummaryCard';
+import { getVerseLifeApplication, type VerseLifeApplication } from '../../services/scripture';
+import { setStudyDepth } from '../../services/userPrefs';
 
 export default function DevotionDetailScreen() {
   const route = useRoute<any>();
@@ -30,6 +33,11 @@ export default function DevotionDetailScreen() {
   const [showHighlights, setShowHighlights] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
   const [isToggingStar, setIsToggingStar] = useState(false);
+  // Key-verse summary card (same card as VOTD / Battle Verses). Pre-checked on load so the
+  // tap affordance only shows when a summary actually exists.
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryContent, setSummaryContent] = useState<VerseLifeApplication | null>(null);
+  const [summaryAvailable, setSummaryAvailable] = useState(false);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [selectedParagraph, setSelectedParagraph] = useState<{ start: number; length: number; text: string } | null>(null);
   const [selectionStart, setSelectionStart] = useState(0);
@@ -105,6 +113,20 @@ export default function DevotionDetailScreen() {
           return;
         }
         setDevotion(data as Devotion);
+
+        // Pre-check the key verse's summary: only reveal the tap affordance when a
+        // verse_life_application row exists, and cache the content so the card opens
+        // instantly. Anchor on the single key_verse_number (the table is per-verse;
+        // a devotion whose key verse is a range summarizes its anchor verse).
+        const dv = data as Devotion;
+        const kBook = dv.key_verse_book;
+        const kChap = Number(dv.key_verse_chapter);
+        const kVerse = Number(dv.key_verse_number);
+        if (kBook && Number.isFinite(kChap) && Number.isFinite(kVerse)) {
+          getVerseLifeApplication(kBook, kChap, kVerse)
+            .then((app) => { if (app) { setSummaryContent(app); setSummaryAvailable(true); } })
+            .catch(() => {});
+        }
 
         // Check completion for this user + devotion
         const { data: { session } } = await supabase.auth.getSession();
@@ -291,6 +313,20 @@ export default function DevotionDetailScreen() {
     }
   };
 
+  // Deeper → Strong's deep-study surface, mirroring the VOTD wiring. Registered in
+  // ProgressStack (the live path to this screen) and DevotionsStack.
+  const handleDeeper = useCallback(() => {
+    if (!devotion) return;
+    setStudyDepth('deeper');
+    setSummaryOpen(false);
+    navigation.navigate('DeepStudy', {
+      bookName: devotion.key_verse_book,
+      chapter: Number(devotion.key_verse_chapter),
+      verseNumber: Number(devotion.key_verse_number),
+      verseText: devotion.key_verse_text,
+    });
+  }, [devotion, navigation]);
+
   if (loading || !devotion) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
@@ -302,6 +338,9 @@ export default function DevotionDetailScreen() {
   const dateText = formatISODateYYYYMMDD(devotion.devotion_date);
   const keyRef = devotion.key_verse_reference ?? '';
   const keyRangeOrNum = devotion.key_verse_range ?? String(devotion.key_verse_number);
+  // Honest reference for the summary card: it summarizes the single anchor verse, so label
+  // it with the anchor (e.g. "John 3:16"), not the range the devotion may display.
+  const anchorRef = `${devotion.key_verse_book} ${devotion.key_verse_chapter}:${devotion.key_verse_number}`;
   const tags = Array.isArray(devotion.tags) ? devotion.tags : [];
   const situations = Array.isArray(devotion.situation_tags) ? devotion.situation_tags : [];
 
@@ -342,8 +381,10 @@ export default function DevotionDetailScreen() {
         </Text>
       ) : null}
 
-      {/* Key verse box */}
-      <View
+      {/* Key verse box — tap to open the verse summary (only shown when one exists) */}
+      <Pressable
+        onPress={summaryAvailable ? () => setSummaryOpen(true) : undefined}
+        disabled={!summaryAvailable}
         style={{
           marginTop: 14,
           padding: 12,
@@ -357,7 +398,12 @@ export default function DevotionDetailScreen() {
         <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>
           {devotion.key_verse_book} {devotion.key_verse_chapter}:{keyRangeOrNum}
         </Text>
-      </View>
+        {summaryAvailable && (
+          <Text style={{ marginTop: 6, fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>
+            Tap for summary
+          </Text>
+        )}
+      </Pressable>
 
       {/* Body */}
       {devotion.devotional_text ? (
@@ -697,6 +743,17 @@ export default function DevotionDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Key-verse summary card — same card as VOTD / Battle Verses. Reference is the
+          anchor verse (honest about what the summary covers). */}
+      <VerseSummaryCard
+        visible={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        reference={anchorRef}
+        loading={false}
+        content={summaryContent}
+        onDeeper={handleDeeper}
+      />
     </ScrollView>
   );
 }
