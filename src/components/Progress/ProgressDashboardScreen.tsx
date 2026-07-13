@@ -11,6 +11,7 @@ import { getUserBattleVerses, deleteBattleVerse, saveBattleVerse, BATTLE_TAGS, t
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import VerseSummaryCard from '../VerseSummaryCard';
+import ReadingProgressModal from './ReadingProgressModal';
 import { getVerseLifeApplication, type VerseLifeApplication } from '../../services/scripture';
 import { setStudyDepth } from '../../services/userPrefs';
 import { colors } from '../../theme/colors';
@@ -72,6 +73,7 @@ export default function ProgressDashboardScreen() {
   const [showRelatedVerseModal, setShowRelatedVerseModal] = useState(false);
   const [selectedRelatedVerse, setSelectedRelatedVerse] = useState<string | null>(null);
   const [relatedVerseText, setRelatedVerseText] = useState<string>('');
+  const [showReadingModal, setShowReadingModal] = useState(false);
   const [showHighlightsModal, setShowHighlightsModal] = useState(false);
   const [highlights, setHighlights] = useState<HighlightWithDevotion[]>([]);
   const [highlightsLoading, setHighlightsLoading] = useState(false);
@@ -639,8 +641,10 @@ const openTodayDevotion = useCallback(() => {
           )}
         </View>
 
-        {/* Chapter Progress */}
-        <View style={{
+        {/* Chapter Progress — tap to open the testament/section breakdown */}
+        <Pressable
+          onPress={() => setShowReadingModal(true)}
+          style={{
           marginBottom: 16,
           padding: 18,
           backgroundColor: colors.background.secondary,
@@ -674,7 +678,10 @@ const openTodayDevotion = useCallback(() => {
               {dashboard?.chapters?.percentage || 0}% complete
             </Text>
           </View>
-        </View>
+          <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ marginTop: 12, fontSize: 13, color: '#3b82f6', fontWeight: '700', textAlign: 'right' }}>
+            Tap for breakdown →
+          </Text>
+        </Pressable>
 
         {/* Reading Plan Progress */}
         {activePlan ? (
@@ -850,6 +857,9 @@ const openTodayDevotion = useCallback(() => {
         onSaveBattleVerse={summaryIsVotd ? saveVotdBattle : undefined}
         battleState={summaryIsVotd ? votdBattleState : undefined}
       />
+
+      {/* Reading Progress breakdown (testament/section drill-down) */}
+      <ReadingProgressModal visible={showReadingModal} onClose={() => setShowReadingModal(false)} />
 
       {/* Related Verse Modal */}
       <Modal
