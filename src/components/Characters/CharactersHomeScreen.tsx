@@ -15,10 +15,34 @@ const [activeStudy, setActiveStudy] = useState<ActiveCharacterStudy | null>(null
 const [q, setQ] = useState('');
 const [testament, setTestament] = useState<'OT'|'NT'|null>(null);
 const [loading, setLoading] = useState(true);
+const [initialLoad, setInitialLoad] = useState(true);
 const navigation = useNavigation<any>();
 
 
-const load = async () => {
+const loadCharacters = async () => {
+setLoading(true);
+try {
+const charactersData = await listCharacters({ q: q || null, testament });
+setItems(charactersData);
+} catch (err) {
+console.error('[CharactersHome] Load characters failed', err);
+} finally {
+setLoading(false);
+}
+};
+
+const loadActiveStudy = async () => {
+try {
+const activeData = await fetchActiveCharacterStudy();
+setActiveStudy(activeData);
+} catch (err) {
+console.error('[CharactersHome] Load active study failed', err);
+}
+};
+
+// Load both characters and active study on initial mount
+React.useEffect(() => {
+const initialLoad = async () => {
 setLoading(true);
 try {
 const [charactersData, activeData] = await Promise.all([
@@ -28,13 +52,28 @@ fetchActiveCharacterStudy()
 setItems(charactersData);
 setActiveStudy(activeData);
 } catch (err) {
-console.error('[CharactersHome] Load failed', err);
+console.error('[CharactersHome] Initial load failed', err);
+} finally {
+setLoading(false);
+setInitialLoad(false);
 }
-finally { setLoading(false); }
 };
+initialLoad();
+}, []);
 
+// Reload characters when search/filter changes (after initial load)
+React.useEffect(() => {
+if (!initialLoad) {
+loadCharacters();
+}
+}, [q, testament]);
 
-useFocusEffect(useCallback(() => { load(); }, [q, testament]));
+// On screen focus, only reload active study (not the full list)
+useFocusEffect(useCallback(() => {
+if (!initialLoad) {
+loadActiveStudy();
+}
+}, [initialLoad]));
 
 
 if (loading) return <View style={{ flex:1, alignItems:'center', justifyContent:'center', backgroundColor: colors.background.primary }}><ActivityIndicator color={colors.accent.primary} /></View>;

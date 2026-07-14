@@ -1,5 +1,6 @@
 // src/services/progress.ts
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentCycle } from './readingCycle'
 
 function isInt(v: any): v is number {
   return Number.isInteger(v) && Number.isFinite(v)
@@ -17,10 +18,11 @@ async function _writeChapterCompletion(book_name: string, chapter_number: number
   if (!user_id) throw new Error('Not signed in')
   const nowIso = new Date().toISOString()
 
+  const cycle = await getCurrentCycle()
   const { data: existing, error: selErr } = await supabase
     .from('user_reading_progress')
     .select('user_id')
-    .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number)
+    .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number).eq('cycle', cycle)
     .limit(1)
   if (selErr) throw selErr
 
@@ -28,12 +30,12 @@ async function _writeChapterCompletion(book_name: string, chapter_number: number
     const { error: updErr } = await supabase
       .from('user_reading_progress')
       .update({ completed_at: nowIso })
-      .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number)
+      .eq('user_id', user_id).eq('book_name', book_name).eq('chapter_number', chapter_number).eq('cycle', cycle)
     if (updErr) throw updErr
   } else {
     const { error: insErr } = await supabase
       .from('user_reading_progress')
-      .insert([{ user_id, book_name, chapter_number, completed_at: nowIso }])
+      .insert([{ user_id, book_name, chapter_number, completed_at: nowIso, cycle }])
     if (insErr) throw insErr
   }
 }
@@ -129,7 +131,23 @@ export async function fetchUserDashboard(): Promise<UserDashboard> {
     if (!totalCharactersAvailable) totalCharactersAvailable = 29
   }
 
-  const totalRead = s?.total_chapters_read ?? 0
+  // Count unique chapters read (distinct book_name + chapter_number combinations)
+  let totalRead = 0
+  {
+    const cycle = await getCurrentCycle()
+    const { data: readChapters } = await supabase
+      .from('user_reading_progress')
+      .select('book_name, chapter_number')
+      .eq('user_id', userId)
+      .eq('cycle', cycle)
+
+    // Count unique (book_name, chapter_number) pairs regardless of translation
+    const uniqueChapters = new Set(
+      (readChapters ?? []).map(r => `${r.book_name}:${r.chapter_number}`)
+    )
+    totalRead = uniqueChapters.size
+  }
+
   const percentage =
     totalChaptersAvailable > 0 ? Math.round((totalRead / totalChaptersAvailable) * 100) : 0
 
@@ -324,26 +342,34 @@ export async function fetchActiveCharacterStudy(): Promise<ActiveCharacterStudy 
     const character = (progressData as any).bible_characters
     if (!character) return null
 
-    // Count completed lessons
-    const { data: lessonProgressData, error: lessonError } = await supabase
-      .from('user_character_lesson_progress')
-      .select('lesson_id')
-      .eq('user_id', user_id)
-      .eq('completed', true)
-
-    if (lessonError) {
-      console.warn('[fetchActiveCharacterStudy] lesson progress error', lessonError)
-    }
-
-    // Get lesson IDs for this character
+    // Get lesson IDs for this character first
     const { data: lessonsData } = await supabase
-      .from('character_lessons')
+      .from('character_study_lessons')
       .select('id')
       .eq('character_id', progressData.character_id)
 
     const lessonIds = (lessonsData || []).map((l: any) => l.id)
-    const completedLessonIds = (lessonProgressData || []).map((lp: any) => lp.lesson_id)
-    const completedLessons = completedLessonIds.filter((id: number) => lessonIds.includes(id)).length
+    console.log('[fetchActiveCharacterStudy] Character ID:', progressData.character_id)
+    console.log('[fetchActiveCharacterStudy] Lesson IDs for this character:', lessonIds)
+
+    // Count completed lessons for this character only
+    let completedLessons = 0
+    if (lessonIds.length > 0) {
+      const { data: lessonProgressData, error: lessonError } = await supabase
+        .from('user_character_lesson_progress')
+        .select('lesson_id, completed')
+        .eq('user_id', user_id)
+        .eq('completed', true)
+        .in('lesson_id', lessonIds)
+
+      if (lessonError) {
+        console.warn('[fetchActiveCharacterStudy] lesson progress error', lessonError)
+      }
+
+      console.log('[fetchActiveCharacterStudy] Completed lesson progress data:', lessonProgressData)
+      completedLessons = (lessonProgressData || []).length
+      console.log('[fetchActiveCharacterStudy] Completed lessons count:', completedLessons)
+    }
 
     const totalLessons = character.total_lessons || lessonIds.length || 0
     const percentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0

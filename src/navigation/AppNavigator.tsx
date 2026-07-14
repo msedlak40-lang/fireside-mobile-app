@@ -1,19 +1,21 @@
 // src/navigation/AppNavigator.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, View, Text, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, Platform, TouchableOpacity } from 'react-native';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as ExpoLinking from 'expo-linking';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
-import { attemptBiometricUnlock, isBiometricEnabled } from '../services/biometricAuth';
+import { getUserFires, getUnreadShareCount } from '../services/fire';
 
 // Screens
 import Auth from '../screens/Auth';
-import BibleHomeScreen from '../components/BibleHomeScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
+import BibleScreen from '../components/BibleScreen';
 import ChapterScreen from '../components/ChapterScreen';
 import VerseScreen from '../components/VerseScreen';
 import ReadingPlanDayScreen from '../screens/ReadingPlanDayScreen';
@@ -22,6 +24,7 @@ import ReadingPlanDayScreen from '../screens/ReadingPlanDayScreen';
 import DevotionsHomeTabs from '../components/Devotions/DevotionsHomeTabs';
 import ThemeListScreen from '../components/Devotions/ThemeListScreen';
 import DevotionDetailScreen from '../components/Devotions/DevotionDetailScreen';
+import DevotionArchiveScreen from '../screens/DevotionArchiveScreen';
 
 // Characters
 import CharactersHomeScreen from '../components/Characters/CharactersHomeScreen';
@@ -35,19 +38,50 @@ import ReadingPlanDetailScreen from '../components/ReadingPlans/ReadingPlanDetai
 // Progress = Home
 import ProgressDashboardScreen from '../components/Progress/ProgressDashboardScreen';
 
-// Journal
-import JournalHomeScreen from '../components/Journal/JournalHomeScreen';
-import JournalCreateScreen from '../components/Journal/JournalCreateScreen';
-import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
+// TODO: Re-enable when Prayer feature is ready
+// import JournalHomeScreen from '../components/Journal/JournalHomeScreen';
+// import JournalCreateScreen from '../components/Journal/JournalCreateScreen';
+// import JournalDetailScreen from '../components/Journal/JournalDetailScreen';
 
-// Notes & Highlights summary (new screen)
+// Prayer (Coming Soon placeholder) — disabled for App Store submission
+// import PrayerComingSoonScreen from '../screens/PrayerComingSoonScreen';
+
+// Notes & Highlights summary
 import NotesHighlightsSummary from '../screens/NotesHighlightsSummary';
+
+// Search (now inside Bible stack)
+import BibleSearchScreen from '../screens/BibleSearchScreen';
+
+// Settings
+import SettingsScreen from '../screens/SettingsScreen';
+
+// VOTD Archive
+import VOTDArchiveScreen from '../screens/VOTDArchiveScreen';
+
+// Arsenal
+import ArsenalScreen from '../screens/ArsenalScreen';
+
+// Fire
+import FireScreen from '../screens/FireScreen';
+import FireDetailsScreen from '../screens/FireDetailsScreen';
+
+// Study
+import StudyHomeScreen from '../screens/StudyHomeScreen';
+
+// Journeys
+import JourneyCatalogScreen from '../screens/JourneyCatalogScreen';
+import JourneyDetailScreen from '../screens/JourneyDetailScreen';
+import JourneyExperienceScreen from '../screens/JourneyExperienceScreen';
+import JourneyLocationScreen from '../screens/JourneyLocationScreen';
+
+// Deep Study (Strong's word study — the verse "Deeper" surface)
+import DeepStudyScreen from '../screens/DeepStudyScreen';
 
 // ---- Stacks ----
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Bible Tab
+// Bible Tab (now includes Search)
 const BibleStack = createNativeStackNavigator();
 function BibleStackNavigator() {
   return (
@@ -64,8 +98,18 @@ function BibleStackNavigator() {
     >
       <BibleStack.Screen
         name="BibleHome"
-        component={BibleHomeScreen}
-        options={{ headerTitle: 'Bible' }}
+        component={BibleScreen}
+        options={({ navigation }: any) => ({
+          headerTitle: 'Bible',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('BibleSearch')}
+              style={{ marginRight: 8 }}
+            >
+              <Text style={{ fontSize: 24 }}>🔍</Text>
+            </TouchableOpacity>
+          ),
+        })}
       />
       <BibleStack.Screen
         name="Chapter"
@@ -76,6 +120,16 @@ function BibleStackNavigator() {
         name="Verse"
         component={VerseScreen}
         options={{ headerTitle: 'Verse' }}
+      />
+      <BibleStack.Screen
+        name="BibleSearch"
+        component={BibleSearchScreen}
+        options={{ headerTitle: 'Search' }}
+      />
+      <BibleStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
       />
     </BibleStack.Navigator>
   );
@@ -101,61 +155,90 @@ function DevotionsStackNavigator() {
         component={DevotionDetailScreen}
         options={{ headerTitle: 'Devotion' }}
       />
+      <DevotionsStack.Screen
+        name="DevotionArchive"
+        component={DevotionArchiveScreen}
+        options={{ headerTitle: 'Past Devotions' }}
+      />
+      {/* Cross-stack fix (same as VOTD): the verse-summary card's Deeper button navigates
+          to DeepStudy. Registered here so it resolves if DevotionsStack is ever mounted. */}
+      <DevotionsStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
+      />
     </DevotionsStack.Navigator>
   );
 }
 
-// Characters Tab
-const CharactersStack = createNativeStackNavigator();
-function CharactersStackNavigator() {
+// Study Tab (combines Characters + Reading Plans)
+const StudyStack = createNativeStackNavigator();
+function StudyStackNavigator() {
   return (
-    <CharactersStack.Navigator>
-      <CharactersStack.Screen
+    <StudyStack.Navigator>
+      <StudyStack.Screen
+        name="StudyHome"
+        component={StudyHomeScreen}
+        options={{ headerTitle: 'Study' }}
+      />
+      {/* Characters screens */}
+      <StudyStack.Screen
         name="CharactersHome"
         component={CharactersHomeScreen}
-        options={{ headerTitle: 'Bible Characters' }}
+        options={{ headerTitle: 'Biblical Characters' }}
       />
-      <CharactersStack.Screen
+      <StudyStack.Screen
         name="CharacterDetail"
         component={CharacterDetailScreen}
         options={{ headerTitle: 'Character' }}
       />
-      <CharactersStack.Screen
+      <StudyStack.Screen
         name="CharacterLesson"
         component={CharacterLessonScreen}
         options={{ headerTitle: 'Lesson' }}
       />
-    </CharactersStack.Navigator>
-  );
-}
-
-// Reading Plans Tab
-const ReadingPlansStack = createNativeStackNavigator();
-function ReadingPlansStackNavigator() {
-  return (
-    <ReadingPlansStack.Navigator>
-      <ReadingPlansStack.Screen
+      {/* Reading Plans screens */}
+      <StudyStack.Screen
         name="ReadingPlansHome"
         component={ReadingPlansHomeScreen}
         options={{ headerTitle: 'Reading Plans' }}
       />
-      <ReadingPlansStack.Screen
+      <StudyStack.Screen
         name="ReadingPlanDetail"
         component={ReadingPlanDetailScreen}
         options={{ headerTitle: 'Plan Details' }}
       />
-      {/* NEW: opens when a day is tapped */}
-      <ReadingPlansStack.Screen
+      <StudyStack.Screen
         name="ReadingPlanDay"
         component={ReadingPlanDayScreen}
         options={{ headerTitle: 'Plan Day' }}
       />
-    </ReadingPlansStack.Navigator>
+      {/* Journey screens */}
+      <StudyStack.Screen
+        name="JourneyCatalog"
+        component={JourneyCatalogScreen}
+        options={{ headerTitle: 'Journeys' }}
+      />
+      <StudyStack.Screen
+        name="JourneyDetail"
+        component={JourneyDetailScreen}
+        options={{ headerTitle: 'Journey' }}
+      />
+      <StudyStack.Screen
+        name="JourneyExperience"
+        component={JourneyExperienceScreen}
+        options={{ headerShown: false }}
+      />
+      <StudyStack.Screen
+        name="JourneyLocation"
+        component={JourneyLocationScreen}
+        options={{ headerTitle: 'Location' }}
+      />
+    </StudyStack.Navigator>
   );
 }
 
-
-// Progress/Home Tab (now includes Notes & Highlights + DevotionDetail for direct nav from Home)
+// Progress/Home Tab (includes Notes & Highlights + DevotionDetail for direct nav from Home)
 const ProgressStack = createNativeStackNavigator();
 function ProgressStackNavigator() {
   return (
@@ -163,51 +246,124 @@ function ProgressStackNavigator() {
       <ProgressStack.Screen
         name="ProgressDashboard"
         component={ProgressDashboardScreen}
-        options={{ headerTitle: 'Home' }}
+        options={({ navigation }) => ({
+          headerTitle: 'Home',
+          headerRight: () => (
+            <Text
+              onPress={() => navigation.navigate('Settings')}
+              style={{ fontSize: 22, paddingRight: 8 }}
+            >
+              ⚙️
+            </Text>
+          ),
+        })}
       />
       <ProgressStack.Screen
         name="NotesHighlightsSummary"
         component={NotesHighlightsSummary}
         options={{ headerTitle: 'Notes & Highlights' }}
       />
-      {/* Add DevotionDetail here too, so Home can open it directly */}
       <ProgressStack.Screen
         name="DevotionDetail"
         component={DevotionDetailScreen}
         options={{ headerTitle: 'Devotion' }}
       />
+      <ProgressStack.Screen
+        name="DevotionArchive"
+        component={DevotionArchiveScreen}
+        options={{ headerTitle: 'Past Devotions' }}
+      />
+      <ProgressStack.Screen
+        name="VOTDArchive"
+        component={VOTDArchiveScreen}
+        options={{ headerTitle: 'Verse of the Day Archive' }}
+      />
+      <ProgressStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ headerTitle: 'Settings' }}
+      />
+      <ProgressStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
+      />
     </ProgressStack.Navigator>
   );
 }
 
-// Journal Tab
-const JournalStack = createNativeStackNavigator();
-function JournalStackNavigator() {
+// Prayer Tab — disabled for App Store submission (re-enable when feature is ready)
+// const PrayerStack = createNativeStackNavigator();
+// function PrayerStackNavigator() {
+//   return (
+//     <PrayerStack.Navigator>
+//       <PrayerStack.Screen
+//         name="PrayerHome"
+//         component={PrayerComingSoonScreen}
+//         options={{ headerTitle: 'Prayer' }}
+//       />
+//     </PrayerStack.Navigator>
+//   );
+// }
+
+// Arsenal Tab
+const ArsenalStack = createNativeStackNavigator();
+function ArsenalStackNavigator() {
   return (
-    <JournalStack.Navigator>
-      <JournalStack.Screen
-        name="JournalHome"
-        component={JournalHomeScreen}
-        options={{ headerTitle: 'Journal' }}
+    <ArsenalStack.Navigator>
+      <ArsenalStack.Screen
+        name="ArsenalHome"
+        component={ArsenalScreen}
+        options={{ headerTitle: 'Arsenal' }}
       />
-      <JournalStack.Screen
-        name="JournalCreate"
-        component={JournalCreateScreen}
-        options={{ headerTitle: 'New Entry' }}
-      />
-      <JournalStack.Screen
-        name="JournalDetail"
-        component={JournalDetailScreen}
-        options={{ headerTitle: 'Entry' }}
-      />
-    </JournalStack.Navigator>
+    </ArsenalStack.Navigator>
   );
 }
 
-// ---- Bottom Tabs ----
+// Fire Tab
+const FireStack = createNativeStackNavigator();
+function FireStackNavigator() {
+  return (
+    <FireStack.Navigator>
+      <FireStack.Screen
+        name="FireHome"
+        component={FireScreen}
+        options={{ headerTitle: 'Fire' }}
+      />
+      <FireStack.Screen
+        name="FireDetails"
+        component={FireDetailsScreen}
+        options={{ headerTitle: 'Fire' }}
+      />
+    </FireStack.Navigator>
+  );
+}
+
+// ---- Bottom Tabs (5 tabs — Prayer disabled for App Store) ----
 function MainTabs() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 6);
+  const [fireUnreadCount, setFireUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadFireUnreadCount();
+    const interval = setInterval(loadFireUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function loadFireUnreadCount() {
+    try {
+      const fires = await getUserFires();
+      let total = 0;
+      for (const fire of fires) {
+        const count = await getUnreadShareCount(fire.id);
+        total += count;
+      }
+      setFireUnreadCount(total);
+    } catch (error) {
+      // Silently fail - badge is non-critical
+    }
+  }
 
   return (
     <Tab.Navigator
@@ -224,6 +380,8 @@ function MainTabs() {
         },
         tabBarActiveTintColor: colors.tabBar.active,
         tabBarInactiveTintColor: colors.tabBar.inactive,
+        // Apple standard: tab bars do not grow with Dynamic Type.
+        tabBarAllowFontScaling: false,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -249,29 +407,40 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="CharactersTab"
-        component={CharactersStackNavigator}
+        name="ArsenalTab"
+        component={ArsenalStackNavigator}
         options={{
-          title: 'Characters',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>👤</Text>
+          title: 'Arsenal',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🗡️</Text>
         }}
       />
       <Tab.Screen
-        name="PlansTab"
-        component={ReadingPlansStackNavigator}
+        name="StudyTab"
+        component={StudyStackNavigator}
         options={{
-          title: 'Plans',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>📅</Text>
+          title: 'Study',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>📚</Text>
         }}
       />
       <Tab.Screen
-        name="JournalTab"
-        component={JournalStackNavigator}
+        name="FireTab"
+        component={FireStackNavigator}
         options={{
-          title: 'Journal',
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>📝</Text>
+          title: 'Fire',
+          tabBarBadge: fireUnreadCount > 0 ? fireUnreadCount : undefined,
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🔥</Text>
         }}
       />
+      {/* Prayer tab disabled for App Store submission
+      <Tab.Screen
+        name="PrayerTab"
+        component={PrayerStackNavigator}
+        options={{
+          title: 'Prayer',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🙏</Text>
+        }}
+      />
+      */}
     </Tab.Navigator>
   );
 }
@@ -282,97 +451,142 @@ const linking = {
   config: {
     screens: {
       Auth: 'auth',
+      ResetPassword: 'auth/reset-password',
       MainTabs: {
         screens: {
           HomeTab: {
             screens: {
               ProgressDashboard: 'home',
               NotesHighlightsSummary: 'home/notes',
-              DevotionDetail: 'home/devotion/:id'
+              DevotionDetail: 'home/devotion/:id',
+              Settings: 'home/settings'
             }
           },
           BibleTab: {
             screens: {
               BibleHome: 'bible',
               Chapter: 'bible/:bookId/:chapter',
-              Verse: 'bible/:bookId/:chapter/:verse'
+              Verse: 'bible/:bookId/:chapter/:verse',
+              BibleSearch: 'search',
+              DeepStudy: 'bible/deep-study'
             }
           },
-          DevotionsTab: {
+          ArsenalTab: {
             screens: {
-              DevotionsHome: 'devotions',
-              ThemeList: 'devotions/theme/:category',
-              DevotionDetail: 'devotions/:id'
+              ArsenalHome: 'arsenal'
             }
           },
-          CharactersTab: {
+          StudyTab: {
             screens: {
-              CharactersHome: 'characters',
-              CharacterDetail: 'characters/:id',
-              CharacterLesson: 'characters/lesson/:id'
+              StudyHome: 'study',
+              CharactersHome: 'study/characters',
+              CharacterDetail: 'study/characters/:id',
+              CharacterLesson: 'study/characters/lesson/:id',
+              ReadingPlansHome: 'study/plans',
+              ReadingPlanDetail: 'study/plans/:planId',
+              ReadingPlanDay: 'study/plans/:planId/day/:dayNumber',
+              JourneyCatalog: 'study/journeys',
+              JourneyDetail: 'study/journeys/:journeyId',
+              JourneyExperience: 'study/journeys/:journeyId/experience',
+              JourneyLocation: 'study/journeys/:journeyId/location/:locationIndex'
             }
           },
-          PlansTab: {
+          FireTab: {
             screens: {
-              ReadingPlansHome: 'plans',
-              ReadingPlanDetail: 'plans/:planId'
+              FireHome: 'fire',
+              FireDetails: 'fire/:fireId'
             }
           },
-          JournalTab: {
-            screens: {
-              JournalHome: 'journal',
-              JournalCreate: 'journal/new',
-              JournalDetail: 'journal/:id'
-            }
-          }
+          // PrayerTab disabled for App Store submission
+          // PrayerTab: {
+          //   screens: {
+          //     PrayerHome: 'prayer'
+          //   }
+          // }
         }
       }
     }
   }
 };
 
-// ---- Auth helpers removed (no longer using magic links) ----
-
 // ---- Root Navigator ----
 export default function AppNavigator() {
   const [ready, setReady] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const navigationRef = useNavigationContainerRef();
+
+  // Keep screen awake while app is open
+  useEffect(() => {
+    activateKeepAwakeAsync();
+    return () => {
+      deactivateKeepAwake();
+    };
+  }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthed(!!session);
+      if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the reset link — show the reset password screen
+        setShowResetPassword(true);
+      }
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Handle deep link recovery tokens from Supabase password reset emails
+  useEffect(() => {
+    const handleUrl = async (url: string) => {
+      // Supabase recovery links contain hash fragments: #access_token=...&type=recovery
+      const hashIdx = url.indexOf('#');
+      if (hashIdx === -1) return;
+      const hash = url.slice(hashIdx + 1);
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+
+      if (type === 'recovery' && accessToken) {
+        console.log('[AppNavigator] Password recovery deep link detected');
+        try {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+          // onAuthStateChange will fire PASSWORD_RECOVERY and set showResetPassword
+        } catch (e) {
+          console.warn('[AppNavigator] Failed to set recovery session:', e);
+        }
+      }
+    };
+
+    // Check if app was opened via a deep link
+    ExpoLinking.getInitialURL().then((url) => {
+      if (url) handleUrl(url);
+    });
+
+    // Listen for deep links while app is open
+    const sub = ExpoLinking.addEventListener('url', (event) => {
+      handleUrl(event.url);
+    });
+
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
     (async () => {
       try {
-        // First check if there's an existing session
+        // Check if there's an existing Supabase session
         const { data } = await supabase.auth.getSession();
+        const hasSession = !!data.session;
 
-        if (data.session) {
-          // Active session exists
+        if (hasSession) {
+          console.log('[AppNavigator] Session exists, allowing access');
           setIsAuthed(true);
         } else {
-          // No active session - check if biometric unlock is available
-          const biometricEnabled = await isBiometricEnabled();
-
-          if (biometricEnabled) {
-            console.log('[AppNavigator] Attempting biometric unlock...');
-            const unlocked = await attemptBiometricUnlock();
-
-            if (unlocked) {
-              console.log('[AppNavigator] Biometric unlock successful');
-              setIsAuthed(true);
-            } else {
-              console.log('[AppNavigator] Biometric unlock failed or cancelled');
-              setIsAuthed(false);
-            }
-          } else {
-            // No session and no biometric - show auth screen
-            setIsAuthed(false);
-          }
+          console.log('[AppNavigator] No session, showing login screen');
+          setIsAuthed(false);
         }
       } catch (err) {
         console.warn('[Auth] Session check failed', err);
@@ -408,9 +622,16 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer linking={linking} theme={theme}>
+    <NavigationContainer ref={navigationRef} linking={linking} theme={theme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthed ? (
+        {showResetPassword ? (
+          <RootStack.Screen
+            name="ResetPassword"
+            options={{ headerShown: true, title: 'Reset Password', headerStyle: { backgroundColor: colors.background.secondary }, headerTintColor: colors.text.primary }}
+          >
+            {() => <ResetPasswordScreen onComplete={() => setShowResetPassword(false)} />}
+          </RootStack.Screen>
+        ) : isAuthed ? (
           <RootStack.Screen name="MainTabs" component={MainTabs} />
         ) : (
           <RootStack.Screen name="Auth" component={Auth} />

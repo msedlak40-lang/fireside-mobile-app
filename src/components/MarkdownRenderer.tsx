@@ -2,15 +2,20 @@
 import React from 'react'
 import { View, Text, StyleSheet, Linking, Platform } from 'react-native'
 import { colors } from '../theme/colors'
+import { CHROME_MAX_SCALE } from '../lib/textScaling'
 
 type Props = {
   /** Preferred prop */
   content?: string | null
   /** Legacy prop (kept for back-compat) */
   markdown?: string | null
+  /** Allow text selection via long-press */
+  selectable?: boolean
+  /** Extra vertical space below each paragraph (px). Off by default. */
+  paragraphSpacing?: number
 }
 
-export default function MarkdownRenderer({ content, markdown }: Props) {
+export default function MarkdownRenderer({ content, markdown, selectable, paragraphSpacing }: Props) {
   const raw = typeof content === 'string' ? content : markdown
   const safe = typeof raw === 'string' ? raw : ''
   if (!safe.trim()) return null
@@ -28,7 +33,11 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
   const flushParagraph = (para: string) => {
     const children = renderInline(para)
     elements.push(
-      <Text key={`p-${idx++}`} style={styles.paragraph}>
+      <Text
+        key={`p-${idx++}`}
+        selectable={selectable}
+        style={paragraphSpacing ? [styles.paragraph, { marginBottom: paragraphSpacing }] : styles.paragraph}
+      >
         {children}
       </Text>
     )
@@ -50,8 +59,8 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
       const t = item.replace(/^\s*([-*+]|\d+\.)\s+/, '')
       return (
         <View key={`li-${idx++}-${i}`} style={styles.listItem}>
-          <Text style={styles.bullet}>{listType === 'ul' ? '•' : `${i + 1}.`}</Text>
-          <Text style={styles.listText}>{renderInline(t)}</Text>
+          <Text style={styles.bullet} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{listType === 'ul' ? '•' : `${i + 1}.`}</Text>
+          <Text selectable={selectable} style={styles.listText}>{renderInline(t)}</Text>
         </View>
       )
     })
@@ -91,27 +100,27 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
     // Headings
     if (/^#####\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h5-${idx++}`} style={styles.h5}>{renderInline(line.replace(/^#####\s+/, ''))}</Text>)
+      elements.push(<Text key={`h5-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h5}>{renderInline(line.replace(/^#####\s+/, ''))}</Text>)
       continue
     }
     if (/^####\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h4-${idx++}`} style={styles.h4}>{renderInline(line.replace(/^####\s+/, ''))}</Text>)
+      elements.push(<Text key={`h4-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h4}>{renderInline(line.replace(/^####\s+/, ''))}</Text>)
       continue
     }
     if (/^###\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h3-${idx++}`} style={styles.h3}>{renderInline(line.replace(/^###\s+/, ''))}</Text>)
+      elements.push(<Text key={`h3-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h3}>{renderInline(line.replace(/^###\s+/, ''))}</Text>)
       continue
     }
     if (/^##\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h2-${idx++}`} style={styles.h2}>{renderInline(line.replace(/^##\s+/, ''))}</Text>)
+      elements.push(<Text key={`h2-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h2}>{renderInline(line.replace(/^##\s+/, ''))}</Text>)
       continue
     }
     if (/^#\s+/.test(line)) {
       flushList()
-      elements.push(<Text key={`h1-${idx++}`} style={styles.h1}>{renderInline(line.replace(/^#\s+/, ''))}</Text>)
+      elements.push(<Text key={`h1-${idx++}`} selectable={selectable} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.h1}>{renderInline(line.replace(/^#\s+/, ''))}</Text>)
       continue
     }
 
@@ -121,7 +130,7 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
       const text = line.replace(/^\s*>\s?/, '')
       elements.push(
         <View key={`quote-${idx++}`} style={styles.quote}>
-          <Text style={styles.quoteText}>{renderInline(text)}</Text>
+          <Text selectable={selectable} style={styles.quoteText}>{renderInline(text)}</Text>
         </View>
       )
       continue
@@ -166,42 +175,37 @@ export default function MarkdownRenderer({ content, markdown }: Props) {
 
 function renderInline(text: string): React.ReactNode {
   const nodes: React.ReactNode[] = []
-  let i = 0
-  const push = (t: string) => {
-    if (!t) return
-    nodes.push(<Text key={`t-${i++}`}>{t}</Text>)
+  let key = 0
+
+  // Single left-to-right scan preserves the original order of inline spans.
+  // Order in the alternation matters: link, bold (**), italic (*), code.
+  const pattern = /\[(.+?)\]\((https?:\/\/[^\s)]+)\)|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`/g
+  let lastIndex = 0
+  let m: RegExpExecArray | null
+
+  while ((m = pattern.exec(text)) !== null) {
+    if (m.index > lastIndex) {
+      nodes.push(<Text key={`t-${key++}`}>{text.slice(lastIndex, m.index)}</Text>)
+    }
+    if (m[1] !== undefined) {
+      const url = m[2]
+      nodes.push(
+        <Text key={`a-${key++}`} style={styles.link} onPress={() => Linking.openURL(url)}>{m[1]}</Text>
+      )
+    } else if (m[3] !== undefined) {
+      nodes.push(<Text key={`b-${key++}`} style={styles.bold}>{m[3]}</Text>)
+    } else if (m[4] !== undefined) {
+      nodes.push(<Text key={`i-${key++}`} style={styles.italic}>{m[4]}</Text>)
+    } else if (m[5] !== undefined) {
+      nodes.push(<Text key={`c-${key++}`} style={styles.inlineCode}>{m[5]}</Text>)
+    }
+    lastIndex = pattern.lastIndex
   }
 
-  // links: [text](url)
-  text = text.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => {
-    nodes.push(
-      <Text key={`a-${i++}`} style={styles.link} onPress={() => Linking.openURL(url)}>
-        {label}
-      </Text>
-    )
-    return ''
-  })
+  if (lastIndex < text.length) {
+    nodes.push(<Text key={`t-${key++}`}>{text.slice(lastIndex)}</Text>)
+  }
 
-  // strong **bold**
-  text = text.replace(/\*\*(.+?)\*\*/g, (_m, bold) => {
-    nodes.push(<Text key={`b-${i++}`} style={styles.bold}>{bold}</Text>)
-    return ''
-  })
-
-  // emphasis *italic*
-  text = text.replace(/\*(.+?)\*/g, (_m, em) => {
-    nodes.push(<Text key={`i-${i++}`} style={styles.italic}>{em}</Text>)
-    return ''
-  })
-
-  // inline code `code`
-  text = text.replace(/`([^`]+)`/g, (_m, code) => {
-    nodes.push(<Text key={`c-${i++}`} style={styles.inlineCode}>{code}</Text>)
-    return ''
-  })
-
-  // whatever remains as normal text
-  push(text)
   return nodes
 }
 

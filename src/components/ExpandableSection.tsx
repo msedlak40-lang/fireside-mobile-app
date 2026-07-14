@@ -40,6 +40,8 @@ type Props = {
   sectionKey?: string | null
   /** Tell parent when a note/highlight is added */
   onAnnotationAdded?: () => void
+  /** Allow text selection via long-press */
+  selectable?: boolean
 }
 
 /** Persist a summary note/highlight entry to Supabase */
@@ -159,6 +161,7 @@ export default function ExpandableSection({
   studyTier,
   sectionKey,
   onAnnotationAdded,
+  selectable,
 }: Props) {
   const [expanded, setExpanded] = useState<boolean>(!!initiallyExpanded)
 
@@ -252,14 +255,20 @@ export default function ExpandableSection({
             <>
               {paraBlocks.map((block, idx) => (
                 <View key={idx} style={styles.paraWrap}>
-                  <TouchableOpacity
-                    activeOpacity={enableAnnotations ? 0.8 : 1}
-                    style={[styles.para, paraHighlights[idx] ? { backgroundColor: colors.highlight.yellow, borderColor: colors.accent.tertiary } : null]}
-                    onLongPress={() => enableAnnotations ? openNoteForPara(idx) : undefined}
-                    onPress={() => enableAnnotations ? setHighlight(idx, 'yellow') : undefined}
-                  >
-                    <MarkdownRenderer content={block} />
-                  </TouchableOpacity>
+                  {selectable ? (
+                    <View style={[styles.para, paraHighlights[idx] ? { backgroundColor: colors.highlight.yellow, borderColor: colors.accent.tertiary } : null]}>
+                      <MarkdownRenderer content={block} selectable />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={enableAnnotations ? 0.8 : 1}
+                      style={[styles.para, paraHighlights[idx] ? { backgroundColor: colors.highlight.yellow, borderColor: colors.accent.tertiary } : null]}
+                      onLongPress={() => enableAnnotations ? openNoteForPara(idx) : undefined}
+                      onPress={() => enableAnnotations ? setHighlight(idx, 'yellow') : undefined}
+                    >
+                      <MarkdownRenderer content={block} />
+                    </TouchableOpacity>
+                  )}
 
                   {enableAnnotations ? (
                     <View style={styles.paraActions}>
