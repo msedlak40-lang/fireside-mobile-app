@@ -155,18 +155,25 @@ export default function DeepStudyScreen() {
         onRequestClose={() => setSelectedWord(null)}
       >
         <View style={styles.modalBackdrop}>
-          <ScrollView style={{ maxHeight: '75%' }} contentContainerStyle={{ flexGrow: 0 }}>
-            <View style={styles.modalCard}>
+          <View style={styles.modalCard}>
+            {/* Fixed header — stays pinned while the definition scrolls */}
+            {selectedWord && (
+              <Text style={styles.modalTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                {selectedWord.english_word} ({selectedWord.strongs_number})
+              </Text>
+            )}
+            <View style={styles.modalDivider} />
+
+            {/* Scrollable body */}
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalScrollContent}
+            >
               {selectedWord && (() => {
                 const entry = lexicon[selectedWord.strongs_number];
                 const translit = selectedWord.transliteration || entry?.transliteration || '';
                 return (
                   <>
-                    <Text style={styles.modalTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                      {selectedWord.english_word} ({selectedWord.strongs_number})
-                    </Text>
-                    <View style={styles.modalDivider} />
-
                     <Text style={styles.modalLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Original Word</Text>
                     <Text style={styles.modalValue}>
                       {selectedWord.original_word}
@@ -203,15 +210,16 @@ export default function DeepStudyScreen() {
                   </>
                 );
               })()}
+            </ScrollView>
 
-              <TouchableOpacity
-                style={styles.modalClose}
-                onPress={() => setSelectedWord(null)}
-              >
-                <Text style={styles.modalCloseText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+            {/* Fixed footer — always reachable */}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setSelectedWord(null)}
+            >
+              <Text style={styles.modalCloseText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Close</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 
@@ -443,10 +451,17 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '90%',
+    maxHeight: '80%',
     alignSelf: 'center',
     backgroundColor: colors.background.elevated,
     borderRadius: 12,
     padding: 16,
+  },
+  modalScroll: {
+    flexShrink: 1,
+  },
+  modalScrollContent: {
+    paddingBottom: 4,
   },
   modalTitle: {
     color: colors.text.primary,

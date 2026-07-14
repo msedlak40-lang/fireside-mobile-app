@@ -24,7 +24,7 @@
     "version": "2.0.1",
     "ios": {
       "bundleIdentifier": "com.msedlak40.firesidemobile",
-      "buildNumber": "14",
+      "buildNumber": "15",
       "icon": "./assets/Fireside180Logo_icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -33,7 +33,7 @@
     },
     "android": {
       "package": "com.msedlak40.firesidemobile",
-      "versionCode": 3,
+      "versionCode": 4,
       "icon": "./assets/Fireside180Logo_icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/Fireside180Logo_icon.png",
