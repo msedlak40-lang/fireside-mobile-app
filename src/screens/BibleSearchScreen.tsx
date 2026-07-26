@@ -26,6 +26,7 @@ import VerseSummaryCard, { type CrossRefItem } from '../components/VerseSummaryC
 import { getVerseLifeApplication, type VerseLifeApplication } from '../services/scripture';
 import { getCrossReferences, type CrossReference } from '../services/strongsStudy';
 import { setStudyDepth } from '../services/userPrefs';
+import { useGuestMode } from '../context/GuestModeContext';
 
 type SearchResult = {
   book_name: string;
@@ -39,6 +40,7 @@ const TRANSLATIONS = ['KJV', 'WEB'];
 
 export default function BibleSearchScreen() {
   const navigation = useNavigation<any>();
+  const { isGuest, promptSignIn } = useGuestMode();
   const [searchQuery, setSearchQuery] = useState('');
   const [themeInput, setThemeInput] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -199,6 +201,7 @@ export default function BibleSearchScreen() {
   };
 
   const handleBatchSave = async () => {
+    if (isGuest) { promptSignIn('save Battle Verses'); return; }
     if (selectedKeys.size === 0) return;
     setSaving(true);
     try {
@@ -282,6 +285,7 @@ export default function BibleSearchScreen() {
   const handleResultBattleVerse = async () => {
     if (!summaryResult) return;
     setSummaryOpen(false);
+    if (isGuest) { promptSignIn('save Battle Verses'); return; }
     try {
       const saved = await saveBattleVerse(
         summaryResult.book_name, summaryResult.chapter_number,
