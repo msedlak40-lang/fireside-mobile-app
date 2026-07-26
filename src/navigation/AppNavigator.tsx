@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
 import { getUserFires, getUnreadShareCount } from '../services/fire';
+import { clearLocalUserData } from '../services/userPrefs';
 
 // Screens
 import Auth from '../screens/Auth';
@@ -527,6 +528,13 @@ export default function AppNavigator() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthed(!!session);
+      if (event === 'SIGNED_OUT') {
+        // Wipe device-cached user state so one account's cached streak/progress/
+        // position can't bleed into the next account that logs in on this device.
+        // Central here to cover every sign-out path (Settings button, account
+        // deletion, and automatic sign-out from an expired/revoked session).
+        clearLocalUserData();
+      }
       if (event === 'PASSWORD_RECOVERY') {
         // User clicked the reset link — show the reset password screen
         setShowResetPassword(true);

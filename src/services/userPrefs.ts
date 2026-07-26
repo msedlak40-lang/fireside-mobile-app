@@ -4,6 +4,20 @@ const KEY = 'fireside.translation'
 const DEPTH_KEY = 'fireside.studyDepth'
 const POSITION_KEY = 'fireside.lastPosition'
 const BOOK_SORT_KEY = 'fireside.bookSort'
+// Owned by readingCycle.ts; listed here so clearLocalUserData wipes it too.
+const DASHBOARD_CACHE_KEY = 'fireside.dashboard'
+
+/**
+ * Wipe all device-cached user state (prefs + last position + cached dashboard).
+ * Called on sign-out so one account's cached personal data (streak, progress,
+ * reading position) can never bleed into the next account that logs in on this
+ * device. Also used by the account-deletion flow.
+ */
+export async function clearLocalUserData(): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove([KEY, DEPTH_KEY, POSITION_KEY, BOOK_SORT_KEY, DASHBOARD_CACHE_KEY])
+  } catch {}
+}
 
 export async function getPreferredTranslation(): Promise<string | null> {
   try { return (await AsyncStorage.getItem(KEY)) } catch { return null }
