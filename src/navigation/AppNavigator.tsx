@@ -1,5 +1,5 @@
 // src/navigation/AppNavigator.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View, Text, Platform, TouchableOpacity } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as ExpoLinking from 'expo-linking';
@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
 import { getUserFires, getUnreadShareCount } from '../services/fire';
 import { clearLocalUserData } from '../services/userPrefs';
+import { GuestModeProvider, useGuestMode } from '../context/GuestModeContext';
 
 // Screens
 import Auth from '../screens/Auth';
@@ -344,6 +345,7 @@ function FireStackNavigator() {
 function MainTabs() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 6);
+  const { isGuest } = useGuestMode();
   const [fireUnreadCount, setFireUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -368,6 +370,7 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
+      initialRouteName={isGuest ? 'BibleTab' : 'HomeTab'}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -514,8 +517,12 @@ const linking = {
 export default function AppNavigator() {
   const [ready, setReady] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const navigationRef = useNavigationContainerRef();
+
+  const enterGuest = useCallback(() => setIsGuest(true), []);
+  const exitGuest = useCallback(() => setIsGuest(false), []);
 
   // Keep screen awake while app is open
   useEffect(() => {
@@ -528,6 +535,7 @@ export default function AppNavigator() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthed(!!session);
+      if (session) setIsGuest(false); // a real session supersedes guest mode
       if (event === 'SIGNED_OUT') {
         // Wipe device-cached user state so one account's cached streak/progress/
         // position can't bleed into the next account that logs in on this device.
@@ -631,20 +639,22 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer ref={navigationRef} linking={linking} theme={theme}>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {showResetPassword ? (
-          <RootStack.Screen
-            name="ResetPassword"
-            options={{ headerShown: true, title: 'Reset Password', headerStyle: { backgroundColor: colors.background.secondary }, headerTintColor: colors.text.primary }}
-          >
-            {() => <ResetPasswordScreen onComplete={() => setShowResetPassword(false)} />}
-          </RootStack.Screen>
-        ) : isAuthed ? (
-          <RootStack.Screen name="MainTabs" component={MainTabs} />
-        ) : (
-          <RootStack.Screen name="Auth" component={Auth} />
-        )}
-      </RootStack.Navigator>
+      <GuestModeProvider isGuest={isGuest} onEnterGuest={enterGuest} onExitGuest={exitGuest}>
+        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+          {showResetPassword ? (
+            <RootStack.Screen
+              name="ResetPassword"
+              options={{ headerShown: true, title: 'Reset Password', headerStyle: { backgroundColor: colors.background.secondary }, headerTintColor: colors.text.primary }}
+            >
+              {() => <ResetPasswordScreen onComplete={() => setShowResetPassword(false)} />}
+            </RootStack.Screen>
+          ) : (isAuthed || isGuest) ? (
+            <RootStack.Screen name="MainTabs" component={MainTabs} />
+          ) : (
+            <RootStack.Screen name="Auth" component={Auth} />
+          )}
+        </RootStack.Navigator>
+      </GuestModeProvider>
     </NavigationContainer>
   );
 }

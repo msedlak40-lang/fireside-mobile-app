@@ -16,6 +16,8 @@ import { getVerseLifeApplication, type VerseLifeApplication } from '../../servic
 import { setStudyDepth } from '../../services/userPrefs';
 import { colors } from '../../theme/colors';
 import { CHROME_MAX_SCALE } from '../../lib/textScaling';
+import { useGuestMode } from '../../context/GuestModeContext';
+import GuestPreview from '../GuestPreview';
 
 interface HighlightWithDevotion {
   id: string;
@@ -60,6 +62,7 @@ function formatISODateYYYYMMDD(iso?: string | null) {
 export default function ProgressDashboardScreen() {
   const navigation = useNavigation<any>();
 
+  const { isGuest } = useGuestMode();
   const [dashboard, setDashboard] = useState<UserDashboard | null>(null);
   const [activePlan, setActivePlan] = useState<ActivePlanWithReading | null>(null);
   const [activeCharacterStudy, setActiveCharacterStudy] = useState<ActiveCharacterStudy | null>(null);
@@ -260,6 +263,7 @@ export default function ProgressDashboardScreen() {
 
   // Initial load - try cache first, then fetch if needed
   const load = async () => {
+    if (isGuest) { setLoading(false); return } // guests never hit the throwing dashboard fetch
     setLoading(true);
     try {
       const cached = await loadFromCache();
@@ -448,6 +452,22 @@ const openTodayDevotion = useCallback(() => {
     acc[key].highlights.push(highlight);
     return acc;
   }, {} as Record<string, { devotion_id: number; devotion_title: string; devotion_date: string; highlights: HighlightWithDevotion[] }>);
+
+  if (isGuest) {
+    return (
+      <GuestPreview
+        icon="🔥"
+        title="Track your journey"
+        subtitle="Create a free account to save your progress and make the daily Verse of the Day your own."
+        bullets={[
+          'Your reading streak and chapters-read progress',
+          'Save the Verse of the Day and Battle Verses',
+          "A personal home for everything you're studying",
+        ]}
+        action="track your reading streak, progress, and Verse of the Day"
+      />
+    );
+  }
 
   if (loading) {
     return (
