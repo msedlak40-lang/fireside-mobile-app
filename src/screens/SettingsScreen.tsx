@@ -246,172 +246,79 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Your Name Section (account-only) */}
-        {!isGuest && (
+        {/* ============================== Account ============================== */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Your Name</Text>
-          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-            The name shown to your brothers on posts and comments in Fire.
-          </Text>
-          <TextInput
-            style={styles.nameInput}
-            value={firstName}
-            onChangeText={(t) => {
-              setFirstName(t);
-              if (nameSaved) setNameSaved(false);
-            }}
-            placeholder="Enter your name"
-            placeholderTextColor={colors.text.muted}
-            autoCapitalize="words"
-            maxLength={40}
-            returnKeyType="done"
-            editable={!nameSaving}
-          />
-          {(() => {
-            const disabled = nameSaving || !firstName.trim() || firstName.trim() === savedFirstName;
-            return (
-              <TouchableOpacity
-                onPress={handleSaveName}
-                activeOpacity={0.7}
-                disabled={disabled}
-                style={[
-                  styles.nameSaveButton,
-                  disabled && styles.nameSaveButtonDisabled,
-                  nameSaved && styles.nameSaveButtonSaved,
-                ]}
-              >
-                <Text style={styles.nameSaveButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                  {nameSaving ? 'Saving…' : nameSaved ? '✓ Saved' : 'Save'}
-                </Text>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Account</Text>
+          {isGuest ? (
+            <>
+              <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                You're browsing as a guest. Sign in or create a free account to set your name and yearly theme, track reading progress, and join a Fire.
+              </Text>
+              <TouchableOpacity style={styles.cycleButton} onPress={exitGuest} activeOpacity={0.7}>
+                <Text style={styles.cycleButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign In / Create Account</Text>
               </TouchableOpacity>
-            );
-          })()}
-        </View>
-        )}
-
-        {/* Theme Selection Section (account-only) */}
-        {!isGuest && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>My {currentYear} Theme</Text>
-            {currentTheme && (
-              <View
-                style={[
-                  styles.currentBadge,
-                  {
-                    backgroundColor:
-                      getThemeColors(currentTheme)?.light || colors.background.tertiary,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.currentBadgeText,
-                    { color: getThemeColors(currentTheme)?.dark || colors.text.primary },
-                  ]}
-                  maxFontSizeMultiplier={CHROME_MAX_SCALE}
-                >
-                  Active
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-            Choose a theme to guide your Bible reading this year. Your theme will surface relevant
-            applications and help you discover sub-themes throughout Scripture.
-          </Text>
-
-          <View style={styles.themeList}>
-            {availableThemes.map((theme) => {
-              const isSelected = currentTheme === theme;
-              const themeColors = isValidTheme(theme) ? getThemeColors(theme) : null;
-              const description = isValidTheme(theme) ? getThemeDescription(theme) : '';
-
-              return (
-                <TouchableOpacity
-                  key={theme}
-                  style={[
-                    styles.themeOption,
-                    isSelected && styles.themeOptionSelected,
-                    isSelected && themeColors && { borderColor: themeColors.primary },
-                  ]}
-                  onPress={() => handleThemeSelect(theme)}
-                  disabled={isSaving}
-                  activeOpacity={0.7}
-                >
-                  {/* Theme Header */}
-                  <View style={styles.themeHeader}>
-                    <View style={styles.themeTitleRow}>
-                      {/* Color indicator */}
-                      <View
-                        style={[
-                          styles.colorIndicator,
-                          { backgroundColor: themeColors?.primary || colors.accent.primary },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.themeText,
-                          isSelected && themeColors && { color: themeColors.primary },
-                        ]}
-                        maxFontSizeMultiplier={CHROME_MAX_SCALE}
-                      >
-                        {theme}
-                      </Text>
-                    </View>
-
-                    {isSelected && (
-                      <View
-                        style={[
-                          styles.checkmarkContainer,
-                          { backgroundColor: themeColors?.primary || colors.accent.primary },
-                        ]}
-                      >
-                        <Text style={styles.checkmark} maxFontSizeMultiplier={CHROME_MAX_SCALE}>✓</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Theme Description */}
-                  <Text
+            </>
+          ) : (
+            <>
+              {/* Your Name */}
+              <Text style={styles.subLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Your Name</Text>
+              <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                The name shown to your brothers on posts and comments in Fire.
+              </Text>
+              <TextInput
+                style={styles.nameInput}
+                value={firstName}
+                onChangeText={(t) => {
+                  setFirstName(t);
+                  if (nameSaved) setNameSaved(false);
+                }}
+                placeholder="Enter your name"
+                placeholderTextColor={colors.text.muted}
+                autoCapitalize="words"
+                maxLength={40}
+                returnKeyType="done"
+                editable={!nameSaving}
+              />
+              {(() => {
+                const disabled = nameSaving || !firstName.trim() || firstName.trim() === savedFirstName;
+                return (
+                  <TouchableOpacity
+                    onPress={handleSaveName}
+                    activeOpacity={0.7}
+                    disabled={disabled}
                     style={[
-                      styles.themeDescription,
-                      isSelected && { color: colors.text.primary },
+                      styles.nameSaveButton,
+                      disabled && styles.nameSaveButtonDisabled,
+                      nameSaved && styles.nameSaveButtonSaved,
                     ]}
-                    maxFontSizeMultiplier={CHROME_MAX_SCALE}
                   >
-                    {description}
-                  </Text>
+                    <Text style={styles.nameSaveButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                      {nameSaving ? 'Saving…' : nameSaved ? '✓ Saved' : 'Save'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
+
+              {/* Email + Sign Out */}
+              <View style={styles.subGroup}>
+                <View style={styles.settingRow}>
+                  <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Email</Text>
+                  <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{userEmail ?? (userId ? 'Signed in' : 'Not signed in')}</Text>
+                </View>
+                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.7}>
+                  <Text style={styles.signOutButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign Out</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {!currentTheme && (
-            <View style={styles.hintContainer}>
-              <Text style={styles.hintIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>💡</Text>
-              <Text style={styles.hint} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                Select a theme to begin your journey. You can change it anytime during the year.
-              </Text>
-            </View>
-          )}
-
-          {currentTheme && (
-            <View style={styles.infoContainer}>
-              <Text style={styles.infoText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                Your theme influences which applications appear when reading chapters and helps
-                track your growth throughout the year.
-              </Text>
-            </View>
+              </View>
+            </>
           )}
         </View>
 
-        )}
-
-        {/* Reading Translation Section (works for guests too — local preference) */}
+        {/* ========================= Reading Preferences ========================= */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Translation</Text>
+          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Preferences</Text>
+
+          {/* Translation (works for guests too — local preference) */}
+          <Text style={styles.subLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Translation</Text>
           <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             The translation used when you read and study Scripture.
           </Text>
@@ -437,54 +344,147 @@ export default function SettingsScreen() {
               );
             })}
           </View>
-        </View>
 
-        {/* Reading Cycle Section (account-only) */}
-        {!isGuest && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Cycle</Text>
-          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-            {cycle > 1
-              ? `You're on reading cycle ${cycle}. Start a new cycle to read through again with a clean slate.`
-              : 'Finished reading through? Start a new cycle to read again with a clean slate.'}
-          </Text>
-          <TouchableOpacity
-            onPress={handleStartNextCycle}
-            activeOpacity={0.7}
-            style={styles.cycleButton}
-          >
-            <Text style={styles.cycleButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Start reading cycle {cycle + 1}</Text>
-          </TouchableOpacity>
-        </View>
-
-        )}
-
-        {/* Account Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Account</Text>
-          {isGuest ? (
-            <>
-              <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                You're browsing as a guest. Sign in or create a free account to set your name and yearly theme, track reading progress, and join a Fire.
-              </Text>
-              <TouchableOpacity style={styles.cycleButton} onPress={exitGuest} activeOpacity={0.7}>
-                <Text style={styles.cycleButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign In / Create Account</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Email</Text>
-                <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{userEmail ?? (userId ? 'Signed in' : 'Not signed in')}</Text>
+          {/* My Theme (account-only) */}
+          {!isGuest && (
+            <View style={styles.subGroup}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.subLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>My {currentYear} Theme</Text>
+                {currentTheme && (
+                  <View
+                    style={[
+                      styles.currentBadge,
+                      {
+                        backgroundColor:
+                          getThemeColors(currentTheme)?.light || colors.background.tertiary,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.currentBadgeText,
+                        { color: getThemeColors(currentTheme)?.dark || colors.text.primary },
+                      ]}
+                      maxFontSizeMultiplier={CHROME_MAX_SCALE}
+                    >
+                      Active
+                    </Text>
+                  </View>
+                )}
               </View>
-              <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.7}>
-                <Text style={styles.signOutButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign Out</Text>
+
+              <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                Choose a theme to guide your Bible reading this year. Your theme will surface relevant
+                applications and help you discover sub-themes throughout Scripture.
+              </Text>
+
+              <View style={styles.themeList}>
+                {availableThemes.map((theme) => {
+                  const isSelected = currentTheme === theme;
+                  const themeColors = isValidTheme(theme) ? getThemeColors(theme) : null;
+                  const description = isValidTheme(theme) ? getThemeDescription(theme) : '';
+
+                  return (
+                    <TouchableOpacity
+                      key={theme}
+                      style={[
+                        styles.themeOption,
+                        isSelected && styles.themeOptionSelected,
+                        isSelected && themeColors && { borderColor: themeColors.primary },
+                      ]}
+                      onPress={() => handleThemeSelect(theme)}
+                      disabled={isSaving}
+                      activeOpacity={0.7}
+                    >
+                      {/* Theme Header */}
+                      <View style={styles.themeHeader}>
+                        <View style={styles.themeTitleRow}>
+                          {/* Color indicator */}
+                          <View
+                            style={[
+                              styles.colorIndicator,
+                              { backgroundColor: themeColors?.primary || colors.accent.primary },
+                            ]}
+                          />
+                          <Text
+                            style={[
+                              styles.themeText,
+                              isSelected && themeColors && { color: themeColors.primary },
+                            ]}
+                            maxFontSizeMultiplier={CHROME_MAX_SCALE}
+                          >
+                            {theme}
+                          </Text>
+                        </View>
+
+                        {isSelected && (
+                          <View
+                            style={[
+                              styles.checkmarkContainer,
+                              { backgroundColor: themeColors?.primary || colors.accent.primary },
+                            ]}
+                          >
+                            <Text style={styles.checkmark} maxFontSizeMultiplier={CHROME_MAX_SCALE}>✓</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Theme Description */}
+                      <Text
+                        style={[
+                          styles.themeDescription,
+                          isSelected && { color: colors.text.primary },
+                        ]}
+                        maxFontSizeMultiplier={CHROME_MAX_SCALE}
+                      >
+                        {description}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {!currentTheme && (
+                <View style={styles.hintContainer}>
+                  <Text style={styles.hintIcon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>💡</Text>
+                  <Text style={styles.hint} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                    Select a theme to begin your journey. You can change it anytime during the year.
+                  </Text>
+                </View>
+              )}
+
+              {currentTheme && (
+                <View style={styles.infoContainer}>
+                  <Text style={styles.infoText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                    Your theme influences which applications appear when reading chapters and helps
+                    track your growth throughout the year.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Reading Cycle (account-only) */}
+          {!isGuest && (
+            <View style={styles.subGroup}>
+              <Text style={styles.subLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Cycle</Text>
+              <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                {cycle > 1
+                  ? `You're on reading cycle ${cycle}. Start a new cycle to read through again with a clean slate.`
+                  : 'Finished reading through? Start a new cycle to read again with a clean slate.'}
+              </Text>
+              <TouchableOpacity
+                onPress={handleStartNextCycle}
+                activeOpacity={0.7}
+                style={styles.cycleButton}
+              >
+                <Text style={styles.cycleButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Start reading cycle {cycle + 1}</Text>
               </TouchableOpacity>
-            </>
+            </View>
           )}
         </View>
 
-        {/* App Info */}
+        {/* =============================== About =============================== */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>About</Text>
           <View style={styles.settingRow}>
@@ -497,7 +497,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Danger Zone (account-only) */}
+        {/* ============================= Danger Zone ============================= */}
         {!isGuest && (
         <View style={[styles.section, styles.dangerSection]}>
           <Text style={[styles.sectionTitle, styles.dangerTitle]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Danger Zone</Text>
@@ -625,6 +625,20 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginBottom: 20,
     lineHeight: 20,
+  },
+  // Inner heading for an individual setting grouped under a section header.
+  subLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 6,
+  },
+  // Spacing + hairline divider between clustered settings inside one section.
+  subGroup: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.default,
   },
   themeList: {
     gap: 12,
