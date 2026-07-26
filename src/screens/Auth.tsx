@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
+import { useGuestMode } from '../context/GuestModeContext';
 
 export default function Auth() {
+  const { enterGuest } = useGuestMode();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -206,6 +208,30 @@ export default function Auth() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Guest access — read the Bible without an account (Apple 5.1.1(v)) */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
+              <Text style={{ marginHorizontal: 12, color: colors.text.muted, fontSize: 13 }}>or</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
+            </View>
+            <TouchableOpacity
+              onPress={enterGuest}
+              disabled={loading}
+              style={{
+                height: 48,
+                borderRadius: 8,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.accent.primary,
+                marginTop: 16,
+              }}
+            >
+              <Text style={{ color: colors.accent.primary, fontWeight: '700', fontSize: 16 }}>
+                Browse the Bible without an account
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>

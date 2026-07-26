@@ -26,10 +26,12 @@ import { getPreferredTranslation, setPreferredTranslation, clearLocalUserData } 
 import { getCurrentCycle, startNextCycle } from '../services/readingCycle';
 import { colors } from '../theme/colors';
 import { CHROME_MAX_SCALE } from '../lib/textScaling';
+import { useGuestMode } from '../context/GuestModeContext';
 
 const TRANSLATIONS = ['KJV', 'WEB'];
 
 export default function SettingsScreen() {
+  const { isGuest, exitGuest } = useGuestMode();
   const [currentTheme, setCurrentTheme] = useState<string | null>(null);
   const [translation, setTranslation] = useState('KJV');
   const [cycle, setCycle] = useState(1);
@@ -244,7 +246,8 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Your Name Section */}
+        {/* Your Name Section (account-only) */}
+        {!isGuest && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Your Name</Text>
           <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
@@ -284,8 +287,10 @@ export default function SettingsScreen() {
             );
           })()}
         </View>
+        )}
 
-        {/* Theme Selection Section */}
+        {/* Theme Selection Section (account-only) */}
+        {!isGuest && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>My {currentYear} Theme</Text>
@@ -402,7 +407,9 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Reading Translation Section */}
+        )}
+
+        {/* Reading Translation Section (works for guests too — local preference) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Translation</Text>
           <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
@@ -432,7 +439,8 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Reading Cycle Section */}
+        {/* Reading Cycle Section (account-only) */}
+        {!isGuest && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Reading Cycle</Text>
           <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
@@ -449,16 +457,31 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        )}
+
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Account</Text>
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Email</Text>
-            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{userEmail ?? (userId ? 'Signed in' : 'Not signed in')}</Text>
-          </View>
-          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.7}>
-            <Text style={styles.signOutButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign Out</Text>
-          </TouchableOpacity>
+          {isGuest ? (
+            <>
+              <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                You're browsing as a guest. Sign in or create a free account to set your name and yearly theme, track reading progress, and join a Fire.
+              </Text>
+              <TouchableOpacity style={styles.cycleButton} onPress={exitGuest} activeOpacity={0.7}>
+                <Text style={styles.cycleButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign In / Create Account</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Email</Text>
+                <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{userEmail ?? (userId ? 'Signed in' : 'Not signed in')}</Text>
+              </View>
+              <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.7}>
+                <Text style={styles.signOutButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign Out</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* App Info */}
@@ -466,7 +489,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>About</Text>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Version</Text>
-            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>2.0.0</Text>
+            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>2.0.1</Text>
           </View>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Theme System</Text>
@@ -474,7 +497,8 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Danger Zone */}
+        {/* Danger Zone (account-only) */}
+        {!isGuest && (
         <View style={[styles.section, styles.dangerSection]}>
           <Text style={[styles.sectionTitle, styles.dangerTitle]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Danger Zone</Text>
           <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
@@ -488,6 +512,7 @@ export default function SettingsScreen() {
             <Text style={styles.deleteButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Delete Account</Text>
           </TouchableOpacity>
         </View>
+        )}
       </ScrollView>
 
       {/* Delete confirmation (two-step: open + type DELETE) */}

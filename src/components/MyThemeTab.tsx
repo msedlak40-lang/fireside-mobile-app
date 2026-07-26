@@ -25,6 +25,8 @@ import { saveApplication, isApplicationSaved } from '../services/arsenal';
 import { colors } from '../theme/colors';
 import SelectableProse from './SelectableProse';
 import { useSentenceSelection } from '../hooks/useSentenceSelection';
+import { useGuestMode } from '../context/GuestModeContext';
+import GuestPreview from './GuestPreview';
 
 interface Props {
   bookName: string;
@@ -33,6 +35,7 @@ interface Props {
 
 export default function MyThemeTab({ bookName, chapter }: Props) {
   const navigation = useNavigation<any>();
+  const { isGuest } = useGuestMode();
   const [userTheme, setUserTheme] = useState<string | null>(null);
   const [chapterThemes, setChapterThemes] = useState<ChapterTheme[]>([]);
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
@@ -47,6 +50,10 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
   const sentenceSel = useSentenceSelection();
 
   const loadData = useCallback(async () => {
+    if (isGuest) {
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
       setError(null);
@@ -102,7 +109,7 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
     } finally {
       setIsLoading(false);
     }
-  }, [bookName, chapter]);
+  }, [bookName, chapter, isGuest]);
 
   useEffect(() => {
     loadData();
@@ -153,6 +160,24 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
     },
     [bookName, chapter],
   );
+
+  // Guest: invite to sign in instead of showing theme applications
+  if (isGuest) {
+    return (
+      <GuestPreview
+        embedded
+        icon="🎯"
+        title="Make it your theme"
+        subtitle="Set a yearly theme and save the chapter applications that speak to you."
+        bullets={[
+          'Highlight your focus theme across every chapter',
+          'Save applications straight to your Arsenal',
+          'Track the insights God shows you as you read',
+        ]}
+        action="set your theme and save applications"
+      />
+    );
+  }
 
   // Loading state
   if (isLoading) {

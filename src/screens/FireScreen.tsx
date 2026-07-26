@@ -20,8 +20,11 @@ import {
 } from '../services/fire';
 import { colors } from '../theme/colors';
 import { CHROME_MAX_SCALE } from '../lib/textScaling';
+import { useGuestMode } from '../context/GuestModeContext';
+import GuestPreview from '../components/GuestPreview';
 
 export default function FireScreen({ navigation }: any) {
+  const { isGuest } = useGuestMode();
   const [fires, setFires] = useState<Fire[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -43,6 +46,7 @@ export default function FireScreen({ navigation }: any) {
   );
 
   async function loadFires() {
+    if (isGuest) { setIsLoading(false); return } // guests see the preview, no fetch
     try {
       setIsLoading(true);
       const userFires = await getUserFires();
@@ -124,6 +128,22 @@ export default function FireScreen({ navigation }: any) {
           },
         },
       ]
+    );
+  }
+
+  if (isGuest) {
+    return (
+      <GuestPreview
+        icon="🔥"
+        title="Gather your brothers"
+        subtitle="Fires are private accountability groups where men share verses, encouragement, and prayer."
+        bullets={[
+          'Create or join a Fire with an invite code',
+          'Share verses and insights with your group',
+          'Encourage and pray for one another',
+        ]}
+        action="join your brothers in a Fire"
+      />
     );
   }
 

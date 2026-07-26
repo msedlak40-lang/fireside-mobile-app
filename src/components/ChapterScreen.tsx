@@ -24,6 +24,7 @@ import MyThemeTab from './MyThemeTab'
 import { supabase } from '../lib/supabaseClient'
 import { colors } from '../theme/colors'
 import { CHROME_MAX_SCALE } from '../lib/textScaling'
+import { useGuestMode } from '../context/GuestModeContext'
 
 type RouteParams = { bookId: number; chapter: number; bookName?: string; translation?: string }
 type Verse = { number: number; text: string }
@@ -32,6 +33,7 @@ type TabType = 'read' | 'deepdive' | 'mytheme' | 'crossrefs' | 'discussion'
 export default function ChapterScreen() {
   const route = useRoute<any>() as { params?: Partial<RouteParams> }
   const navigation = useNavigation<any>()
+  const { isGuest, promptSignIn } = useGuestMode()
   const initialBookId = route?.params?.bookId ?? null
   const initialChapter = route?.params?.chapter ?? 1
   const paramBookName = route?.params?.bookName ?? null
@@ -335,6 +337,7 @@ export default function ChapterScreen() {
   // ---- Progress: direct DB writes ----
   const markChapterRead = useCallback(async () => {
     try {
+      if (isGuest) { promptSignIn('track your reading progress'); return }
       if (!bookNameResolved) {
         Alert.alert('Error', 'Book name not available')
         return
@@ -390,7 +393,7 @@ export default function ChapterScreen() {
       console.error('[markChapterRead] error:', e)
       Alert.alert('Error', e?.message ?? 'Unable to mark as read')
     }
-  }, [bookNameResolved, chapter])
+  }, [bookNameResolved, chapter, isGuest, promptSignIn])
 
   const noVerses = !verses || verses.length === 0
 

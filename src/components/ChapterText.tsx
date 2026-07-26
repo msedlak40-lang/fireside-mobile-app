@@ -14,6 +14,7 @@ import { setStudyDepth } from '../services/userPrefs'
 import { saveBattleVerse, BATTLE_TAGS } from '../services/battleVerses'
 import { colors } from '../theme/colors'
 import { CHROME_MAX_SCALE } from '../lib/textScaling'
+import { useGuestMode } from '../context/GuestModeContext'
 
 type RawVerse = any
 
@@ -58,6 +59,7 @@ export default function ChapterText(props: Props) {
   const verses = props.verses ?? []
   const significantVerses = props.significantVerses ?? new Set<number>()
   const navigation = useNavigation<any>()
+  const { isGuest, promptSignIn } = useGuestMode()
 
   // Note modal
   const [noteOpen, setNoteOpen] = useState(false)
@@ -160,6 +162,7 @@ export default function ChapterText(props: Props) {
   // --- Actions ---
   function handleAddNote() {
     if (!summaryVerse) return
+    if (isGuest) { setSummaryOpen(false); promptSignIn('add notes'); return }
     setActiveVerse(summaryVerse.num)
     setSummaryOpen(false)
     setNoteOpen(true)
@@ -167,6 +170,7 @@ export default function ChapterText(props: Props) {
 
   function handleBattleVerse() {
     if (!summaryVerse) return
+    if (isGuest) { setSummaryOpen(false); promptSignIn('save Battle Verses'); return }
     setBattleVerseData({ verseNum: summaryVerse.num, verseText: summaryVerse.text })
     setSummaryOpen(false)
     setBattleTagOpen(true)
@@ -174,6 +178,7 @@ export default function ChapterText(props: Props) {
 
   function handleShareToFire() {
     if (!summaryVerse || !book) return
+    if (isGuest) { setSummaryOpen(false); promptSignIn('share verses to a Fire'); return }
     setShareVerse({ num: summaryVerse.num, text: summaryVerse.text })
     setSummaryOpen(false)
     setShareFireOpen(true)
@@ -181,6 +186,7 @@ export default function ChapterText(props: Props) {
 
   async function handleHighlight(color: HighlightColor) {
     if (!summaryVerse || !book) return
+    if (isGuest) { setSummaryOpen(false); promptSignIn('highlight verses'); return }
     const v = summaryVerse.num
     if (highlightMap.has(v)) await removeHighlight(v)
     await insertHighlight(v, color)
@@ -189,6 +195,7 @@ export default function ChapterText(props: Props) {
 
   async function handleRemoveHighlight() {
     if (!summaryVerse) return
+    if (isGuest) { setSummaryOpen(false); promptSignIn('highlight verses'); return }
     await removeHighlight(summaryVerse.num)
     await loadHighlights()
   }

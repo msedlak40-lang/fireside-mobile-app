@@ -28,8 +28,11 @@ import ViewArsenalModal from '../components/ViewArsenalModal';
 import ShareToFireModal from '../components/ShareToFireModal';
 import { colors } from '../theme/colors';
 import { CHROME_MAX_SCALE } from '../lib/textScaling';
+import { useGuestMode } from '../context/GuestModeContext';
+import GuestPreview from '../components/GuestPreview';
 
 export default function ArsenalScreen({ navigation }: any) {
+  const { isGuest } = useGuestMode();
   const [savedApps, setSavedApps] = useState<SavedApplication[]>([]);
   const [stats, setStats] = useState<ArsenalStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +62,7 @@ export default function ArsenalScreen({ navigation }: any) {
 
   const loadArsenal = useCallback(async () => {
     try {
+      if (isGuest) { setIsLoading(false); return } // short-circuit: no throwing fetch for guests
       if (!refreshing) setIsLoading(true);
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -86,7 +90,7 @@ export default function ArsenalScreen({ navigation }: any) {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [selectedTheme, selectedSubTheme, selectedCharacter, showFavoritesOnly, refreshing]);
+  }, [selectedTheme, selectedSubTheme, selectedCharacter, showFavoritesOnly, refreshing, isGuest]);
 
   useEffect(() => {
     loadArsenal();
@@ -207,6 +211,22 @@ export default function ArsenalScreen({ navigation }: any) {
   }
 
   const hasActiveFilters = selectedTheme || selectedSubTheme || selectedCharacter || showFavoritesOnly;
+
+  if (isGuest) {
+    return (
+      <GuestPreview
+        icon="🗡️"
+        title="Build your Arsenal"
+        subtitle="Save the applications and insights you discover while reading, and organize them your way."
+        bullets={[
+          'Save theme applications from any chapter',
+          'Filter and favorite your saved insights',
+          'A growing personal library for spiritual battle',
+        ]}
+        action="save and organize your insights"
+      />
+    );
+  }
 
   // Loading state
   if (isLoading && savedApps.length === 0) {
