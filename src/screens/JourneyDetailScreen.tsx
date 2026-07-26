@@ -15,9 +15,11 @@ import {
 } from '../services/journeys';
 import type { Journey, UserJourneyProgress } from '../types/journey';
 import { colors } from '../theme/colors';
+import { useGuestMode } from '../context/GuestModeContext';
 
 export default function JourneyDetailScreen({ route, navigation }: any) {
   const { journeyId } = route.params;
+  const { isGuest, promptSignIn } = useGuestMode();
   const [journey, setJourney] = useState<Journey | null>(null);
   const [progress, setProgress] = useState<UserJourneyProgress | null>(null);
 
@@ -45,6 +47,7 @@ export default function JourneyDetailScreen({ route, navigation }: any) {
 
   async function handleStart() {
     if (!journey) return;
+    if (isGuest) { promptSignIn('start this journey'); return; }
 
     if (progress) {
       navigation.navigate('JourneyExperience', { journeyId: journey.id });

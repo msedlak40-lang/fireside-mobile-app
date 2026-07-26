@@ -5,6 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
 import { colors } from '../../theme/colors';
 import type { CharacterLesson } from '../../types/supabase-characters';
+import { useGuestMode } from '../../context/GuestModeContext';
 
 // New table needed: user_character_lesson_progress
 type LessonProgress = {
@@ -18,6 +19,7 @@ type LessonProgress = {
 export default function CharacterLessonScreen() {
   const { id } = useRoute<any>().params as { id: number };
   const navigation = useNavigation<any>();
+  const { isGuest, promptSignIn } = useGuestMode();
   const [lesson, setLesson] = useState<CharacterLesson | null>(null);
   const [lessonProgress, setLessonProgress] = useState<LessonProgress | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,7 @@ export default function CharacterLessonScreen() {
   }, [id]);
 
   const markLessonComplete = async () => {
+    if (isGuest) { promptSignIn('track your lesson progress'); return; }
     if (isCompleting || !lesson) return;
 
     try {

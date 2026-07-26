@@ -18,6 +18,7 @@ import type {
   UserReadingPlanProgress,
   ReadingPlanDayProgress
 } from '../../services/readingPlans';
+import { useGuestMode } from '../../context/GuestModeContext';
 
 type GroupedDay = {
   day_number: number;
@@ -34,6 +35,7 @@ type GroupedDay = {
 export default function ReadingPlanDetailScreen() {
   const { planId } = useRoute<any>().params as { planId: number };
   const navigation = useNavigation<any>();
+  const { isGuest, promptSignIn } = useGuestMode();
 
   const [plan, setPlan] = useState<ReadingPlan | null>(null);
   const [groupedDays, setGroupedDays] = useState<GroupedDay[]>([]);
@@ -117,6 +119,7 @@ export default function ReadingPlanDetailScreen() {
   };
 
   const handleStartPlan = async () => {
+    if (isGuest) { promptSignIn('start this reading plan'); return; }
     if (starting) return;
     try {
       setStarting(true);
@@ -134,6 +137,7 @@ export default function ReadingPlanDetailScreen() {
   };
 
   const handleCompleteDay = async (day: GroupedDay) => {
+    if (isGuest) { promptSignIn('track your reading plan progress'); return; }
     if (!userProgress) return;
     try {
       await completeReadingPlanDay(userProgress.id, day.first_day_id, day.day_number);
@@ -161,6 +165,7 @@ export default function ReadingPlanDetailScreen() {
   );
 
   const handleMarkPassage = async (day: GroupedDay, passageIndex: number, totalPassages: number) => {
+    if (isGuest) { promptSignIn('track your reading plan progress'); return; }
     try {
       const { allComplete } = await markPassageComplete(day.first_day_id, passageIndex, totalPassages, day.day_number);
       await load(); // Refresh all state

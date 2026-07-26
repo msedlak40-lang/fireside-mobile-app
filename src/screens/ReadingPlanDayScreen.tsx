@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
 import { markPassageComplete, fetchPassageProgress, completeReadingPlanDay } from '../services/readingPlans';
+import { useGuestMode } from '../context/GuestModeContext';
 
 type PlanDayRow = {
   id: number;
@@ -74,6 +75,7 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
     totalPassages?: number;
   };
   const hasSinglePassage = passageIndex != null;
+  const { isGuest, promptSignIn } = useGuestMode();
 
   console.log('════════════════════════════════════');
   console.log('[ReadingPlanDayScreen] RENDER params:', {
@@ -254,6 +256,7 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
   }, [dayId, passageIndex, translation]);
 
   const handleMarkPassageComplete = useCallback(async (index: number) => {
+    if (isGuest) { promptSignIn('track your reading plan progress'); return; }
     if (!day || completingIndex !== null) return;
     setCompletingIndex(index);
     try {
@@ -280,10 +283,11 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
     } finally {
       setCompletingIndex(null);
     }
-  }, [day, readingBlocks.length, completingIndex]);
+  }, [day, readingBlocks.length, completingIndex, isGuest, promptSignIn]);
 
   // Mark complete: single passage or entire day depending on context
   const handleMarkDayComplete = useCallback(async () => {
+    if (isGuest) { promptSignIn('track your reading plan progress'); return; }
     if (!day) return;
     setCompletingIndex(-1);
     try {
@@ -315,7 +319,7 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
     } finally {
       setCompletingIndex(null);
     }
-  }, [day, hasSinglePassage, passageIndex, totalPassages]);
+  }, [day, hasSinglePassage, passageIndex, totalPassages, isGuest, promptSignIn]);
 
   // In single-passage mode, compare against totalPassages (real count), not readingBlocks.length (always 1)
   const effectiveTotal = hasSinglePassage ? (totalPassages ?? 1) : readingBlocks.length;

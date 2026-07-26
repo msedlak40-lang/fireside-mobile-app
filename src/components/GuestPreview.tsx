@@ -19,6 +19,11 @@ type Props = {
   /** Completes "Sign in to {action}" in the shared sheet. */
   action: string;
   ctaLabel?: string;
+  /**
+   * Render just the card (no SafeAreaView/ScrollView wrapper) so it can sit
+   * inside a parent scroll view — e.g. the My Theme tab within the reader.
+   */
+  embedded?: boolean;
 };
 
 export default function GuestPreview({
@@ -28,36 +33,43 @@ export default function GuestPreview({
   bullets = [],
   action,
   ctaLabel = 'Sign In / Create Account',
+  embedded = false,
 }: Props) {
   const { promptSignIn } = useGuestMode();
 
+  const card = (
+    <View style={styles.card}>
+      <Text style={styles.icon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{icon}</Text>
+      <Text style={styles.title} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{title}</Text>
+      <Text style={styles.subtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{subtitle}</Text>
+
+      {bullets.length > 0 && (
+        <View style={styles.bullets}>
+          {bullets.map((b, i) => (
+            <View key={i} style={styles.bulletRow}>
+              <Text style={styles.bulletDot} maxFontSizeMultiplier={CHROME_MAX_SCALE}>✓</Text>
+              <Text style={styles.bulletText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{b}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity style={styles.cta} onPress={() => promptSignIn(action)} activeOpacity={0.85}>
+        <Text style={styles.ctaText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{ctaLabel}</Text>
+      </TouchableOpacity>
+      <Text style={styles.footnote} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+        Free to create — keep reading the Bible as a guest anytime.
+      </Text>
+    </View>
+  );
+
+  if (embedded) {
+    return <View style={styles.embeddedWrap}>{card}</View>;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.icon} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{icon}</Text>
-          <Text style={styles.title} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{title}</Text>
-          <Text style={styles.subtitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{subtitle}</Text>
-
-          {bullets.length > 0 && (
-            <View style={styles.bullets}>
-              {bullets.map((b, i) => (
-                <View key={i} style={styles.bulletRow}>
-                  <Text style={styles.bulletDot} maxFontSizeMultiplier={CHROME_MAX_SCALE}>✓</Text>
-                  <Text style={styles.bulletText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{b}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.cta} onPress={() => promptSignIn(action)} activeOpacity={0.85}>
-            <Text style={styles.ctaText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{ctaLabel}</Text>
-          </TouchableOpacity>
-          <Text style={styles.footnote} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-            Free to create — keep reading the Bible as a guest anytime.
-          </Text>
-        </View>
-      </ScrollView>
+      <ScrollView contentContainerStyle={styles.content}>{card}</ScrollView>
     </SafeAreaView>
   );
 }
@@ -71,6 +83,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
+  },
+  embeddedWrap: {
+    paddingVertical: 24,
   },
   card: {
     backgroundColor: colors.background.secondary,

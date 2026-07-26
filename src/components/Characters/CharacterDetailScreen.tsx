@@ -8,10 +8,12 @@ import { getCharacterWithLessons } from '../../lib/characters';
 import { completeCharacterStudy, fetchCharacterProgress, toggleCharacterFavorite } from '../../services/progress';
 import type { BibleCharacter, CharacterLesson } from '../../types/supabase-characters';
 import type { CharacterProgress } from '../../services/progress';
+import { useGuestMode } from '../../context/GuestModeContext';
 
 export default function CharacterDetailScreen() {
   const { id } = useRoute<any>().params as { id: number };
   const navigation = useNavigation<any>();
+  const { isGuest, promptSignIn } = useGuestMode();
 
   const [character, setCharacter] = useState<BibleCharacter | null>(null);
   const [lessons, setLessons] = useState<CharacterLesson[]>([]);
@@ -58,6 +60,7 @@ export default function CharacterDetailScreen() {
   useFocusEffect(useCallback(() => { load(); return () => {}; }, [load]));
 
   const handleStartStudy = async () => {
+    if (isGuest) { promptSignIn('start this character study'); return; }
     if (isStarting || !character) return;
     try {
       setIsStarting(true);
@@ -82,6 +85,7 @@ export default function CharacterDetailScreen() {
   };
 
   const markCharacterComplete = async () => {
+    if (isGuest) { promptSignIn('track your character study progress'); return; }
     if (isCompleting) return;
     try {
       setIsCompleting(true);
@@ -97,6 +101,7 @@ export default function CharacterDetailScreen() {
   };
 
   const handleToggleFavorite = async () => {
+    if (isGuest) { promptSignIn('save favorite characters'); return; }
     try {
       await toggleCharacterFavorite(id);
       const progress = await fetchCharacterProgress(id);
