@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
 import {
@@ -21,7 +22,7 @@ import {
   isValidTheme,
   type CoreTheme,
 } from '../services/themes';
-import { getPreferredTranslation, setPreferredTranslation } from '../services/userPrefs';
+import { getPreferredTranslation, setPreferredTranslation, clearLocalUserData } from '../services/userPrefs';
 import { getCurrentCycle, startNextCycle } from '../services/readingCycle';
 import { colors } from '../theme/colors';
 import { CHROME_MAX_SCALE } from '../lib/textScaling';
@@ -42,6 +43,11 @@ export default function SettingsScreen() {
   const [savedFirstName, setSavedFirstName] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
+
+  // Account actions (sign out / delete)
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const availableThemes = getAvailableThemes();
   const currentYear = new Date().getFullYear();
@@ -190,6 +196,37 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Failed to save theme. Please try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Sign out of your account?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', onPress: () => { supabase.auth.signOut().catch(() => {}); } },
+    ]);
+  };
+
+  // Delete: RPC first. Sign out + clear local caches ONLY on confirmed success,
+  // so an RPC failure leaves the user signed in (never strand them).
+  const handleConfirmDelete = async () => {
+    try {
+      setDeleting(true);
+      const { error } = await supabase.rpc('delete_own_account');
+      if (error) throw error;
+
+      // Success — account + all data are gone. Clear local caches, then sign out;
+      // signOut() flips the root gate back to the Auth screen. (The root auth
+      // listener also clears on SIGNED_OUT; clearing here first is belt-and-braces.)
+      await clearLocalUserData();
+      try { await supabase.auth.signOut(); } catch {}
+      // Component unmounts as the gate flips; no manual navigation needed.
+    } catch (e: any) {
+      setDeleting(false);
+      setConfirmVisible(false);
+      Alert.alert(
+        'Could not delete account',
+        `${e?.message ?? 'Something went wrong.'}\n\nYou are still signed in — no data was deleted. Please try again.`
+      );
     }
   };
 
@@ -417,8 +454,11 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Account</Text>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Email</Text>
-            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{userId ? 'Signed in' : 'Not signed in'}</Text>
+            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{userEmail ?? (userId ? 'Signed in' : 'Not signed in')}</Text>
           </View>
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.7}>
+            <Text style={styles.signOutButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
 
         {/* App Info */}
@@ -433,7 +473,73 @@ export default function SettingsScreen() {
             <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Active</Text>
           </View>
         </View>
+
+        {/* Danger Zone */}
+        <View style={[styles.section, styles.dangerSection]}>
+          <Text style={[styles.sectionTitle, styles.dangerTitle]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Danger Zone</Text>
+          <Text style={styles.sectionDescription} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+            Permanently delete your account and all of your data. This cannot be undone.
+          </Text>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => { setConfirmText(''); setConfirmVisible(true); }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.deleteButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Delete Account</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      {/* Delete confirmation (two-step: open + type DELETE) */}
+      <Modal
+        visible={confirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { if (!deleting) setConfirmVisible(false); }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Delete Account</Text>
+            <Text style={styles.modalWarning} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+              This permanently deletes your account and all your data — reading progress, notes, saved verses, and Fire history. This cannot be undone.
+            </Text>
+            <Text style={styles.modalPrompt} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Type DELETE to confirm.</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={confirmText}
+              onChangeText={setConfirmText}
+              placeholder="DELETE"
+              placeholderTextColor={colors.text.muted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!deleting}
+            />
+            {(() => {
+              const armed = confirmText.trim().toUpperCase() === 'DELETE' && !deleting;
+              return (
+                <TouchableOpacity
+                  style={[styles.modalDeleteBtn, !armed && styles.modalDeleteBtnDisabled]}
+                  disabled={!armed}
+                  onPress={handleConfirmDelete}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalDeleteBtnText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                    {deleting ? 'Deleting…' : 'Delete My Account'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              disabled={deleting}
+              onPress={() => setConfirmVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCancelBtnText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Saving Overlay */}
       {isSaving && (
@@ -651,5 +757,108 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  signOutButton: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  signOutButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  dangerSection: {
+    borderBottomWidth: 0,
+  },
+  dangerTitle: {
+    color: '#ef4444',
+  },
+  deleteButton: {
+    marginTop: 4,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ef4444',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.background.elevated,
+    borderRadius: 14,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#ef4444',
+    marginBottom: 10,
+  },
+  modalWarning: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text.primary,
+    marginBottom: 16,
+  },
+  modalPrompt: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text.secondary,
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: colors.text.primary,
+    marginBottom: 16,
+  },
+  modalDeleteBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: '#dc2626',
+  },
+  modalDeleteBtnDisabled: {
+    opacity: 0.4,
+  },
+  modalDeleteBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  modalCancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  modalCancelBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.secondary,
   },
 });
