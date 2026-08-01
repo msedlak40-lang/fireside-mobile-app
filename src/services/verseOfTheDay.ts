@@ -1,5 +1,6 @@
 // src/services/verseOfTheDay.ts
 import { supabase } from '../lib/supabaseClient';
+import { cleanVerseText } from '../utils/verseText';
 
 export type VerseOfTheDay = {
   book_name: string;
@@ -216,7 +217,7 @@ async function fetchCuratedVerse(
     book_name: curated.book_name,
     chapter_number: curated.chapter,
     verse_number: curated.verse,
-    verse_text: verse.verse_text,
+    verse_text: cleanVerseText(verse.verse_text),
     translation,
     reference: `${curated.book_name} ${curated.chapter}:${curated.verse}`,
     insight_title: insight?.insight_title || undefined,
@@ -278,7 +279,7 @@ async function fetchInsightVerse(
     book_name: bookName,
     chapter_number: insightData.chapter_number,
     verse_number: insightData.verse_number,
-    verse_text: verseData.verse_text,
+    verse_text: cleanVerseText(verseData.verse_text),
     translation,
     reference: `${bookName} ${insightData.chapter_number}:${insightData.verse_number}`,
     insight_title: insightData.insight_title || undefined,
@@ -323,7 +324,7 @@ async function fetchRandomVerse(
     book_name: data.book_name,
     chapter_number: data.chapter_number,
     verse_number: data.verse_number,
-    verse_text: data.verse_text,
+    verse_text: cleanVerseText(data.verse_text),
     translation,
     reference: `${data.book_name} ${data.chapter_number}:${data.verse_number}`,
     source: 'random',

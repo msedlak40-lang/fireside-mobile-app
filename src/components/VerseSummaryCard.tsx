@@ -8,6 +8,7 @@ import {
 import { colors } from '../theme/colors'
 import { supabase } from '../lib/supabaseClient'
 import { saveBattleVerse } from '../services/battleVerses'
+import { cleanVerseText } from '../utils/verseText'
 import { CHROME_MAX_SCALE } from '../lib/textScaling'
 import SelectableProse from './SelectableProse'
 import { useSentenceSelection } from '../hooks/useSentenceSelection'
@@ -99,7 +100,7 @@ export default function VerseSummaryCard(props: Props) {
         .lte('verse_number', end)
         .order('verse_number')
       if (!error && data && data.length > 0) {
-        setCrossRefText(data.map((v: any) => `${v.verse_number} ${v.verse_text}`).join(' '))
+        setCrossRefText(data.map((v: any) => `${v.verse_number} ${cleanVerseText(v.verse_text)}`).join(' '))
       } else {
         setCrossRefText('Verse text not available.')
       }
