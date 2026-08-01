@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import { colors } from '../theme/colors';
 import { markPassageComplete, fetchPassageProgress, completeReadingPlanDay } from '../services/readingPlans';
 import { useGuestMode } from '../context/GuestModeContext';
+import { cleanVerseText } from '../utils/verseText';
 
 type PlanDayRow = {
   id: number;
@@ -122,7 +123,10 @@ export default function ReadingPlanDayScreen({ route, navigation }: any) {
       }
 
       const { data, error } = await q.order('verse_number', { ascending: true });
-      if (!error && data && data.length) return data as VerseRow[];
+      if (!error && data && data.length) {
+        // Normalize whitespace/newlines so passages wrap naturally (same fix as the reader).
+        return data.map((row: any) => ({ ...row, verse_text: cleanVerseText(row.verse_text) })) as VerseRow[];
+      }
     }
     return [];
   };

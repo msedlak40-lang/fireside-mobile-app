@@ -1,6 +1,7 @@
 // src/services/scripture.ts — COMPLETE FIXED VERSION
 import { supabase } from '../lib/supabaseClient'
 import { getCurrentCycle } from './readingCycle'
+import { cleanVerseText } from '../utils/verseText'
 
 /** ------------ Types ------------ */
 export type Book = {
@@ -243,7 +244,11 @@ export async function fetchChapterTextByNameAndTranslation(
     .eq('translation', translation)
     .order('verse_number', { ascending: true })
   if (error) throw error
-  return (data ?? []) as { verse_number: number; verse_text: string }[]
+  // Normalize whitespace/newlines so consumers wrap naturally (same fix as the reader).
+  return (data ?? []).map((row: any) => ({
+    verse_number: row.verse_number,
+    verse_text: cleanVerseText(row.verse_text),
+  })) as { verse_number: number; verse_text: string }[]
 }
 
 export async function fetchVersePage(bookId: number, chapter: number, verse: number): Promise<VersePage> {
@@ -359,10 +364,11 @@ export async function fetchChapterText(
 
     if (error) throw error
 
-    // Map to VerseLine format and dedupe
+    // Map to VerseLine format and dedupe. Normalize whitespace/newlines so the
+    // reader wraps naturally (same fix as the Verse of the Day card).
     const rows = (data ?? []).map((row: any) => ({
       verse_number: row.verse_number,
-      text: row.verse_text
+      text: cleanVerseText(row.verse_text)
     })) as VerseLine[]
 
     // Dedupe by verse_number, keep first occurrence
