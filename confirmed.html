@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Confirmed - Fireside Fellowship</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .check-badge {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            background: #4caf50;
+            color: white;
+            font-size: 46px;
+            line-height: 84px;
+            margin: 0 auto 24px auto;
+            box-shadow: 0 4px 14px rgba(76,175,80,0.35);
+        }
+        h1 {
+            color: #2c3e50;
+            margin: 0 0 8px 0;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 18px;
+            margin-bottom: 28px;
+        }
+        .success-card {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 20px 22px;
+            border-radius: 8px;
+            margin: 0 0 28px 0;
+            text-align: left;
+            color: #2c3e50;
+        }
+        .success-card strong {
+            color: #2e7d32;
+        }
+        .open-btn {
+            display: inline-block;
+            background: #e74c3c;
+            color: white;
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 600;
+            padding: 15px 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(231,76,60,0.3);
+        }
+        .open-btn:hover {
+            background: #d84234;
+        }
+        .fallback {
+            color: #7f8c8d;
+            font-size: 15px;
+            margin: 20px auto 0 auto;
+            max-width: 520px;
+        }
+        .fallback strong {
+            color: #2c3e50;
+        }
+        .desktop-note {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 28px 0 0 0;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: left;
+        }
+        .desktop-note strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 4px;
+        }
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            text-align: center;
+            font-size: 14px;
+        }
+        footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="check-badge">&#10003;</div>
+        <h1>Your email is confirmed</h1>
+        <p class="subtitle">You're all set.</p>
+
+        <div class="success-card">
+            <strong>Your Fireside account is ready.</strong>
+            <p style="margin: 6px 0 0 0;">There's nothing else to do here &mdash; just open the app and sign in with the email and password you created.</p>
+        </div>
+
+        <a href="fireside://auth" class="open-btn">Open Fireside</a>
+
+        <p class="fallback">
+            Button didn't do anything? That's okay &mdash; just <strong>open the Fireside app on your phone and sign in</strong>. Your account is confirmed and waiting.
+        </p>
+
+        <div class="desktop-note">
+            <strong>On a computer?</strong>
+            Grab your phone, open the Fireside app, and sign in with your email and password. You're good to go.
+        </div>
+
+        <footer>
+            <p>
+                <a href="privacy-policy.html">Privacy Policy</a>
+                &nbsp;&middot;&nbsp;
+                <a href="support.html">Support</a>
+            </p>
+            <p>&copy; 2026 Fireside Fellowship. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
