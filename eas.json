@@ -6,8 +6,21 @@
       "distribution": "internal",
       "ios": { "resourceClass": "m-medium" }
     },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "buildConfiguration": "Release"
+      }
+    },
     "production": {
       "ios": { "resourceClass": "m-medium" }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }
