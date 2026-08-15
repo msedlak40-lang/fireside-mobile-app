@@ -489,7 +489,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle} maxFontSizeMultiplier={CHROME_MAX_SCALE}>About</Text>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Version</Text>
-            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>2.0.1</Text>
+            <Text style={styles.settingValue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>2.0.2</Text>
           </View>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Theme System</Text>
