@@ -1,7 +1,7 @@
 {
   "expo": {
     "scheme": "fireside",
-    "name": "Fireside",
+    "name": "Fireside180°",
     "slug": "fireside-mobile",
     "icon": "./assets/Fireside180Logo_icon.png",
  "plugins": [
@@ -24,17 +24,18 @@
     "version": "2.0.1",
     "ios": {
       "bundleIdentifier": "com.msedlak40.firesidemobile",
-      "buildNumber": "17",
+      "buildNumber": "18",
       "supportsTablet": false,
       "icon": "./assets/Fireside180Logo_icon.png",
       "infoPlist": {
+        "CFBundleDisplayName": "Fireside180°",
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Fireside uses Face ID to securely unlock the app and keep your data safe."
       }
     },
     "android": {
       "package": "com.msedlak40.firesidemobile",
-      "versionCode": 5,
+      "versionCode": 6,
       "icon": "./assets/Fireside180Logo_icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/Fireside180Logo_icon.png",
