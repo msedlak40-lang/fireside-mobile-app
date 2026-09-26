@@ -1,7 +1,7 @@
 // src/components/Progress/ProgressDashboardScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, SafeAreaView, RefreshControl, Modal, Pressable, TouchableWithoutFeedback, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
@@ -15,7 +15,7 @@ import VerseSummaryCard from '../VerseSummaryCard';
 import ReadingProgressModal from './ReadingProgressModal';
 import BattleTagPicker from '../BattleTagPicker';
 import { getVerseLifeApplication, type VerseLifeApplication } from '../../services/scripture';
-import { setStudyDepth } from '../../services/userPrefs';
+import { setStudyDepth, getPreferredTranslation } from '../../services/userPrefs';
 import { colors } from '../../theme/colors';
 import { CHROME_MAX_SCALE } from '../../lib/textScaling';
 import { useGuestMode } from '../../context/GuestModeContext';
@@ -40,6 +40,11 @@ type CachedData = {
   activeCharacterStudy: ActiveCharacterStudy | null;
   todayDevotion: any | null;
   verseOfTheDay: VerseOfTheDay | null;
+  // The translation the cached verseOfTheDay text was fetched in. Cached here so a stale entry
+  // can be DETECTED rather than having to be cleared by whoever changed the preference —
+  // Settings is one writer today, and a second one would otherwise silently reintroduce the bug.
+  // Absent on entries written before this field existed, which reads as a mismatch and refetches.
+  translation: string;
   timestamp: number;
 };
 
@@ -208,14 +213,16 @@ export default function ProgressDashboardScreen() {
     });
   }, [summaryVerse, navigation]);
 
-  // Load cached data from AsyncStorage
-  const loadFromCache = async (): Promise<CachedData | null> => {
+  // Load cached data from AsyncStorage. A cache entry is only usable if it is both fresh AND
+  // in the translation the reader currently prefers — otherwise the VOTD would keep showing the
+  // previous translation's text for as long as the entry lived.
+  const loadFromCache = async (currentTranslation: string): Promise<CachedData | null> => {
     try {
       const cached = await AsyncStorage.getItem(CACHE_KEY);
       if (cached) {
         const parsed: CachedData = JSON.parse(cached);
         const age = Date.now() - parsed.timestamp;
-        if (age < CACHE_DURATION) {
+        if (age < CACHE_DURATION && parsed.translation === currentTranslation) {
           return parsed;
         }
       }
@@ -241,11 +248,15 @@ export default function ProgressDashboardScreen() {
   // Fetch fresh data from API
   const fetchFreshData = async () => {
     try {
+      // The VOTD text follows the reader's chosen translation (KJV by default). Only the TEXT:
+      // the insight attached to the verse is keyed by book/chapter/verse and is the same either
+      // way, so nothing about the enrichment changes with this.
+      const translation = await getPreferredTranslation();
       const [dashData, planData, characterStudyData, verseData] = await Promise.all([
         fetchUserDashboard(),
         fetchActiveReadingPlan(),
         fetchActiveCharacterStudy(),
-        fetchVerseOfTheDay('KJV'),
+        fetchVerseOfTheDay(translation),
       ]);
 
       // today's devotion
@@ -262,6 +273,7 @@ export default function ProgressDashboardScreen() {
         activeCharacterStudy: characterStudyData,
         todayDevotion: data ?? null,
         verseOfTheDay: verseData,
+        translation,
       };
 
       setDashboard(freshData.dashboard);
@@ -287,7 +299,7 @@ export default function ProgressDashboardScreen() {
     if (isGuest) { setLoading(false); return } // guests never hit the throwing dashboard fetch
     setLoading(true);
     try {
-      const cached = await loadFromCache();
+      const cached = await loadFromCache(await getPreferredTranslation());
       if (cached) {
         // Use cached data immediately
         setDashboard(cached.dashboard);
@@ -319,6 +331,25 @@ export default function ProgressDashboardScreen() {
   useEffect(() => {
     load();
   }, []);
+
+  // This screen mounts once and stays mounted, so changing the translation in Settings and
+  // walking back here would otherwise keep showing the old translation's verse indefinitely —
+  // not for the cache's five minutes, but until the app restarted. Compare the preference to
+  // what is actually on screen each time the tab regains focus, and refetch ONLY on a mismatch.
+  // One AsyncStorage read per focus; no extra network call in the common case. Skipped while
+  // verseOfTheDay is still null so this cannot race the initial load into a double fetch.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const rendered = verseOfTheDay?.translation;
+        if (!rendered) return;
+        const preferred = await getPreferredTranslation();
+        if (!cancelled && preferred !== rendered) await fetchFreshData();
+      })();
+      return () => { cancelled = true; };
+    }, [verseOfTheDay?.translation]),
+  );
 
   const openPlans = useCallback(() => {
     // ✅ just switch to the Plans tab — avoids nested hook issues
