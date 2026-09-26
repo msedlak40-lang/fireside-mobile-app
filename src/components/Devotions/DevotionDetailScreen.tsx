@@ -8,8 +8,41 @@ import { saveDevotionHighlight, getDevotionHighlights, deleteDevotionHighlight }
 import { getDevotionInteraction, toggleDevotionStar, markDevotionRead } from '../../services/devotionInteractions';
 import type { Devotion } from '../../types/supabase-devotions';
 import VerseSummaryCard from '../VerseSummaryCard';
-import { getVerseLifeApplication, type VerseLifeApplication } from '../../services/scripture';
-import { setStudyDepth } from '../../services/userPrefs';
+import BattleTagPicker from '../BattleTagPicker';
+import { saveBattleVerse } from '../../services/battleVerses';
+import { getVerseLifeApplication, fetchVerseTextByName, type VerseLifeApplication } from '../../services/scripture';
+import { setStudyDepth, getPreferredTranslation } from '../../services/userPrefs';
+
+const LEADING_VERSE = /^\s*(\d+)/;
+
+/**
+ * Which verse a devotion's "Save to Battle Verses" writes, and whether the devotion's stored
+ * key_verse_text spans more than one verse.
+ *
+ * DERIVED FROM key_verse_range, NOT key_verse_number. key_verse_number is unreliable for
+ * ranges: 9 of the 104 dashed rows hold the LAST verse of the range rather than the first
+ * (id 269, "1 Corinthians 1:23-24", holds 24), and the same reference is stored inconsistently
+ * — Deuteronomy 6:6-7 appears four times, twice as 6 and twice as 7. key_verse_range is
+ * consistent, so derive from it and leave the mis-authored rows alone in the data.
+ *
+ * A LEADING-INTEGER parse, not a dash split, because that is total over the whole table. The
+ * grammar across all 816 devotions is: NULL (367), plain integer (343, always equal to
+ * key_verse_number), "N-M" (104), and exactly two others — "10a" (Zechariah 4:10a) and "1,4"
+ * (Ecclesiastes 3:1,4). Verified: the derived verse equals the first verse printed in
+ * key_verse_reference on all 816 rows, and differs from key_verse_number on exactly the 9.
+ *
+ * isMultiVerse keys off "-" or "," because those are what join verses. "10a" is a fragment of
+ * ONE verse (its text is half of Zechariah 4:10), so it counts as single-verse and keeps the
+ * devotion's own text.
+ */
+function deriveSavedVerse(d: Devotion): { verseNumber: number; isMultiVerse: boolean } {
+  const raw = d.key_verse_range;
+  const first = raw ? Number(LEADING_VERSE.exec(raw)?.[1]) : NaN;
+  return {
+    verseNumber: Number.isFinite(first) ? first : Number(d.key_verse_number),
+    isMultiVerse: !!raw && /[-,]/.test(raw),
+  };
+}
 
 export default function DevotionDetailScreen() {
   const route = useRoute<any>();
@@ -38,6 +71,9 @@ export default function DevotionDetailScreen() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryContent, setSummaryContent] = useState<VerseLifeApplication | null>(null);
   const [summaryAvailable, setSummaryAvailable] = useState(false);
+  // Save-the-key-verse-to-Battle-Verses state machine, same four states as the VOTD save:
+  // idle -> choosing (picker open) -> saving (write in flight) -> saved.
+  const [battleState, setBattleState] = useState<'idle' | 'choosing' | 'saving' | 'saved'>('idle');
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [selectedParagraph, setSelectedParagraph] = useState<{ start: number; length: number; text: string } | null>(null);
   const [selectionStart, setSelectionStart] = useState(0);
@@ -327,6 +363,80 @@ export default function DevotionDetailScreen() {
     });
   }, [devotion, navigation]);
 
+  // Save the devotion's key verse to Battle Verses — the sixth caller of BattleTagPicker,
+  // after VOTD, the chapter reader, the cross-reference card, and search single/batch.
+  //
+  // NO book-name normalization. The devotion's stored key_verse_book is canonical ('Psalms',
+  // not 'Psalm' — 48 rows corrected in the database on 2026-09-26), so the book goes straight
+  // through exactly as every other save path passes its own.
+  //
+  // The verse number and text, however, are NOT taken at face value — see deriveSavedVerse
+  // above and the comment in saveKeyVerseToBattle below.
+  const openBattlePicker = useCallback(() => {
+    if (!devotion || battleState !== 'idle') return;
+    setBattleState('choosing');
+  }, [devotion, battleState]);
+
+  const cancelBattlePicker = useCallback(() => {
+    setBattleState(s => (s === 'choosing' ? 'idle' : s));
+  }, []);
+
+  // tag is null when the reader chose "just save" — passed straight through, because
+  // saveBattleVerse writes `battle_tag: battleTag || null` and a declined tag must stay
+  // genuinely untagged (reachable from the dashboard's "Untagged" chip) rather than being
+  // filed as 'general', which is a tag someone actually picked.
+  const saveKeyVerseToBattle = useCallback(async (tag: string | null) => {
+    if (!devotion) return;
+    setBattleState('saving');
+    try {
+      const { verseNumber, isMultiVerse } = deriveSavedVerse(devotion);
+
+      // A range devotion's key_verse_text is the WHOLE range in a modern paraphrase, verified
+      // against the data: "1 Corinthians 1:23-24" stores both verses, "Isaiah 40:29-31" stores
+      // three, and the wording is NIV-ish ("spur one another on toward love and good deeds")
+      // rather than the KJV our bible_verses holds. Persisting that under a single verse number
+      // would file two verses' text as one, so read the one verse instead — at the translation
+      // the reader is actually reading, so a saved battle verse matches the reader.
+      let verseText = devotion.key_verse_text;
+      if (isMultiVerse) {
+        const translation = await getPreferredTranslation();
+        const single = await fetchVerseTextByName(
+          devotion.key_verse_book,
+          Number(devotion.key_verse_chapter),
+          verseNumber,
+          translation,
+        ).catch(() => null);
+        // Nothing found (a non-canonical book name, a verse this translation omits, a dropped
+        // request) falls back to the devotion's own text rather than failing the save. The
+        // verse NUMBER is corrected either way — that is the actual defect; the single-verse
+        // text is a best-effort improvement on top of it.
+        if (single) verseText = single;
+      }
+
+      // saveBattleVerse returns false on the duplicate constraint. Already-saved and
+      // just-saved both mean "it is in the list", so both collapse to 'saved'. It also composes
+      // verse_reference from the number passed here, so correct attribution follows from the
+      // corrected number without a second thing to keep in agreement.
+      await saveBattleVerse(
+        devotion.key_verse_book,
+        Number(devotion.key_verse_chapter),
+        verseNumber,
+        verseText,
+        tag ?? undefined,
+      );
+      setBattleState('saved');
+    } catch {
+      setBattleState('idle');
+      Alert.alert('Error', 'Could not save verse.');
+    }
+  }, [devotion]);
+
+  // A different devotion in the same mounted screen (setParams) must not inherit the previous
+  // one's "Saved" badge.
+  useEffect(() => {
+    setBattleState('idle');
+  }, [devotionId]);
+
   if (loading || !devotion) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.primary }}>
@@ -341,6 +451,14 @@ export default function DevotionDetailScreen() {
   // Honest reference for the summary card: it summarizes the single anchor verse, so label
   // it with the anchor (e.g. "John 3:16"), not the range the devotion may display.
   const anchorRef = `${devotion.key_verse_book} ${devotion.key_verse_chapter}:${devotion.key_verse_number}`;
+  // Deliberately a SECOND reference, not a reuse of anchorRef. anchorRef labels the summary
+  // card, and the summary CONTENT is keyed to key_verse_number (fetched that way on load), so
+  // repointing it at the derived verse would label the card with a verse whose summary it is
+  // not showing. saveRef labels the battle-save picker, which must name the row actually
+  // written. Identical on 807 devotions; they differ on the 9 whose key_verse_number holds the
+  // last verse of its range. Both come from one helper, so the picker can never drift from the
+  // save it describes.
+  const saveRef = `${devotion.key_verse_book} ${devotion.key_verse_chapter}:${deriveSavedVerse(devotion).verseNumber}`;
   const tags = Array.isArray(devotion.tags) ? devotion.tags : [];
   const situations = Array.isArray(devotion.situation_tags) ? devotion.situation_tags : [];
 
@@ -398,11 +516,34 @@ export default function DevotionDetailScreen() {
         <Text style={{ marginTop: 4, fontSize: 12, color: colors.text.secondary }}>
           {devotion.key_verse_book} {devotion.key_verse_chapter}:{keyRangeOrNum}
         </Text>
-        {summaryAvailable && (
-          <Text style={{ marginTop: 6, fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>
-            Tap for summary
-          </Text>
-        )}
+        {/* Action row. The Battle-save control is a child touchable, so it takes its own tap
+            rather than opening the summary card; the parent Pressable being disabled when no
+            summary exists does not block it (Pressable's `disabled` only affects its own
+            pressability, not pointer events on children). */}
+        <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          {summaryAvailable ? (
+            <Text style={{ fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>
+              Tap for summary
+            </Text>
+          ) : <View />}
+          <TouchableOpacity
+            onPress={openBattlePicker}
+            disabled={battleState !== 'idle'}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 14,
+              backgroundColor: battleState === 'saved' ? 'rgba(39,174,96,0.15)' : colors.background.tertiary,
+              borderWidth: 1,
+              borderColor: battleState === 'saved' ? colors.success : colors.border.default,
+            }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '700', color: battleState === 'saved' ? colors.success : colors.text.primary }}>
+              {battleState === 'saving' ? 'Saving…' : battleState === 'saved' ? '✓ Saved' : '⚔️ Save'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Pressable>
 
       {/* Body */}
@@ -753,6 +894,17 @@ export default function DevotionDetailScreen() {
         loading={false}
         content={summaryContent}
         onDeeper={handleDeeper}
+      />
+
+      {/* Optional battle tag for the key-verse save. Visible while choosing AND while saving,
+          so the spinner replaces the controls in place rather than the modal vanishing mid-write.
+          Reference is saveRef — the row that actually gets written, not the displayed range. */}
+      <BattleTagPicker
+        visible={battleState === 'choosing' || battleState === 'saving'}
+        reference={saveRef}
+        busy={battleState === 'saving'}
+        onSelect={saveKeyVerseToBattle}
+        onCancel={cancelBattlePicker}
       />
     </ScrollView>
   );

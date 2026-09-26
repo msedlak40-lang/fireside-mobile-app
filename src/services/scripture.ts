@@ -242,6 +242,35 @@ export async function fetchChapterTextByNameAndTranslation(
   })) as { verse_number: number; verse_text: string }[]
 }
 
+/**
+ * One verse's text by book_name + chapter + verse + translation.
+ *
+ * Returns null for BOTH "no such row" and "row present but empty" — a verse the translation
+ * omits (WEB has empty text at Acts 8:37, Romans 16:25 and three others) is, to every caller,
+ * the same fact as a missing row: no usable text. Callers branch once.
+ *
+ * Exists so a single-verse read doesn't have to go through
+ * fetchChapterTextByNameAndTranslation, which would pull all 176 rows of Psalm 119 to use one.
+ */
+export async function fetchVerseTextByName(
+  book_name: string,
+  chapter: number,
+  verse: number,
+  translation: TranslationCode
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('bible_verses')
+    .select('verse_text')
+    .eq('book_name', book_name)
+    .eq('chapter_number', chapter)
+    .eq('verse_number', verse)
+    .eq('translation', translation)
+    .maybeSingle()
+  if (error) throw error
+  const text = cleanVerseText((data as any)?.verse_text ?? '')
+  return text === '' ? null : text
+}
+
 export async function fetchVersePage(bookId: number, chapter: number, verse: number): Promise<VersePage> {
   const { data, error } = await supabase
     .rpc('rpc_get_verse_page', { p_book_id: bookId, p_chapter: chapter, p_verse: verse })
