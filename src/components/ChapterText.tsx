@@ -11,7 +11,8 @@ import ShareToFireModal from './ShareToFireModal'
 import { getVerseLifeApplication, type VerseLifeApplication } from '../services/scripture'
 import { getCrossReferences, type CrossReference } from '../services/strongsStudy'
 import { setStudyDepth } from '../services/userPrefs'
-import { saveBattleVerse, BATTLE_TAGS } from '../services/battleVerses'
+import { saveBattleVerse } from '../services/battleVerses'
+import BattleTagPicker from './BattleTagPicker'
 import { colors } from '../theme/colors'
 import { CHROME_MAX_SCALE } from '../lib/textScaling'
 import { useGuestMode } from '../context/GuestModeContext'
@@ -288,11 +289,11 @@ export default function ChapterText(props: Props) {
   }
 
   // --- DB operations ---
-  async function handleSaveBattleVerse(tag: string) {
+  async function handleSaveBattleVerse(tag: string | null) {
     if (!battleVerseData || !book) return
     setBattleTagOpen(false)
     try {
-      const saved = await saveBattleVerse(book, chapter, battleVerseData.verseNum, battleVerseData.verseText, tag)
+      const saved = await saveBattleVerse(book, chapter, battleVerseData.verseNum, battleVerseData.verseText, tag ?? undefined)
       if (saved) Alert.alert('Saved!', `${book} ${chapter}:${battleVerseData.verseNum} added to Battle Verses`)
       else Alert.alert('Already Saved', 'This verse is already in your Battle Verses')
     } catch { Alert.alert('Error', 'Could not save verse') }
@@ -496,40 +497,14 @@ export default function ChapterText(props: Props) {
         </View>
       </Modal>
 
-      {/* ===== BATTLE TAG MODAL ===== */}
-      <Modal visible={battleTagOpen} transparent animationType="fade" onRequestClose={() => { setBattleTagOpen(false); setBattleVerseData(null) }}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.modalTitle}>Save to Battle Verses</Text>
-            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: colors.text.secondary, fontSize: 14, marginBottom: 12 }}>
-              {book} {chapter}:{battleVerseData?.verseNum} — Choose a battle tag:
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {BATTLE_TAGS.map((tag) => (
-                <TouchableOpacity
-                  key={tag}
-                  style={{
-                    paddingHorizontal: 14, paddingVertical: 10,
-                    backgroundColor: colors.background.tertiary, borderRadius: 8,
-                    borderWidth: 1, borderColor: colors.border.default,
-                  }}
-                  onPress={() => handleSaveBattleVerse(tag)}
-                >
-                  <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: colors.text.primary, fontWeight: '600', fontSize: 14, textTransform: 'capitalize' }}>
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={[styles.btn, styles.btnGhost, { marginTop: 12, alignSelf: 'flex-end' }]}
-              onPress={() => { setBattleTagOpen(false); setBattleVerseData(null) }}
-            >
-              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.btnGhostText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Battle tag — the shared picker. Was a duplicate local modal here, which is why the
+          reader was the only save path that asked for a category. Skippable, matching VOTD. */}
+      <BattleTagPicker
+        visible={battleTagOpen}
+        reference={book && battleVerseData ? book + ' ' + chapter + ':' + battleVerseData.verseNum : null}
+        onSelect={handleSaveBattleVerse}
+        onCancel={() => { setBattleTagOpen(false); setBattleVerseData(null) }}
+      />
     </View>
   )
 }

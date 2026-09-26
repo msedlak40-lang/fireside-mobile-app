@@ -19,6 +19,7 @@ import { CHROME_MAX_SCALE } from '../lib/textScaling';
 import { supabase } from '../lib/supabaseClient';
 import { parseReference } from '../utils/bibleReferenceParser';
 import { saveBattleVersesBatch, saveBattleVerse } from '../services/battleVerses';
+import BattleTagPicker from '../components/BattleTagPicker';
 import { CORE_THEMES, THEME_DESCRIPTIONS, THEME_COLORS } from '../services/themes';
 import type { ChapterTheme } from '../services/themes';
 import { hybridThemeSearch, getThemeChapterCounts } from '../services/themeSearch';
@@ -51,6 +52,9 @@ export default function BibleSearchScreen() {
   const [translation, setTranslation] = useState('KJV');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  // One picker instance serves BOTH battle-save paths on this screen, so it records which one
+  // opened it. 'batch' reads selectedKeys at save time; 'single' saves summaryResult.
+  const [battlePicker, setBattlePicker] = useState<null | { mode: 'single' | 'batch' }>(null);
   const [themeCounts, setThemeCounts] = useState<Record<string, number>>({});
   const [modalChapter, setModalChapter] = useState<ChapterTheme | null>(null);
 
@@ -200,9 +204,16 @@ export default function BibleSearchScreen() {
     }
   };
 
-  const handleBatchSave = async () => {
+  const handleBatchSave = () => {
     if (isGuest) { promptSignIn('save Battle Verses'); return; }
     if (selectedKeys.size === 0) return;
+    setBattlePicker({ mode: 'batch' });
+  };
+
+  // One tag applies to the whole selection. Per-verse tagging on a multi-select would mean N
+  // modals, which is why the batch takes a single choice -- the same shape saveBattleVersesBatch
+  // already had with its `battleTag` parameter.
+  const doBatchSave = async (tag: string | null) => {
     setSaving(true);
     try {
       const versesToSave = results.filter(r => selectedKeys.has(verseKey(r)));
@@ -213,7 +224,9 @@ export default function BibleSearchScreen() {
           verse_number: v.verse_number,
           verse_text: v.verse_text,
         })),
+        tag ?? undefined,
       );
+      setBattlePicker(null);
       Alert.alert(
         'Saved to Battle Verses',
         count > 0
@@ -282,18 +295,33 @@ export default function BibleSearchScreen() {
     });
   };
 
-  const handleResultBattleVerse = async () => {
+  const handleResultBattleVerse = () => {
     if (!summaryResult) return;
+    // Close the summary card BEFORE opening the picker: two sibling native modals visible at
+    // once is the arrangement that occludes on iOS, and this screen keeps them as siblings.
     setSummaryOpen(false);
     if (isGuest) { promptSignIn('save Battle Verses'); return; }
+    setBattlePicker({ mode: 'single' });
+  };
+
+  const doSingleSave = async (tag: string | null) => {
+    if (!summaryResult) return;
+    setSaving(true);
     try {
       const saved = await saveBattleVerse(
         summaryResult.book_name, summaryResult.chapter_number,
         summaryResult.verse_number, summaryResult.verse_text,
+        tag ?? undefined,
       );
+      setBattlePicker(null);
       if (saved) Alert.alert('Saved!', `${summaryResult.reference} added to Battle Verses`);
       else Alert.alert('Already Saved', 'This verse is already in your Battle Verses');
-    } catch { Alert.alert('Error', 'Could not save verse'); }
+    } catch {
+      setBattlePicker(null);
+      Alert.alert('Error', 'Could not save verse');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleGoToChapter = () => {
@@ -696,6 +724,19 @@ export default function BibleSearchScreen() {
           );
         })()}
       </View>
+
+      {/* Shared tag picker for both battle-save paths on this screen. The batch uses `subtitle`
+          because a multi-select has no single reference to show. */}
+      <BattleTagPicker
+        visible={battlePicker !== null}
+        reference={battlePicker?.mode === 'single' ? (summaryResult?.reference ?? null) : null}
+        subtitle={battlePicker?.mode === 'batch'
+          ? `${selectedKeys.size} verse${selectedKeys.size === 1 ? '' : 's'} selected — choose a battle tag, or just save:`
+          : null}
+        busy={saving}
+        onSelect={(tag) => { if (battlePicker?.mode === 'batch') doBatchSave(tag); else doSingleSave(tag); }}
+        onCancel={() => setBattlePicker(null)}
+      />
     </SafeAreaView>
   );
 }
