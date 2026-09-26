@@ -602,27 +602,34 @@ const openTodayDevotion = useCallback(() => {
               Tap for summary
             </Text>
 
-            {/* Action buttons */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-              <TouchableOpacity
-                onPress={openBattleVersesModal}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 14,
-                  backgroundColor: '#1e40af',
-                  borderRadius: 8,
-                }}
-              >
-                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>View Battle Verses</Text>
-              </TouchableOpacity>
+            {/* Action buttons — same geometry as the TODAY'S DEVOTION card below: a full-width
+                primary CTA, then the archive link centred beneath it. Kept in step with that
+                card's "Open Devotion →" / "View Archive" pair (padding, radius, shadow, sizes);
+                only the palette differs, blue here and purple there. */}
+            <TouchableOpacity
+              onPress={openBattleVersesModal}
+              style={{
+                marginTop: 12,
+                padding: 14,
+                backgroundColor: '#1e40af',
+                borderRadius: 10,
+                alignItems: 'center',
+                shadowColor: '#1e40af',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            >
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>View Battle Verses</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => navigation.navigate('VOTDArchive')}
-                style={{ paddingVertical: 10 }}
-              >
-                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#2563eb', fontWeight: '600', fontSize: 13 }}>View Archive</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('VOTDArchive')}
+              style={{ paddingVertical: 10, alignItems: 'center' }}
+            >
+              <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#2563eb', fontWeight: '600', fontSize: 13 }}>View Archive</Text>
+            </TouchableOpacity>
           </Pressable>
         )}
 
@@ -680,6 +687,18 @@ const openTodayDevotion = useCallback(() => {
               No devotion scheduled for today.
             </Text>
           )}
+
+          {/* Archive link — parity with the VOTD card's "View Archive": same plain-text
+              treatment, in this card's purple rather than VOTD's blue. Deliberately OUTSIDE the
+              todayDevotion conditional, unlike VOTD's, because past devotions are most useful on
+              a day with nothing scheduled. DevotionArchive is registered in this same
+              ProgressStack and takes no params. */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('DevotionArchive')}
+            style={{ paddingVertical: 10, alignItems: 'center' }}
+          >
+            <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ color: '#7c3aed', fontWeight: '600', fontSize: 13 }}>View Archive</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Chapter Progress — tap to open the testament/section breakdown */}
