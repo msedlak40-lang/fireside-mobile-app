@@ -153,6 +153,23 @@ function seedRandom(seed: number): number {
   return ((seed * 9301 + 49297) % 233280) / 233280;
 }
 
+/**
+ * Normalized verse text, or null when there is nothing to show.
+ *
+ * A translation that OMITS a verse still has a row for it with empty text — WEB does at
+ * Acts 8:37, Acts 15:34, Acts 24:7, Luke 17:36 and Romans 16:25. So `if (!row) return null`
+ * is not enough: the row is truthy and the card would render empty quotes. Exactly one of the
+ * 8,223 bible_verse_insights rows sits on such a verse (Romans 16:25), which is how this got
+ * noticed; the 84 curated verses are all present in both translations.
+ *
+ * Returning null lets each path fall through to the next, which picks a different verse rather
+ * than showing a blank one. Same rule as fetchVerseTextByName in services/scripture.ts.
+ */
+function usableVerseText(raw: string | null | undefined): string | null {
+  const text = cleanVerseText(raw);
+  return text === '' ? null : text;
+}
+
 // ---------------------------------------------------------------------------
 // Core fetch — weighted hybrid (60 % curated, 40 % insight)
 // ---------------------------------------------------------------------------
@@ -203,7 +220,9 @@ async function fetchCuratedVerse(
     .eq('translation', translation)
     .maybeSingle();
 
-  if (!verse) return null;
+  // Covers both "no row" and "row present but this translation omits the verse".
+  const verseText = usableVerseText(verse?.verse_text);
+  if (!verseText) return null;
 
   // Try to enrich with insight
   const { data: insight } = await supabase
@@ -217,7 +236,7 @@ async function fetchCuratedVerse(
     book_name: curated.book_name,
     chapter_number: curated.chapter,
     verse_number: curated.verse,
-    verse_text: cleanVerseText(verse.verse_text),
+    verse_text: verseText,
     translation,
     reference: `${curated.book_name} ${curated.chapter}:${curated.verse}`,
     insight_title: insight?.insight_title || undefined,
@@ -273,13 +292,17 @@ async function fetchInsightVerse(
     .eq('translation', translation)
     .maybeSingle();
 
-  if (!verseData) return null;
+  // Romans 16:25 is the one insight verse WEB omits: the row exists with empty text, so the
+  // old `if (!verseData)` check passed it through and the card rendered empty quotes. Falling
+  // through to the random path shows a real verse instead.
+  const insightVerseText = usableVerseText(verseData?.verse_text);
+  if (!insightVerseText) return null;
 
   return {
     book_name: bookName,
     chapter_number: insightData.chapter_number,
     verse_number: insightData.verse_number,
-    verse_text: cleanVerseText(verseData.verse_text),
+    verse_text: insightVerseText,
     translation,
     reference: `${bookName} ${insightData.chapter_number}:${insightData.verse_number}`,
     insight_title: insightData.insight_title || undefined,
@@ -318,13 +341,14 @@ async function fetchRandomVerse(
     .limit(1)
     .maybeSingle();
 
-  if (!data) return null;
+  const randomVerseText = usableVerseText(data?.verse_text);
+  if (!randomVerseText) return null;
 
   return {
     book_name: data.book_name,
     chapter_number: data.chapter_number,
     verse_number: data.verse_number,
-    verse_text: cleanVerseText(data.verse_text),
+    verse_text: randomVerseText,
     translation,
     reference: `${data.book_name} ${data.chapter_number}:${data.verse_number}`,
     source: 'random',
