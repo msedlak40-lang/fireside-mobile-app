@@ -36,8 +36,16 @@ type Props = {
   onViewCrossRefChapter?: (item: CrossRefItem) => void
   onDeeper: () => void
   /** Deliberate primary-region "Save to Battle Verses" (distinct from the generic onBattleVerse action).
-   *  Controlled: the host owns the state so it can be shared with another control (e.g. a corner button). */
+   *  Controlled: the host owns the state so it can be shared with another control (e.g. a corner button).
+   *  Use this form ONLY when the host's control lives outside this modal -- a host that opens its own
+   *  BattleTagPicker in response is opening a SIBLING modal, which is occluded on iOS (see the nesting
+   *  note above the pickers below). To collect a tag from inside this card, use the WithTag form. */
   onSaveBattleVerse?: () => void
+  /** Primary-region save that collects a battle tag FIRST, using a picker nested inside this
+   *  card's own modal. Takes precedence over onSaveBattleVerse when both are supplied. The host
+   *  still owns battleState for the button's label; this card owns only the picker's visibility.
+   *  tag is null when the reader chose "just save". */
+  onSaveBattleVerseWithTag?: (tag: string | null) => void | Promise<void>
   battleState?: 'idle' | 'saving' | 'saved'
   // Actions are optional so hosts supply only what fits their context.
   onNote?: () => void
@@ -52,7 +60,7 @@ type Props = {
 export default function VerseSummaryCard(props: Props) {
   const {
     visible, onClose, reference, loading, content, crossRefs, onViewCrossRefChapter, onDeeper,
-    onSaveBattleVerse, battleState = 'idle', onNote, onBattleVerse, onShareToFire, onHighlight, isHighlighted, onRemoveHighlight, extraActions,
+    onSaveBattleVerse, onSaveBattleVerseWithTag, battleState = 'idle', onNote, onBattleVerse, onShareToFire, onHighlight, isHighlighted, onRemoveHighlight, extraActions,
   } = props
   const [actionsOpen, setActionsOpen] = useState(false)
   const hasActions = !!(onNote || onBattleVerse || onShareToFire || onHighlight || (extraActions && extraActions.length > 0))
@@ -66,6 +74,8 @@ export default function VerseSummaryCard(props: Props) {
   // Cross-ref battle save: the tag picker, and whether its save is in flight.
   const [battlePickerOpen, setBattlePickerOpen] = useState(false)
   const [battleSaving, setBattleSaving] = useState(false)
+  // Separate picker for the PRIMARY-region save, so it cannot collide with the cross-ref one.
+  const [primaryPickerOpen, setPrimaryPickerOpen] = useState(false)
   const [crossRefText, setCrossRefText] = useState<string | null>(null)
   const [crossRefLoading, setCrossRefLoading] = useState(false)
 
@@ -76,6 +86,7 @@ export default function VerseSummaryCard(props: Props) {
       setActionsOpen(false)
       setCrossRefDetail(null)
       setCrossRefText(null)
+      setPrimaryPickerOpen(false)
       sentenceSel.clear()
     }
   }, [visible])
@@ -240,11 +251,16 @@ export default function VerseSummaryCard(props: Props) {
                 <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.deeperText}>Study the Words {'→'}</Text>
               </TouchableOpacity>
 
-              {/* Deliberate primary-region Battle Verse save — controlled by the host (shared with the corner control) */}
-              {onSaveBattleVerse && (
+              {/* Deliberate primary-region Battle Verse save — controlled by the host (shared with the corner control).
+                  With the WithTag form, the tap opens this card's OWN nested picker first; with the bare
+                  form it calls straight out, for hosts whose control lives outside this modal. */}
+              {(onSaveBattleVerseWithTag || onSaveBattleVerse) && (
                 <TouchableOpacity
                   style={[styles.secondaryBtn, battleState !== 'idle' && styles.savedBtn]}
-                  onPress={onSaveBattleVerse}
+                  onPress={() => {
+                    if (onSaveBattleVerseWithTag) setPrimaryPickerOpen(true)
+                    else onSaveBattleVerse?.()
+                  }}
                   disabled={battleState !== 'idle'}
                 >
                   <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={battleState !== 'idle' ? styles.savedText : styles.secondaryText}>
@@ -330,6 +346,21 @@ export default function VerseSummaryCard(props: Props) {
         busy={battleSaving}
         onSelect={saveCrossRefToBattle}
         onCancel={() => setBattlePickerOpen(false)}
+      />
+
+      {/* The PRIMARY-region save's picker, nested for the same reason: a host that mounted this
+          as a sibling of this card would be showing two modals at once and the picker would be
+          occluded. Stays visible through the write (busy tracks the host's battleState) so the
+          spinner replaces the controls in place. */}
+      <BattleTagPicker
+        visible={primaryPickerOpen}
+        reference={reference}
+        busy={battleState === 'saving'}
+        onSelect={async (tag) => {
+          await onSaveBattleVerseWithTag?.(tag)
+          setPrimaryPickerOpen(false)
+        }}
+        onCancel={() => setPrimaryPickerOpen(false)}
       />
     </Modal>
   )
