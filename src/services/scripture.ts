@@ -2,6 +2,7 @@
 import { supabase } from '../lib/supabaseClient'
 import { getCurrentCycle } from './readingCycle'
 import { cleanVerseText } from '../utils/verseText'
+import { fetchAllProgressRows, chaptersByBook } from './readingProgressRows'
 
 /** ------------ Types ------------ */
 export type Book = {
@@ -129,20 +130,9 @@ export async function fetchReadChapterCounts(): Promise<Record<string, number>> 
   const userId = auth?.user?.id
   if (!userId) return {}
   const cycle = await getCurrentCycle()
-  const { data } = await supabase
-    .from('user_reading_progress')
-    .select('book_name,chapter_number')
-    .eq('user_id', userId)
-    .eq('cycle', cycle)
-  const byBook: Record<string, Set<number>> = {}
-  for (const r of data ?? []) {
-    const bn = (r as any).book_name
-    const cn = (r as any).chapter_number
-    if (bn == null || cn == null) continue
-    ;(byBook[bn] ??= new Set<number>()).add(cn)
-  }
+  const rows = await fetchAllProgressRows(userId, cycle)
   const out: Record<string, number> = {}
-  for (const k in byBook) out[k] = byBook[k].size
+  for (const [bookName, chapters] of chaptersByBook(rows)) out[bookName] = chapters.size
   return out
 }
 

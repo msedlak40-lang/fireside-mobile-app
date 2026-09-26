@@ -9,6 +9,7 @@ import { colors } from '../../theme/colors'
 import { CHROME_MAX_SCALE } from '../../lib/textScaling'
 import { getReadingBreakdown, type ReadingBreakdown, type TestamentProgress, type SectionProgress, type BookProgress } from '../../services/readingBreakdown'
 import { getLastReadingPosition, getPreferredTranslation, type LastReadingPosition } from '../../services/userPrefs'
+import { formatCount } from '../../utils/formatCount'
 
 const BLUE = '#3b82f6'   // reading-blue, matches the hero bar
 const TRACK = '#e5e7eb'  // bar track
@@ -32,7 +33,7 @@ function BookRow({ b }: { b: BookProgress }) {
           {b.complete ? '✓ ' : ''}{b.name}
         </Text>
         <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 12, color: b.complete ? DONE : colors.text.secondary, fontWeight: '600' }}>
-          {b.read} / {b.total} · {b.pct}%
+          {formatCount(b.read)} / {formatCount(b.total)} · {b.pct}%
         </Text>
       </View>
       <Bar read={b.read} total={b.total} complete={b.complete} height={6} />
@@ -52,7 +53,7 @@ function SectionBlock({ s, expanded, onToggle }: { s: SectionProgress; expanded:
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, color: s.complete ? DONE : colors.text.secondary, fontWeight: '700' }}>
-              {s.read} / {s.total} · {s.pct}%
+              {formatCount(s.read)} / {formatCount(s.total)} · {s.pct}%
             </Text>
             <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, color: colors.text.secondary }}>{expanded ? '▾' : '▸'}</Text>
           </View>
@@ -90,7 +91,7 @@ function TestamentCard({
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 13, fontWeight: '700', color: t.complete ? DONE : colors.text.secondary }}>
-              {t.read} / {t.total} · {t.pct}%
+              {formatCount(t.read)} / {formatCount(t.total)} · {t.pct}%
             </Text>
             <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: colors.text.secondary }}>{expanded ? '▾' : '▸'}</Text>
           </View>
@@ -196,7 +197,7 @@ export default function ReadingProgressModal({ visible, onClose }: { visible: bo
           ) : (
             <>
               <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ paddingHorizontal: 20, fontSize: 14, color: colors.text.secondary, marginBottom: 12 }}>
-                {data.overall.read} / {data.overall.total} chapters · {data.overall.pct}% this cycle
+                {formatCount(data.overall.read)} / {formatCount(data.overall.total)} chapters · {data.overall.pct}% this cycle
               </Text>
 
               <ScrollView style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 8 }}>

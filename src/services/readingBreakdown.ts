@@ -6,6 +6,7 @@
 // verified with synthetic rows, independent of the DB.
 import { supabase } from '../lib/supabaseClient'
 import { getCurrentCycle } from './readingCycle'
+import { fetchAllProgressRows } from './readingProgressRows'
 
 export type MetaBook = {
   book_name: string
@@ -140,24 +141,12 @@ export async function getReadingBreakdown(): Promise<ReadingBreakdown> {
 
   if (!userId) return computeBreakdown([], metaRows, currentCycle)
 
-  // All-cycles completed rows (match the grid: completed_at IS NOT NULL). Paginate so a
-  // multi-cycle reader past 1000 rows still evaluates completion correctly.
-  const rows: ProgRow[] = []
-  let from = 0
-  const PAGE = 1000
-  for (;;) {
-    const { data, error } = await supabase
-      .from('user_reading_progress')
-      .select('book_name,chapter_number,cycle')
-      .eq('user_id', userId)
-      .not('completed_at', 'is', null)
-      .range(from, from + PAGE - 1)
-    if (error) { console.warn('[readingBreakdown] progress error:', error); break }
-    const chunk = (data ?? []) as ProgRow[]
-    rows.push(...chunk)
-    if (chunk.length < PAGE) break
-    from += PAGE
-  }
+  // All-cycles completed rows (match the grid: completed_at IS NOT NULL). Pagination now
+  // lives in fetchAllProgressRows, shared with the home total and the per-book counts --
+  // those three had no pagination at all, which is why this drill-down was the only
+  // display that stayed correct past 1000 rows. The shared version also adds the ORDER BY
+  // that the loop here was missing, so page boundaries can no longer shift mid-fetch.
+  const rows: ProgRow[] = await fetchAllProgressRows(userId)
 
   return computeBreakdown(rows, metaRows, currentCycle)
 }

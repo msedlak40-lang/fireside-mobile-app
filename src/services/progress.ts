@@ -1,6 +1,7 @@
 // src/services/progress.ts
 import { supabase } from '../lib/supabaseClient'
 import { getCurrentCycle } from './readingCycle'
+import { fetchAllProgressRows, chaptersByBook } from './readingProgressRows'
 
 function isInt(v: any): v is number {
   return Number.isInteger(v) && Number.isFinite(v)
@@ -135,17 +136,8 @@ export async function fetchUserDashboard(): Promise<UserDashboard> {
   let totalRead = 0
   {
     const cycle = await getCurrentCycle()
-    const { data: readChapters } = await supabase
-      .from('user_reading_progress')
-      .select('book_name, chapter_number')
-      .eq('user_id', userId)
-      .eq('cycle', cycle)
-
-    // Count unique (book_name, chapter_number) pairs regardless of translation
-    const uniqueChapters = new Set(
-      (readChapters ?? []).map(r => `${r.book_name}:${r.chapter_number}`)
-    )
-    totalRead = uniqueChapters.size
+    const rows = await fetchAllProgressRows(userId, cycle)
+    for (const chapters of chaptersByBook(rows).values()) totalRead += chapters.size
   }
 
   const percentage =

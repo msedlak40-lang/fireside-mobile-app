@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/progress';
+import { formatCount } from '../../utils/formatCount';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, logVotdView, type VerseOfTheDay } from '../../services/verseOfTheDay';
 import { getUserBattleVerses, deleteBattleVerse, saveBattleVerse, BATTLE_TAGS, type BattleVerse } from '../../services/battleVerses';
@@ -682,7 +683,7 @@ const openTodayDevotion = useCallback(() => {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
               <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 14, color: colors.text.secondary }}>Chapters Read</Text>
               <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{ fontSize: 15, fontWeight: '700', color: colors.text.primary }}>
-                {dashboard?.chapters?.total_read || 0} / {dashboard?.chapters?.total_available || 0}
+                {formatCount(dashboard?.chapters?.total_read)} / {formatCount(dashboard?.chapters?.total_available)}
               </Text>
             </View>
             <View style={{ height: 10, backgroundColor: '#e5e7eb', borderRadius: 5, overflow: 'hidden' }}>
