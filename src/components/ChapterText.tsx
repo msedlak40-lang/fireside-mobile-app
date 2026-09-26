@@ -15,6 +15,7 @@ import { saveBattleVerse, BATTLE_TAGS } from '../services/battleVerses'
 import { colors } from '../theme/colors'
 import { CHROME_MAX_SCALE } from '../lib/textScaling'
 import { useGuestMode } from '../context/GuestModeContext'
+import { cleanVerseText } from '../utils/verseText'
 
 type RawVerse = any
 
@@ -26,6 +27,88 @@ type Props = {
   /** Verse numbers flagged as significant (present in bible_verse_insights) — drives the significance
    *  marker (gold number tint + trailing lightbulb). Pure visual flag; no content behind it. */
   significantVerses?: Set<number>
+  /** Active translation code, used only to name it in the omitted-verse note. Null when the
+   *  reader was opened without a preference set, in which case the note stays generic. */
+  translation?: string | null
+  /** verse_number -> FALLBACK_TRANSLATION text, supplied by ChapterScreen only when the active
+   *  translation omits at least one verse of this chapter. Read for omitted verses and nothing
+   *  else. Absent or missing a number is fine: the note renders alone. */
+  fallbackVerses?: Map<number, string> | null
+}
+
+/**
+ * Where an omitted verse's text is borrowed from, with attribution.
+ *
+ * Hardcoded rather than "whichever translation has text": there are exactly two translations,
+ * KJV is the superset (31,102 verses, zero empty) and WEB is the one with the five omissions,
+ * so a general resolver would be speculation. A third translation makes this a lookup.
+ */
+const FALLBACK_TRANSLATION = 'KJV'
+
+/**
+ * Chapters where a translation PLACES a passage somewhere else, rather than omitting it.
+ *
+ * This is deliberately a short table and not a detector. Comparing the full WEB and KJV verse
+ * sets turned up exactly five differences: Romans 16:26-27 exist only in KJV, and Romans
+ * 14:24-26 exist only in WEB. They are the same passage -- WEB closes the doxology at the end
+ * of Romans 14 instead of Romans 16 -- so nothing is missing from WEB, it is just placed
+ * elsewhere. This is the only chapter in the corpus where the active translation simply ends
+ * earlier than the fallback.
+ *
+ * A general "trailing verses are absent" engine could detect the gap but could not produce the
+ * half of the message that helps: WHERE the passage went. That is a fact about this relocation,
+ * not something derivable, so it is written down once.
+ *
+ * Matching is table-driven so a third translation with its own arrangement is one row here
+ * rather than new branching in the render.
+ */
+const RELOCATION_NOTES: Array<{
+  translation: string
+  book: string
+  chapter: number
+  note: string
+}> = [
+  {
+    translation: 'WEB',
+    book: 'Romans',
+    chapter: 16,
+    note:
+      'In the World English Bible, this chapter’s closing words of praise are placed at ' +
+      'the end of Romans 14 (14:24-26). Other translations number them Romans 16:25-27.',
+  },
+]
+
+function findRelocationNote(translation: string | null, book: string | null, chapter: number): string | null {
+  if (!translation || !book) return null
+  const t = translation.toUpperCase()
+  const b = book.toLowerCase()
+  const hit = RELOCATION_NOTES.find(
+    r => r.translation === t && r.book.toLowerCase() === b && r.chapter === chapter,
+  )
+  return hit ? hit.note : null
+}
+
+// Display names for the omitted-verse note. Kept here, beside its only consumer, rather than
+// shared: SettingsScreen and BibleSearchScreen each hold their own ['KJV','WEB'] code list and
+// neither needs a full name today. Lift this out if a third place wants it.
+const TRANSLATION_NAMES: Record<string, string> = {
+  KJV: 'King James Version',
+  WEB: 'World English Bible',
+}
+
+/**
+ * The note shown in place of a verse the active translation does not carry.
+ *
+ * Names the translation when we know it, because "not in the World English Bible's source
+ * manuscripts" tells the reader something true and specific, where a bare blank told them
+ * nothing and a generic line tells them little. Falls back to neutral wording for an unknown
+ * or unset translation rather than guessing or naming the wrong one.
+ */
+function omittedVerseNote(translation: string | null): string {
+  const name = translation ? TRANSLATION_NAMES[translation.toUpperCase()] : null
+  return name
+    ? `— Not included in the ${name}'s source manuscripts.`
+    : '— Not included in this translation’s source manuscripts.'
 }
 
 function extractVerseNumber(v: RawVerse): number | null {
@@ -58,6 +141,10 @@ export default function ChapterText(props: Props) {
   const chapter = props.chapter
   const verses = props.verses ?? []
   const significantVerses = props.significantVerses ?? new Set<number>()
+  const omittedNote = omittedVerseNote(props.translation ?? null)
+  const fallbackVerses = props.fallbackVerses ?? null
+  const fallbackName = TRANSLATION_NAMES[FALLBACK_TRANSLATION] ?? FALLBACK_TRANSLATION
+  const relocationNote = findRelocationNote(props.translation ?? null, book, chapter)
   const navigation = useNavigation<any>()
   const { isGuest, promptSignIn } = useGuestMode()
 
@@ -270,6 +357,21 @@ export default function ChapterText(props: Props) {
         const verseText = raw?.text ?? String(raw ?? '')
         const significant = vNum ? significantVerses.has(vNum) : false
 
+        // A verse the ACTIVE TRANSLATION does not carry. The row exists and the verse number
+        // is real; only the text is absent, so rendering it bare left a numbered blank line
+        // that read as a loading failure. Say what it is instead.
+        //
+        // Translation-agnostic on purpose: this is one rule about empty text, not a list of
+        // known references. Today it fires on the five verses WEB omits but KJV includes
+        // (Acts 8:37, Acts 15:34, Acts 24:7, Luke 17:36, Romans 16:25 -- verified as
+        // verse_text = '' rows, present in the table with no text). Any future translation
+        // that omits verses is covered without touching this file.
+        //
+        // Tested after cleanVerseText, not with === '', so null, '' and a whitespace-only
+        // value all resolve the same way. fetchChapterText already normalizes, but the check
+        // should not depend on that staying true upstream.
+        const isOmittedInTranslation = cleanVerseText(verseText) === ''
+
         return (
           <TouchableOpacity
             key={`${book ?? 'unknown'}-${chapter}-${vNum ?? idx}-${idx}`}
@@ -282,18 +384,48 @@ export default function ChapterText(props: Props) {
                 {vNum ?? ''}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.verseText,
-                highlighted && styles.verseTextHighlighted,
-              ]}
-            >
-              {verseText}
-            </Text>
+            {isOmittedInTranslation ? (
+              // The note, then the fallback text WITH its attribution, when we have it.
+              //
+              // The label is its own <Text>, never concatenated into the verse string, so the
+              // attribution cannot be separated from the text it labels. Nothing here reaches
+              // the summary card or a Fire share: this is reader-only on purpose, so borrowed
+              // text can never leave the screen carrying the wrong translation's name.
+              <View style={styles.verseOmittedWrap}>
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.verseOmitted}>
+                  {omittedNote}
+                </Text>
+                {vNum != null && fallbackVerses?.get(vNum) ? (
+                  <Text style={styles.verseText}>
+                    <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.fallbackLabel}>
+                      {fallbackName}:{' '}
+                    </Text>
+                    {fallbackVerses.get(vNum)}
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <Text
+                style={[
+                  styles.verseText,
+                  highlighted && styles.verseTextHighlighted,
+                ]}
+              >
+                {verseText}
+              </Text>
+            )}
             {significant && <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.bulb}>💡</Text>}
           </TouchableOpacity>
         )
       })}
+
+      {/* Relocated-passage note, after the last verse. No verse number and no borrowed text:
+          it points at where this translation actually puts the passage. */}
+      {relocationNote ? (
+        <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.relocationNote}>
+          {relocationNote}
+        </Text>
+      ) : null}
 
       {/* ===== VERSE SUMMARY CARD ===== */}
       <VerseSummaryCard
@@ -414,6 +546,25 @@ const styles = StyleSheet.create({
 
   verseText: { flex: 1, color: colors.text.primary, lineHeight: 22 },
   verseTextHighlighted: { fontWeight: '600' },
+  // Muted + italic so it reads as an editorial note about the text rather than as Scripture.
+  // Matches tapHint, the other non-scripture line in this view.
+  verseOmittedWrap: { flex: 1 },
+  verseOmitted: { color: colors.text.muted, fontStyle: 'italic', fontSize: 13 },
+  // The attribution. Same muted italic as the note so it reads as apparatus, while the
+  // borrowed verse text beside it keeps normal scripture styling and stays readable.
+  fallbackLabel: { color: colors.text.muted, fontStyle: 'italic', fontWeight: '700' },
+  // Sits at the end of the chapter. Hairline rule above it so it reads as a closing note about
+  // the chapter rather than as one more verse.
+  relocationNote: {
+    color: colors.text.muted,
+    fontStyle: 'italic',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border.default,
+  },
   bulb: { fontSize: 13, marginLeft: 6, marginTop: 2 },
 
   tapHint: {

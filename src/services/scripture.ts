@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { getCurrentCycle } from './readingCycle'
 import { cleanVerseText } from '../utils/verseText'
 import { fetchAllProgressRows, chaptersByBook } from './readingProgressRows'
+import { DEFAULT_TRANSLATION } from './userPrefs'
 
 /** ------------ Types ------------ */
 export type Book = {
@@ -318,11 +319,20 @@ export async function fetchAdvancedChapterSummary(
   }
 }
 
-/** Full chapter text - uses direct table query instead of RPC */
+/**
+ * Full chapter text - uses direct table query instead of RPC.
+ *
+ * translation defaults rather than being optional-and-unfiltered. An omitted argument used to
+ * mean "no translation filter", which returns every translation's rows for the chapter and
+ * dedupes by verse_number keeping whichever came first -- silently mixing KJV and WEB in one
+ * chapter with nothing marking which line came from where. Two callers still pass no
+ * translation at all (NotesHighlightsSummary and Annotations.ts), so this default is load
+ * bearing and not a guard against a hypothetical.
+ */
 export async function fetchChapterText(
-  bookId: number, 
-  chapter: number, 
-  translation?: string
+  bookId: number,
+  chapter: number,
+  translation: string = DEFAULT_TRANSLATION
 ): Promise<VerseLine[]> {
   try {
     // First, get the book name from metadata
