@@ -18,6 +18,12 @@ import {
   type ReactionSummary,
 } from '../services/fire';
 import ViewArsenalModal from './ViewArsenalModal';
+import VerseSummaryCard, { type CrossRefItem } from './VerseSummaryCard';
+import { saveBattleVerse } from '../services/battleVerses';
+import { getVerseLifeApplication, type VerseLifeApplication } from '../services/scripture';
+import { getCrossReferences, type CrossReference } from '../services/strongsStudy';
+import { setStudyDepth } from '../services/userPrefs';
+import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { CHROME_MAX_SCALE } from '../lib/textScaling';
 
@@ -25,6 +31,27 @@ interface FireShareCardProps {
   share: FireShare;
   currentUserId: string;
   onDelete?: () => void;
+}
+
+/**
+ * CrossReference -> CrossRefItem, the shape VerseSummaryCard's cross-reference rows want.
+ *
+ * NOTE: ChapterText.tsx has a private copy of this same mapper. Kept local rather than
+ * consolidated so this change touches only the Fire feed; if the label format ever changes,
+ * both copies need it.
+ */
+function toCrossRefItem(ref: CrossReference): CrossRefItem {
+  const label = ref.target_verse_end
+    ? `${ref.target_book} ${ref.target_chapter}:${ref.target_verse_start}-${ref.target_verse_end}`
+    : `${ref.target_book} ${ref.target_chapter}:${ref.target_verse_start}`;
+  return {
+    id: ref.id,
+    label,
+    book: ref.target_book,
+    chapter: ref.target_chapter,
+    verseStart: ref.target_verse_start,
+    verseEnd: ref.target_verse_end,
+  };
 }
 
 const REACTIONS = [
@@ -50,6 +77,17 @@ export default function FireShareCard({
   const [newComment, setNewComment] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
+  // Shared-verse enrichment: the same summary card the reader opens on a verse tap. Content is
+  // fetched here because VerseSummaryCard is presentational -- it takes content + loading.
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryContent, setSummaryContent] = useState<VerseLifeApplication | null>(null);
+  const [summaryCrossRefs, setSummaryCrossRefs] = useState<CrossRefItem[]>([]);
+  // Three states, not four: the 'choosing' step lives in VerseSummaryCard, which owns the tag
+  // picker for its primary save region. This is the host's half -- the button's label.
+  const [battleState, setBattleState] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const navigation = useNavigation<any>();
 
   useEffect(() => {
     loadInteractions();
@@ -119,6 +157,83 @@ export default function FireShareCard({
     );
   }
 
+  // A verse share is only interactive when it carries the structured columns the privacy work
+  // denormalized onto fire_shares. They are nullable, so a share created before they existed
+  // would have verse_reference and nothing to key an enrichment lookup on -- that one falls
+  // through to the static display below, exactly as today.
+  const verseBook = share.verse_book;
+  const verseChapter = share.verse_chapter;
+  const verseNumber = share.verse_number;
+  const hasStructuredVerse =
+    !!verseBook && verseChapter != null && verseNumber != null;
+  // Composed rather than read from verse_reference so the label always matches the verse the
+  // lookups actually used. Falls back to the stored string if anything is missing.
+  const verseLabel = hasStructuredVerse
+    ? `${verseBook} ${verseChapter}:${verseNumber}`
+    : (share.verse_reference ?? '');
+
+  async function openVerseSummary() {
+    if (!hasStructuredVerse) return;
+    setSummaryContent(null);
+    setSummaryCrossRefs([]);
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    try {
+      // Same two reads the reader makes on a verse tap. verse_life_application covers all
+      // 31,102 verses, so content is expected; the card has a muted empty state regardless.
+      const [content, refs] = await Promise.all([
+        getVerseLifeApplication(verseBook as string, verseChapter as number, verseNumber as number),
+        getCrossReferences(verseBook as string, verseChapter as number, verseNumber as number, 8),
+      ]);
+      setSummaryContent(content);
+      setSummaryCrossRefs(refs.map(toCrossRefItem));
+    } catch (error) {
+      console.error('[FireShareCard] Error loading verse summary:', error);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
+  // "Study the Words" -> the Strong's surface. DeepStudy is registered in FireStack, so this
+  // stays inside the Fire tab and the feed's scroll position survives the round trip.
+  function handleDeeper() {
+    if (!hasStructuredVerse) return;
+    setStudyDepth('deeper');
+    setSummaryOpen(false);
+    navigation.navigate('DeepStudy', {
+      bookName: verseBook,
+      chapter: verseChapter,
+      verseNumber: verseNumber,
+      verseText: share.verse_text ?? '',
+    });
+  }
+
+  // The tag picker is owned by VerseSummaryCard (nested inside its modal), not mounted here:
+  // a picker mounted here would be a SIBLING of the card's open modal and is occluded on iOS.
+  // So there is no 'choosing' state to hold -- the card handles that and calls straight in.
+  async function saveSharedVerseToBattle(tag: string | null) {
+    if (!hasStructuredVerse) return;
+    setBattleState('saving');
+    try {
+      // The shared text is persisted AS SHARED, deliberately. fire_shares has no
+      // verse_translation column, so the translation is unknown -- but the text is what this
+      // brother actually sent, and it is correct for the verse. (Contrast the devotion key-verse
+      // save, which replaces its stored text because that text spans a whole range.)
+      await saveBattleVerse(
+        verseBook as string,
+        verseChapter as number,
+        verseNumber as number,
+        share.verse_text ?? '',
+        tag ?? undefined,
+      );
+      setBattleState('saved');
+    } catch (error) {
+      console.error('[FireShareCard] Error saving battle verse:', error);
+      setBattleState('idle');
+      Alert.alert('Error', 'Could not save verse.');
+    }
+  }
+
   const isOwnShare = share.user_id === currentUserId;
 
   return (
@@ -140,12 +255,23 @@ export default function FireShareCard({
         </View>
       )}
 
-      {/* Shared Verse (verse-type posts carry their own text; no saved_application) */}
+      {/* Shared Verse (verse-type posts carry their own text; no saved_application).
+          Tappable when the structured columns are present, mirroring the arsenal block below:
+          same TouchableOpacity + "Tap to read →" cue idiom. Without them it renders exactly as
+          it always has, as a static block. */}
       {share.verse_reference && (
-        <View style={styles.verseBlock}>
-          <Text style={styles.verseRef} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{share.verse_reference}</Text>
-          <Text style={styles.verseQuote}>"{share.verse_text}"</Text>
-        </View>
+        hasStructuredVerse ? (
+          <TouchableOpacity style={styles.verseBlock} onPress={openVerseSummary} activeOpacity={0.7}>
+            <Text style={styles.verseRef} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{share.verse_reference}</Text>
+            <Text style={styles.verseQuote}>"{share.verse_text}"</Text>
+            <Text style={styles.verseReadCue} maxFontSizeMultiplier={CHROME_MAX_SCALE}>Tap for insight {'→'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.verseBlock}>
+            <Text style={styles.verseRef} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{share.verse_reference}</Text>
+            <Text style={styles.verseQuote}>"{share.verse_text}"</Text>
+          </View>
+        )
       )}
 
       {/* Shared Application (tap to read the full theme) */}
@@ -278,6 +404,27 @@ export default function FireShareCard({
           onClose={() => setViewOpen(false)}
         />
       )}
+
+      {/* Shared-verse enrichment — the same card the reader opens, so a brother's shared verse
+          carries its plain truth, deeper layer, reflection and cross-references. */}
+      {hasStructuredVerse && (
+        <>
+          <VerseSummaryCard
+            visible={summaryOpen}
+            onClose={() => setSummaryOpen(false)}
+            reference={verseLabel}
+            loading={summaryLoading}
+            content={summaryContent}
+            crossRefs={summaryCrossRefs}
+            onDeeper={handleDeeper}
+            // WithTag form: the card opens its own nested picker, collects the tag, then calls
+            // this. Gated on there being text to save -- the column is nullable and a battle
+            // verse with an empty body is a row the reader cannot use.
+            onSaveBattleVerseWithTag={share.verse_text ? saveSharedVerseToBattle : undefined}
+            battleState={battleState}
+          />
+        </>
+      )}
     </View>
   );
 }
@@ -344,6 +491,14 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.text.primary,
     fontStyle: 'italic',
+  },
+  // Same treatment as appReadCue, the arsenal block's cue, so both tappable blocks read alike.
+  verseReadCue: {
+    fontSize: 11,
+    color: colors.text.muted,
+    fontWeight: '600',
+    marginTop: 10,
+    textAlign: 'right',
   },
   appReference: {
     fontSize: 13,

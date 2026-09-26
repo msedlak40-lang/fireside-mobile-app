@@ -337,6 +337,16 @@ function FireStackNavigator() {
         component={FireDetailsScreen}
         options={{ headerTitle: 'Fire' }}
       />
+      {/* Registered here, not reached cross-tab, so the "Study the Words" affordance on a
+          shared verse's summary card keeps the reader inside the Fire tab — its feed scroll
+          position and back button survive. DeepStudy is a params-only leaf screen already
+          registered in BibleStack, DevotionsStack and ProgressStack, so per-stack registration
+          is the established practice for it. */}
+      <FireStack.Screen
+        name="DeepStudy"
+        component={DeepStudyScreen}
+        options={{ headerTitle: 'Deep Study' }}
+      />
     </FireStack.Navigator>
   );
 }
