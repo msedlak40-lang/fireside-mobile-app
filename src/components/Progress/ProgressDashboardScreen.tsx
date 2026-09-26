@@ -945,7 +945,12 @@ const openTodayDevotion = useCallback(() => {
         loading={summaryLoading}
         content={summaryContent}
         onDeeper={handleDeeper}
-        onSaveBattleVerse={summaryIsVotd ? openVotdBattlePicker : undefined}
+        // WithTag, not the bare form: this control lives INSIDE the card's modal, so having the
+        // host open its own picker would put two modals up at once and the picker is occluded on
+        // iOS. The card opens its own nested picker and hands the tag back to saveVotdBattle --
+        // the same function the corner control's flow ends in, so both paths write identically.
+        // The corner button keeps the bare host-owned picker; it fires with no modal open.
+        onSaveBattleVerseWithTag={summaryIsVotd ? saveVotdBattle : undefined}
         battleState={summaryIsVotd ? (votdBattleState === 'choosing' ? 'saving' : votdBattleState) : undefined}
       />
 
