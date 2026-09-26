@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
 import { getCurrentCycle } from './readingCycle'
+import { fetchAllProgressRows, chaptersByBook as groupChaptersByBook } from './readingProgressRows'
 
 export type BookProgressRow = {
   book_name: string
@@ -15,21 +16,10 @@ export async function getPerBookProgress(): Promise<BookProgressRow[]> {
 
   // Chapters read (scoped to the current reading cycle)
   const cycle = await getCurrentCycle()
-  const { data: chRows, error: chErr } = await supabase
-    .from('user_reading_progress')
-    .select('book_name,chapter_number')
-    .eq('user_id', userId)
-    .eq('cycle', cycle)
-    .not('completed_at', 'is', null)
-
-  if (chErr) console.warn('[library] reading_progress error:', chErr)
-
-  const chaptersByBook = new Map<string, Set<number>>()
-  for (const r of chRows ?? []) {
-    const bn = r.book_name ?? ''
-    if (!chaptersByBook.has(bn)) chaptersByBook.set(bn, new Set())
-    chaptersByBook.get(bn)!.add(Number(r.chapter_number) || 0)
-  }
+  // userId is '' when not signed in; .eq on a uuid column would error, so skip the fetch.
+  const chaptersByBook = userId
+    ? groupChaptersByBook(await fetchAllProgressRows(userId, cycle))
+    : new Map<string, Set<number>>()
 
   // Summaries read (handle tier casing)
   const basicsByBook = new Map<string, number>()
