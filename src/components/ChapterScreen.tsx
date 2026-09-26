@@ -8,6 +8,7 @@ import {
   fetchAdvancedChapterSummary,
   fetchChapterPage,
   fetchChapterKeyVerses,
+  fetchChapterTextByNameAndTranslation,
   fetchBooks,
   getChapterDeepDive,
 } from '../services/scripture'
@@ -15,6 +16,7 @@ import type { Book, ChapterDeepDive } from '../services/scripture'
 import { getStudyDepth, setStudyDepth, setLastReadingPosition, type StudyDepth } from '../services/userPrefs'
 import { getCurrentCycle } from '../services/readingCycle'
 import ChapterText from './ChapterText'
+import { cleanVerseText } from '../utils/verseText'
 import DeepDiveTab from './DeepDiveTab'
 import BookChapterSheet from './BookChapterSheet'
 import CrossReferencesTab from './CrossReferencesTab'
@@ -27,7 +29,27 @@ import { CHROME_MAX_SCALE } from '../lib/textScaling'
 import { useGuestMode } from '../context/GuestModeContext'
 
 type RouteParams = { bookId: number; chapter: number; bookName?: string; translation?: string }
-type Verse = { number: number; text: string }
+
+// The translation an omitted verse is borrowed from. Must match ChapterText's own constant;
+// this side decides WHETHER to fetch, that side decides how to label it.
+const FALLBACK_TRANSLATION = 'KJV'
+
+// verse_number, NOT number. This type used to say `number` while every object in the array
+// actually came from fetchChapterText as VerseLine ({ verse_number, text }). Nothing caught it
+// because the array is assigned out of an `any`, and ChapterText reads
+// `number ?? verse ?? verse_number ?? n` so the display was unaffected. The omitted-verse
+// detection read `.number`, got undefined on every row, and silently never fired.
+type Verse = { verse_number: number; text: string }
+
+/**
+ * The single producer of Verse. Every branch of the normalizer below goes through this, so the
+ * declared type is now TRUE of the array at runtime and a wrong field name is a compile error
+ * rather than a silent undefined.
+ */
+const toVerse = (v: any, i: number): Verse => ({
+  verse_number: Number(v?.verse_number ?? v?.number ?? v?.verse ?? v?.n ?? i + 1),
+  text: cleanVerseText(v?.text ?? v?.verse_text ?? (typeof v === 'string' ? v : '')),
+})
 type TabType = 'read' | 'deepdive' | 'mytheme' | 'crossrefs' | 'discussion'
 
 export default function ChapterScreen() {
@@ -54,6 +76,9 @@ export default function ChapterScreen() {
   const [keyVerses, setKeyVerses] = useState<Array<{ verse_number: number; text: string }>>([])
 
   const [significantVerses, setSignificantVerses] = useState<Set<number>>(new Set())
+  // verse_number -> KJV text, populated only when the active translation omits a verse of this
+  // chapter. Null the rest of the time, which is 1184 of 1189 chapters.
+  const [fallbackVerses, setFallbackVerses] = useState<Map<number, string> | null>(null)
   const [deepDive, setDeepDive] = useState<ChapterDeepDive | null>(null)
   const [depth, setDepthState] = useState<StudyDepth>('summary')
 
@@ -241,12 +266,61 @@ export default function ChapterScreen() {
       // normalize verses
       const rawVerses: any = textRes
       let nextVerses: Verse[] = []
-      if (Array.isArray(rawVerses?.verses)) nextVerses = rawVerses.verses
-      else if (Array.isArray(rawVerses?.chapter_verses)) nextVerses = rawVerses.chapter_verses
-      else if (Array.isArray(rawVerses)) nextVerses = rawVerses
-      else if (Array.isArray(rawVerses?.text)) nextVerses = rawVerses.text.map((t: any, i: number) => ({ number: i + 1, text: String(t) }))
-      else if (typeof rawVerses?.chapter_text === 'string') nextVerses = String(rawVerses.chapter_text).split('\n').filter(Boolean).map((t: string, i: number) => ({ number: i + 1, text: t }))
+      if (Array.isArray(rawVerses?.verses)) nextVerses = rawVerses.verses.map(toVerse)
+      else if (Array.isArray(rawVerses?.chapter_verses)) nextVerses = rawVerses.chapter_verses.map(toVerse)
+      else if (Array.isArray(rawVerses)) nextVerses = rawVerses.map(toVerse)
+      else if (Array.isArray(rawVerses?.text)) nextVerses = rawVerses.text.map((t: any, i: number) => toVerse({ text: String(t) }, i))
+      else if (typeof rawVerses?.chapter_text === 'string') nextVerses = String(rawVerses.chapter_text).split('\n').filter(Boolean).map((t: string, i: number) => toVerse({ text: t }, i))
       setVerses(nextVerses)
+
+      // OMITTED-VERSE FALLBACK. One extra query per chapter, and only when it is needed.
+      //
+      // Three guards, in order of how often they fire:
+      //   * skipped when nothing is empty -- true for 1184 of 1189 chapters, so the common
+      //     path costs nothing at all;
+      //   * skipped when the active translation IS the fallback, since KJV has no empty
+      //     verses and borrowing from itself is meaningless;
+      //   * skipped when the book name is unknown, because the fetch is keyed by name.
+      //
+      // Fetched as a WHOLE CHAPTER once and indexed, not per empty verse: Romans 16 costs one
+      // query whether one verse is missing or ten.
+      //
+      // Failure is deliberately non-fatal and stays out of the outer try: a fallback that
+      // cannot load must leave the note standing on its own, never blank the verse and never
+      // fail the chapter.
+      // toVerse has already normalized and cleaned every row, so an omitted verse is exactly
+      // text === '' and the number is always on verse_number. No casts: if either field name is
+      // wrong the compiler now says so, which is the whole point of pinning Verse above.
+      const emptyVerseNums = nextVerses
+        .filter(v => v.text === '')
+        .map(v => v.verse_number)
+        .filter(n => Number.isFinite(n))
+      const bookForFallback = bookNameResolved ?? (
+        (rawVerses?.book_name || rawVerses?.book || rawVerses?.name) ?? null
+      )
+      if (
+        emptyVerseNums.length > 0 &&
+        String(translation ?? '').toUpperCase() !== FALLBACK_TRANSLATION &&
+        bookForFallback
+      ) {
+        try {
+          const kjv = await fetchChapterTextByNameAndTranslation(
+            String(bookForFallback), chapter, FALLBACK_TRANSLATION,
+          )
+          const map = new Map<number, string>()
+          for (const row of kjv) {
+            if (!emptyVerseNums.includes(row.verse_number)) continue
+            const t = cleanVerseText(row.verse_text)
+            if (t) map.set(row.verse_number, t)
+          }
+          setFallbackVerses(map.size ? map : null)
+        } catch (e) {
+          console.warn('[ChapterScreen] omitted-verse fallback failed; showing the note alone', e)
+          setFallbackVerses(null)
+        }
+      } else {
+        setFallbackVerses(null)
+      }
 
       setBasic(basicRes ?? null)
       setAdvRaw(advRes ?? null)
@@ -448,6 +522,8 @@ export default function ChapterScreen() {
                   significantVerses={significantVerses}
                   bookName={bookNameResolved ?? undefined}
                   chapter={chapter}
+                  translation={translation}
+                  fallbackVerses={fallbackVerses}
                 />
               )}
 
