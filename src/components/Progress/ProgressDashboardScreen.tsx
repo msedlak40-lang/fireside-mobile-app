@@ -8,11 +8,12 @@ import { fetchUserDashboard, fetchActiveCharacterStudy } from '../../services/pr
 import { formatCount } from '../../utils/formatCount';
 import { fetchActiveReadingPlan } from '../../services/readingPlans';
 import { fetchVerseOfTheDay, logVotdView, type VerseOfTheDay } from '../../services/verseOfTheDay';
-import { getUserBattleVerses, deleteBattleVerse, saveBattleVerse, BATTLE_TAGS, type BattleVerse } from '../../services/battleVerses';
+import { getUserBattleVerses, deleteBattleVerse, saveBattleVerse, BATTLE_TAGS, UNTAGGED_FILTER, type BattleVerse } from '../../services/battleVerses';
 import type { UserDashboard, ActiveCharacterStudy } from '../../services/progress';
 import type { ActivePlanWithReading } from '../../services/readingPlans';
 import VerseSummaryCard from '../VerseSummaryCard';
 import ReadingProgressModal from './ReadingProgressModal';
+import BattleTagPicker from '../BattleTagPicker';
 import { getVerseLifeApplication, type VerseLifeApplication } from '../../services/scripture';
 import { setStudyDepth } from '../../services/userPrefs';
 import { colors } from '../../theme/colors';
@@ -85,7 +86,11 @@ export default function ProgressDashboardScreen() {
   const [battleVerses, setBattleVerses] = useState<BattleVerse[]>([]);
   const [battleVersesLoading, setBattleVersesLoading] = useState(false);
   const [battleTagFilter, setBattleTagFilter] = useState<string | null>(null);
-  const [votdBattleState, setVotdBattleState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  // 'choosing' is the tag picker being open. It exists so the two controls that share this
+  // state LOCK while the picker is up -- both gate on `!== 'idle'` -- and a second tap cannot
+  // open a second picker. 'saved' still means "in the list", reached from either a real insert
+  // or a duplicate, exactly as before.
+  const [votdBattleState, setVotdBattleState] = useState<'idle' | 'choosing' | 'saving' | 'saved'>('idle');
   // Generalized source for the shared VerseSummaryCard (VOTD tap or a Battle Verse row tap).
   const [summaryVerse, setSummaryVerse] = useState<{
     bookName: string; chapter: number; verseNumber: number; verseText: string; reference: string;
@@ -151,8 +156,22 @@ export default function ProgressDashboardScreen() {
   // Save the VOTD to Battle Verses — shared state drives BOTH the corner control and the
   // summary-card button. saveBattleVerse dedups via the unique constraint (false = already
   // saved); both outcomes mean "in the list", so both collapse to 'saved'. No duplicate possible.
-  const saveVotdBattle = useCallback(async () => {
+  // Step one of the save: open the picker. Same guard as before, so the control still cannot be
+  // double-fired, and the save itself is unchanged -- it just learns an optional tag first.
+  const openVotdBattlePicker = useCallback(() => {
     if (!verseOfTheDay || votdBattleState !== 'idle') return;
+    setVotdBattleState('choosing');
+  }, [verseOfTheDay, votdBattleState]);
+
+  const cancelVotdBattlePicker = useCallback(() => {
+    setVotdBattleState(s => (s === 'choosing' ? 'idle' : s));
+  }, []);
+
+  // Step two: the actual save. tag is null when the reader chose "just save", which is passed
+  // straight through -- saveBattleVerse writes `battle_tag: battleTag || null`, so a skipped tag
+  // stays genuinely untagged rather than being silently filed as 'general'.
+  const saveVotdBattle = useCallback(async (tag: string | null) => {
+    if (!verseOfTheDay) return;
     setVotdBattleState('saving');
     try {
       await saveBattleVerse(
@@ -160,13 +179,14 @@ export default function ProgressDashboardScreen() {
         verseOfTheDay.chapter_number,
         verseOfTheDay.verse_number,
         verseOfTheDay.verse_text,
+        tag ?? undefined,
       );
       setVotdBattleState('saved');
     } catch {
       setVotdBattleState('idle');
       Alert.alert('Error', 'Could not save verse.');
     }
-  }, [verseOfTheDay, votdBattleState]);
+  }, [verseOfTheDay]);
 
   // Reset the shared Battle-save state when the verse changes (new day / refresh) — not on card close.
   useEffect(() => {
@@ -557,7 +577,7 @@ const openTodayDevotion = useCallback(() => {
               </View>
               {/* Corner Battle-save \u2014 same action + shared state as the summary-card button */}
               <TouchableOpacity
-                onPress={saveVotdBattle}
+                onPress={openVotdBattlePicker}
                 disabled={votdBattleState !== 'idle'}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 style={{
@@ -875,12 +895,22 @@ const openTodayDevotion = useCallback(() => {
         loading={summaryLoading}
         content={summaryContent}
         onDeeper={handleDeeper}
-        onSaveBattleVerse={summaryIsVotd ? saveVotdBattle : undefined}
-        battleState={summaryIsVotd ? votdBattleState : undefined}
+        onSaveBattleVerse={summaryIsVotd ? openVotdBattlePicker : undefined}
+        battleState={summaryIsVotd ? (votdBattleState === 'choosing' ? 'saving' : votdBattleState) : undefined}
       />
 
       {/* Reading Progress breakdown (testament/section drill-down) */}
       <ReadingProgressModal visible={showReadingModal} onClose={() => setShowReadingModal(false)} />
+
+      {/* Optional battle tag for the VOTD save. Visible while choosing AND while saving, so the
+          spinner replaces the controls in place rather than the modal vanishing mid-write. */}
+      <BattleTagPicker
+        visible={votdBattleState === 'choosing' || votdBattleState === 'saving'}
+        reference={verseOfTheDay ? `${verseOfTheDay.book_name} ${verseOfTheDay.chapter_number}:${verseOfTheDay.verse_number}` : null}
+        busy={votdBattleState === 'saving'}
+        onSelect={saveVotdBattle}
+        onCancel={cancelVotdBattlePicker}
+      />
 
       {/* Related Verse Modal */}
       <Modal
@@ -1090,6 +1120,27 @@ const openTodayDevotion = useCallback(() => {
                   </Text>
                 </TouchableOpacity>
               ))}
+              {/* Untagged — reaches the verses saved via "just save". Last in the row because it
+                  is an absence rather than a category. */}
+              <TouchableOpacity
+                onPress={() => filterBattleVerses(UNTAGGED_FILTER)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                  marginRight: 8,
+                  backgroundColor: battleTagFilter === UNTAGGED_FILTER ? '#1e40af' : colors.background.tertiary,
+                }}
+              >
+                <Text maxFontSizeMultiplier={CHROME_MAX_SCALE} style={{
+                  color: battleTagFilter === UNTAGGED_FILTER ? '#fff' : colors.text.secondary,
+                  fontWeight: '600',
+                  fontSize: 13,
+                  fontStyle: 'italic',
+                }}>
+                  Untagged
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
 
             {/* Content */}

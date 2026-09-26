@@ -521,7 +521,7 @@ export default function DevotionDetailScreen() {
       {/* Related character link */}
       {typeof devotion.related_character_id === 'number' ? (
         <Pressable
-          onPress={() => navigation.navigate('CharacterDetail', { id: devotion.related_character_id })}
+          onPress={() => navigation.navigate('StudyTab', { screen: 'CharacterDetail', params: { id: devotion.related_character_id } })}
           style={{ marginTop: 16, padding: 12, backgroundColor: colors.background.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default }}
         >
           <Text style={{ fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>RELATED CHARACTER</Text>

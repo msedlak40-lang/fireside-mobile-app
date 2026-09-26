@@ -8,6 +8,7 @@ import {
 import { colors } from '../theme/colors'
 import { supabase } from '../lib/supabaseClient'
 import { saveBattleVerse } from '../services/battleVerses'
+import BattleTagPicker from './BattleTagPicker'
 import { cleanVerseText } from '../utils/verseText'
 import { CHROME_MAX_SCALE } from '../lib/textScaling'
 import SelectableProse from './SelectableProse'
@@ -62,6 +63,9 @@ export default function VerseSummaryCard(props: Props) {
 
   // Cross-reference detail view (in-sheet, no nested modal)
   const [crossRefDetail, setCrossRefDetail] = useState<CrossRefItem | null>(null)
+  // Cross-ref battle save: the tag picker, and whether its save is in flight.
+  const [battlePickerOpen, setBattlePickerOpen] = useState(false)
+  const [battleSaving, setBattleSaving] = useState(false)
   const [crossRefText, setCrossRefText] = useState<string | null>(null)
   const [crossRefLoading, setCrossRefLoading] = useState(false)
 
@@ -111,17 +115,32 @@ export default function VerseSummaryCard(props: Props) {
     }
   }
 
-  async function addCrossRefToBattle() {
+  // Validate first, THEN offer the tag. Opening a picker only to fail on missing text would
+  // waste the reader's choice, so the guard stays ahead of the modal.
+  function addCrossRefToBattle() {
     if (!crossRefDetail || !crossRefText || crossRefText.startsWith('Verse') || crossRefText.startsWith('Could')) {
       Alert.alert('Error', 'Cannot add — verse text not loaded.')
       return
     }
+    setBattlePickerOpen(true)
+  }
+
+  async function saveCrossRefToBattle(tag: string | null) {
+    if (!crossRefDetail || !crossRefText) return
+    setBattleSaving(true)
     try {
-      const saved = await saveBattleVerse(crossRefDetail.book, crossRefDetail.chapter, crossRefDetail.verseStart, crossRefText)
+      const saved = await saveBattleVerse(
+        crossRefDetail.book, crossRefDetail.chapter, crossRefDetail.verseStart, crossRefText,
+        tag ?? undefined,
+      )
+      setBattlePickerOpen(false)
       Alert.alert(saved ? 'Saved' : 'Already Saved',
         saved ? 'Verse added to your Battle Verses.' : 'This verse is already in your Battle Verses.')
     } catch {
+      setBattlePickerOpen(false)
       Alert.alert('Error', 'Could not save verse.')
+    } finally {
+      setBattleSaving(false)
     }
   }
 
@@ -300,6 +319,18 @@ export default function VerseSummaryCard(props: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Nested inside this card's Modal rather than opened after closing it, because the
+          cross-ref context (crossRefDetail + its fetched text) lives in this card and closing
+          would take the reader out of it. Nesting is the supported direction; two SIBLING
+          modals visible at once is the arrangement that occludes on iOS. Worth a device check. */}
+      <BattleTagPicker
+        visible={battlePickerOpen}
+        reference={crossRefDetail ? crossRefDetail.label : null}
+        busy={battleSaving}
+        onSelect={saveCrossRefToBattle}
+        onCancel={() => setBattlePickerOpen(false)}
+      />
     </Modal>
   )
 }

@@ -29,6 +29,20 @@ export const BATTLE_TAGS = [
 export type BattleTag = (typeof BATTLE_TAGS)[number];
 
 /**
+ * Filter sentinel for verses saved WITHOUT a tag.
+ *
+ * Needed because SQL cannot match a null with equality: `.eq('battle_tag', null)` returns
+ * nothing, so an untagged verse was unreachable from the tag filter and only appeared under
+ * "All". Now that the tag is skippable on every save path, untagged is a normal outcome rather
+ * than an accident, so it needs its own filter.
+ *
+ * A sentinel rather than a separate function because the caller is a chip in a row of tag
+ * chips: one filter value keeps the UI uniform. It cannot collide with a real tag -- BATTLE_TAGS
+ * are bare words.
+ */
+export const UNTAGGED_FILTER = '__untagged__';
+
+/**
  * Save verse to battle verses. Returns true if saved, false if duplicate.
  */
 export async function saveBattleVerse(
@@ -75,7 +89,9 @@ export async function getUserBattleVerses(tag?: string): Promise<BattleVerse[]> 
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: false });
 
-  if (tag) {
+  if (tag === UNTAGGED_FILTER) {
+    query = query.is('battle_tag', null);
+  } else if (tag) {
     query = query.eq('battle_tag', tag);
   }
 
