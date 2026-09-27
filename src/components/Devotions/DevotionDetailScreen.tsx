@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share, Modal, TextInput } from 'react-native';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TouchableOpacity, Alert, Share } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabaseClient';
 import { colors } from '../../theme/colors';
 import { completeDevotionProgress } from '../../services/progress';
-import { saveDevotionHighlight, getDevotionHighlights, deleteDevotionHighlight } from '../../services/devotionHighlights';
+import SelectableMarkdown from '../SelectableMarkdown';
 import { getDevotionInteraction, toggleDevotionStar, markDevotionRead } from '../../services/devotionInteractions';
 import type { Devotion } from '../../types/supabase-devotions';
 import VerseSummaryCard from '../VerseSummaryCard';
@@ -62,8 +62,6 @@ export default function DevotionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [highlights, setHighlights] = useState<Array<{ id?: string; start_pos: number; length: number; selected_text: string; color: string }>>([]);
-  const [showHighlights, setShowHighlights] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
   const [isToggingStar, setIsToggingStar] = useState(false);
   // Key-verse summary card (same card as VOTD / Battle Verses). Pre-checked on load so the
@@ -74,43 +72,13 @@ export default function DevotionDetailScreen() {
   // Save-the-key-verse-to-Battle-Verses state machine, same four states as the VOTD save:
   // idle -> choosing (picker open) -> saving (write in flight) -> saved.
   const [battleState, setBattleState] = useState<'idle' | 'choosing' | 'saving' | 'saved'>('idle');
-  const [showSelectionModal, setShowSelectionModal] = useState(false);
-  const [selectedParagraph, setSelectedParagraph] = useState<{ start: number; length: number; text: string } | null>(null);
-  const [selectionStart, setSelectionStart] = useState(0);
-  const [selectionEnd, setSelectionEnd] = useState(0);
-  const textInputRef = useRef<TextInput>(null);
-
-  // Helper: Calculate start position of each paragraph in the full text
-  const getParagraphPositions = useCallback(() => {
-    if (!devotion?.devotional_text) return [];
-
-    const fullText = devotion.devotional_text.replace(/\\n\\n/g, '\n\n');
-    const paragraphs = fullText.split('\n\n').filter(p => p.trim());
-
-    const positions: Array<{ start: number; length: number; text: string }> = [];
-    let currentPos = 0;
-
-    for (const para of paragraphs) {
-      const trimmed = para.trim();
-      // Find the actual position in fullText
-      const actualStart = fullText.indexOf(trimmed, currentPos);
-      if (actualStart !== -1) {
-        positions.push({
-          start: actualStart,
-          length: trimmed.length,
-          text: trimmed,
-        });
-        currentPos = actualStart + trimmed.length;
-      }
-    }
-
-    return positions;
-  }, [devotion]);
-
-  // Check if a paragraph is highlighted based on its position
-  const isParagraphHighlighted = (paraStart: number, paraLength: number) => {
-    return highlights.some(h => h.start_pos === paraStart && h.length === paraLength);
-  };
+  // devotional_text is stored with LITERAL "\n\n" (see the devotion-escaped-newlines gotcha), so
+  // every reader has to un-escape it. SelectableMarkdown splits on real blank lines, so it must
+  // happen before the text is handed over.
+  const devotionalBody = useMemo(
+    () => (devotion?.devotional_text ?? '').replace(/\\n\\n/g, '\n\n'),
+    [devotion?.devotional_text],
+  );
 
  function formatISODateYYYYMMDD(iso?: string | null) {
   if (!iso) return null;
@@ -179,10 +147,6 @@ export default function DevotionDetailScreen() {
             setIsCompleted(true);
           }
 
-          // Load saved highlights for this devotion
-          const highlightsData = await getDevotionHighlights(devotionId);
-          setHighlights(highlightsData);
-
           // Load star status and mark as read
           const interaction = await getDevotionInteraction(devotionId);
           if (interaction?.is_starred) setIsStarred(true);
@@ -196,79 +160,6 @@ export default function DevotionDetailScreen() {
       }
     })();
   }, [devotionId, bailWithError]);
-
-  // Handle long press to open text selection modal
-  const handleLongPress = (para: { start: number; length: number; text: string }) => {
-    setSelectedParagraph(para);
-    setSelectionStart(0);
-    setSelectionEnd(para.text.length);
-    setShowSelectionModal(true);
-  };
-
-  // Save the selected text portion
-  const saveSelectedText = async () => {
-    if (!selectedParagraph || devotionId == null) return;
-    if (selectionStart === selectionEnd) {
-      Alert.alert('No Selection', 'Please select some text to highlight');
-      return;
-    }
-
-    try {
-      const actualStart = selectedParagraph.start + selectionStart;
-      const actualLength = selectionEnd - selectionStart;
-      const selectedText = selectedParagraph.text.substring(selectionStart, selectionEnd);
-
-      await saveDevotionHighlight(devotionId, actualStart, actualLength, selectedText, 'yellow');
-
-      setHighlights([...highlights, { start_pos: actualStart, length: actualLength, selected_text: selectedText, color: 'yellow' }]);
-      setShowSelectionModal(false);
-      setSelectedParagraph(null);
-    } catch (err) {
-      console.error('[DevotionDetail] Failed to save highlight:', err);
-      Alert.alert('Error', 'Failed to save highlight. Please try again.');
-    }
-  };
-
-  // Get all saved highlights (returns full objects for deletion)
-  const getSavedHighlights = () => {
-    return highlights.sort((a, b) => a.start_pos - b.start_pos);
-  };
-
-  // Share a saved highlight's text to the OS share sheet (reuses selected_text).
-  const shareHighlight = async (highlight: { selected_text: string }) => {
-    try {
-      await Share.share({ message: highlight.selected_text });
-    } catch (err) {
-      console.error('[DevotionDetail] Failed to share highlight:', err);
-    }
-  };
-
-  // Delete a highlight
-  const deleteHighlight = async (highlight: { id?: string; start_pos: number; length: number }) => {
-    if (devotionId == null) return;
-
-    try {
-      if (highlight.id) {
-        await deleteDevotionHighlight(highlight.id);
-      } else {
-        // Fallback: delete by position
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
-        await supabase
-          .from('daily_devotion_highlights')
-          .delete()
-          .eq('user_id', session.user.id)
-          .eq('devotion_id', devotionId)
-          .eq('start_pos', highlight.start_pos)
-          .eq('length', highlight.length);
-      }
-
-      setHighlights(highlights.filter(h => !(h.start_pos === highlight.start_pos && h.length === highlight.length)));
-    } catch (err) {
-      console.error('[DevotionDetail] Failed to delete highlight:', err);
-      Alert.alert('Error', 'Failed to delete highlight.');
-    }
-  };
 
   // Mark devotion as complete
   const markDevotionComplete = async () => {
@@ -306,10 +197,11 @@ export default function DevotionDetailScreen() {
     message += `"${devotion.key_verse_text}"\n`;
     message += `— ${devotion.key_verse_book} ${devotion.key_verse_chapter}:${keyRangeOrNum}\n\n`;
 
-    // Devotional text — stored with literal "\n\n"; un-escape to real paragraph
-    // breaks (matches the on-screen render at getParagraphPositions).
-    if (devotion.devotional_text) {
-      message += `${devotion.devotional_text.replace(/\\n\\n/g, '\n\n')}\n`;
+    // Devotional text — stored with literal "\n\n"; un-escape to real paragraph breaks.
+    // devotionalBody already does this for the on-screen render; reused here so the shared text
+    // and the rendered text cannot diverge.
+    if (devotionalBody) {
+      message += `${devotionalBody}\n`;
     }
 
     // Hard truth
@@ -546,42 +438,16 @@ export default function DevotionDetailScreen() {
         </View>
       </Pressable>
 
-      {/* Body */}
-      {devotion.devotional_text ? (
+      {/* Body — one read-only TextInput per paragraph (SelectableMarkdown), so a long-press
+          gives Apple's drag handles and arbitrary-range Copy. Nothing competes for the gesture
+          now: the old long-press-to-highlight interaction and its modal are gone. */}
+      {devotionalBody ? (
         <View style={{ marginTop: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ fontSize: 12, color: colors.text.secondary }}>
-              Long-press a paragraph to highlight
-            </Text>
-            {highlights.length > 0 && (
-              <TouchableOpacity onPress={() => setShowHighlights(true)}>
-                <Text style={{ fontSize: 12, color: colors.accent.primary, fontWeight: '700' }}>
-                  View Saved ({highlights.length})
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {getParagraphPositions().map((para, index) => {
-            const isHighlighted = isParagraphHighlighted(para.start, para.length);
-            return (
-              <Pressable
-                key={index}
-                onLongPress={() => handleLongPress(para)}
-                style={{
-                  padding: 12,
-                  marginBottom: 8,
-                  borderRadius: 8,
-                  backgroundColor: isHighlighted ? '#fffbeb' : 'transparent',
-                  borderLeftWidth: isHighlighted ? 3 : 0,
-                  borderLeftColor: '#f59e0b',
-                }}
-              >
-                <Text selectable style={{ fontSize: 16, lineHeight: 24, color: isHighlighted ? '#78350f' : colors.text.primary }}>
-                  {para.text}
-                </Text>
-              </Pressable>
-            );
-          })}
+          <SelectableMarkdown
+            content={devotionalBody}
+            paragraphSpacing={8}
+            style={{ fontSize: 16, lineHeight: 24, color: colors.text.primary }}
+          />
         </View>
       ) : null}
 
@@ -712,178 +578,6 @@ export default function DevotionDetailScreen() {
           View Past Devotions
         </Text>
       </TouchableOpacity>
-
-      {/* Text Selection Modal */}
-      <Modal
-        visible={showSelectionModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowSelectionModal(false)}
-      >
-        <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 }}>
-          <View style={{
-            backgroundColor: colors.background.primary,
-            borderRadius: 16,
-            padding: 20,
-            maxHeight: '70%',
-          }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
-                Select Text to Highlight
-              </Text>
-              <TouchableOpacity onPress={() => setShowSelectionModal(false)} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 12 }}>
-              Select the text you want to highlight:
-            </Text>
-
-            <ScrollView style={{ flex: 1, marginBottom: 16 }}>
-              <TextInput
-                ref={textInputRef}
-                multiline
-                editable={false}
-                value={selectedParagraph?.text || ''}
-                onSelectionChange={(event) => {
-                  const { start, end } = event.nativeEvent.selection;
-                  setSelectionStart(start);
-                  setSelectionEnd(end);
-                }}
-                style={{
-                  fontSize: 16,
-                  lineHeight: 24,
-                  color: colors.text.primary,
-                  padding: 12,
-                  backgroundColor: colors.background.secondary,
-                  borderRadius: 8,
-                  minHeight: 150,
-                }}
-                selectionColor={colors.accent.primary}
-                selectTextOnFocus
-              />
-            </ScrollView>
-
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity
-                onPress={() => setShowSelectionModal(false)}
-                style={{
-                  flex: 1,
-                  padding: 16,
-                  backgroundColor: colors.background.secondary,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: colors.text.primary, fontWeight: '700' }}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={saveSelectedText}
-                style={{
-                  flex: 1,
-                  padding: 16,
-                  backgroundColor: colors.accent.primary,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: colors.text.primary, fontWeight: '700' }}>Save Highlight</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Saved Highlights Modal */}
-      <Modal
-        visible={showHighlights}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowHighlights(false)}
-      >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={{
-            backgroundColor: colors.background.primary,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            paddingTop: 20,
-            paddingBottom: 40,
-            maxHeight: '70%',
-          }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>
-                Saved Highlights
-              </Text>
-              <TouchableOpacity onPress={() => setShowHighlights(false)} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 24, color: colors.text.secondary }}>×</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ paddingHorizontal: 20 }}>
-              {getSavedHighlights().map((highlight, index) => (
-                <View
-                  key={index}
-                  style={{
-                    padding: 12,
-                    marginBottom: 12,
-                    backgroundColor: '#fffbeb',
-                    borderRadius: 8,
-                    borderLeftWidth: 3,
-                    borderLeftColor: '#f59e0b',
-                    position: 'relative',
-                  }}
-                >
-                  <Text style={{ fontSize: 15, lineHeight: 22, color: '#78350f', paddingRight: 80 }}>
-                    {highlight.selected_text}
-                  </Text>
-                  {/* Buttons render after the text so they paint on top and win hit-testing. */}
-                  <TouchableOpacity
-                    onPress={() => shareHighlight(highlight)}
-                    hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-                    style={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 44,
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: colors.accent.primary,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text style={{ fontSize: 12 }}>📤</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => deleteHighlight(highlight)}
-                    hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-                    style={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: '#dc2626',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {highlights.length === 0 && (
-                <Text style={{ fontSize: 15, color: colors.text.secondary, textAlign: 'center', marginTop: 20 }}>
-                  No highlights saved yet. Long-press paragraphs to highlight text!
-                </Text>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* Key-verse summary card — same card as VOTD / Battle Verses. Reference is the
           anchor verse (honest about what the summary covers). */}

@@ -23,8 +23,7 @@ import {
 } from '../services/themes';
 import { saveApplication, isApplicationSaved } from '../services/arsenal';
 import { colors } from '../theme/colors';
-import SelectableProse from './SelectableProse';
-import { useSentenceSelection } from '../hooks/useSentenceSelection';
+import SelectableMarkdown from './SelectableMarkdown';
 import { useGuestMode } from '../context/GuestModeContext';
 import GuestPreview from './GuestPreview';
 
@@ -45,9 +44,6 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  // Transient per-sentence tap selection for the application prose. One shared
-  // instance (single-select); cleared when the expanded theme changes.
-  const sentenceSel = useSentenceSelection();
 
   const loadData = useCallback(async () => {
     if (isGuest) {
@@ -116,7 +112,6 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
   }, [loadData]);
 
   const toggleExpand = (theme: string) => {
-    sentenceSel.clear(); // drop any sentence selection when switching/closing a theme
     setExpandedTheme(prev => (prev === theme ? null : theme));
   };
 
@@ -303,16 +298,11 @@ export default function MyThemeTab({ bookName, chapter }: Props) {
                       </View>
                     )}
 
-                    {app.application?.split('\n\n').map((paragraph: string, index: number) => (
-                      <SelectableProse
-                        key={index}
-                        text={paragraph}
-                        blockId={`${theme}-${index}`}
-                        selection={sentenceSel}
-                        style={styles.applicationText}
-                        selectable
-                      />
-                    ))}
+                    {/* SelectableMarkdown splits on blank lines itself, so the caller no longer
+                        needs to pre-split — one component per application, not one per paragraph. */}
+                    {app.application ? (
+                      <SelectableMarkdown content={app.application} style={styles.applicationText} />
+                    ) : null}
 
                     {app.key_insight && (
                       <View style={[styles.insightBox, { borderLeftColor: accentColor }]}>
