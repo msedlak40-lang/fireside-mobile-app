@@ -211,6 +211,9 @@ function renderInline(text: string): React.ReactNode {
 
 // --- Styles ----------------------------------------------------------------
 
+/** Paragraph style, exported so SelectableMarkdown's TextInput matches MarkdownRenderer exactly. */
+export const markdownParagraphStyle = { fontSize: 15, lineHeight: 23, color: colors.text.secondary } as const
+
 const styles = StyleSheet.create({
   root: { gap: 4 },
   h1: { fontSize: 21, fontWeight: '800', marginTop: 20, marginBottom: 10, color: colors.text.primary },

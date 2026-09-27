@@ -2,6 +2,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native'
 import MarkdownRenderer from './MarkdownRenderer'
+import SelectableMarkdown from './SelectableMarkdown'
 import { colors } from '../theme/colors'
 import type { ChapterDeepDive } from '../services/scripture'
 import type { StudyDepth } from '../services/userPrefs'
@@ -13,6 +14,9 @@ type Props = {
   bookName: string | null
   chapter: number
 }
+
+/** One-line revert for the selection trial: false restores the old <Text selectable> rendering. */
+const NATIVE_SELECTION = true
 
 function stripMarkdown(text: string): string {
   return text
@@ -64,7 +68,17 @@ export default function DeepDiveTab({ deepDive, depth, onChangeDepth, bookName, 
             <Text style={styles.shareText}>Share {isSummary ? 'Summary' : 'Deep Dive'}</Text>
           </TouchableOpacity>
 
-          <MarkdownRenderer content={body} selectable paragraphSpacing={isSummary ? 0 : 12} />
+          {/* TRIAL: real Apple selection (drag handles, arbitrary range) needs a UITextView, which
+              only a multiline TextInput gives us -- <Text selectable> can only ever copy a whole
+              Text block. Set NATIVE_SELECTION to false to fall straight back to MarkdownRenderer.
+              Deep dives are the right surface to trial on: no competing touch handlers, and the
+              content uses no headings, lists, quotes, links or code at all (verified across all
+              1,189 chapters), so MarkdownRenderer's block machinery isn't doing anything here. */}
+          {NATIVE_SELECTION ? (
+            <SelectableMarkdown content={body} paragraphSpacing={isSummary ? 0 : 12} />
+          ) : (
+            <MarkdownRenderer content={body} selectable paragraphSpacing={isSummary ? 0 : 12} />
+          )}
         </>
       ) : (
         <Text style={styles.muted}>No deep dive available for this chapter yet.</Text>
